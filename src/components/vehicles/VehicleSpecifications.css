@@ -1,0 +1,47 @@
+.vehicle-specs {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.vehicle-specs__row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--fs-sm);
+}
+
+.vehicle-specs__row:last-child {
+  border-bottom: none;
+}
+
+.vehicle-specs__row:nth-child(even) {
+  background: var(--color-background);
+}
+
+.vehicle-specs dt {
+  color: var(--color-muted);
+}
+
+.vehicle-specs dd {
+  margin: 0;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .vehicle-specs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .vehicle-specs__row {
+    border-right: 1px solid var(--color-border);
+  }
+
+  .vehicle-specs__row:nth-child(2n) {
+    border-right: none;
+  }
+}
