@@ -1,0 +1,52 @@
+:root {
+  /* Color — sourced from the Lycie Investment logo (navy #19406C, sky blue
+     #76CAE9). --color-accent is the true brand light blue, best used for
+     decorative fills and on dark backgrounds. --color-accent-dark is a
+     WCAG-safe variant for text, icons, links and focus states on light
+     backgrounds, since the raw light blue fails 4.5:1 against white. */
+  --color-primary: #19406c;
+  --color-primary-dark: #102a47;
+  --color-accent: #76cae9;
+  --color-accent-dark: #2e7a9c;
+  --color-text: #1a1b1e;
+  --color-muted: #667085;
+  --color-background: #fafaf8;
+  --color-surface: #ffffff;
+  --color-border: #e3e2dd;
+  --color-success: #1e7d4f;
+  --color-error: #b3261e;
+
+  /* Type */
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.375rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+  --fs-3xl: 3rem;
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 6rem;
+
+  /* Layout */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --max-width: 1200px;
+  --shadow-sm: 0 1px 2px rgba(13, 22, 34, 0.06);
+  --shadow-md: 0 4px 16px rgba(13, 22, 34, 0.08);
+
+  --transition: 160ms ease;
+}

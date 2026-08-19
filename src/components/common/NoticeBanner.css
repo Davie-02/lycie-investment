@@ -1,0 +1,29 @@
+.notice-banner-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.notice-banner {
+  border-bottom: 1px solid;
+}
+
+.notice-banner__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+}
+
+.notice-banner p {
+  color: inherit;
+  font-size: var(--fs-sm);
+  margin: 0;
+}
+
+.notice-banner__dismiss {
+  flex-shrink: 0;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+}
