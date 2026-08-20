@@ -147,6 +147,12 @@ model HireRequest {
   days                   Int
   totalCost              Int
   currency               String      @default("MWK")
+  /// "pending" (just submitted, not yet reviewed) | "confirmed" (a real
+  /// booking — this vehicle is committed for these dates) | "cancelled".
+  /// A request only counts as an actual booking once confirmed — see
+  /// HireRequestsService.updateStatus(), which also checks for overlapping
+  /// confirmed bookings on the same vehicle before allowing confirmation.
+  status                 String      @default("pending")
   createdAt              DateTime    @default(now())
 }
 

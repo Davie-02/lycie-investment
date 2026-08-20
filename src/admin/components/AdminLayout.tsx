@@ -38,6 +38,7 @@ export default function AdminLayout() {
     { to: "/admin/vehicles", label: "Vehicles" },
     { to: "/admin/hire-vehicles", label: "Hire Vehicles" },
     { to: "/admin/requests", label: "Submitted Requests" },
+    { to: "/admin/bookings", label: "Bookings" },
     ...(currentUser?.role === "OWNER" || currentUser?.role === "MANAGER"
       ? [
           { to: "/admin/site-content", label: "Site Content" },

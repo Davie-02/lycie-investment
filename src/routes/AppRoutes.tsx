@@ -18,6 +18,8 @@ import AdminDashboard from "@/admin/pages/AdminDashboard";
 import AdminVehicles from "@/admin/pages/AdminVehicles";
 import AdminHireVehicles from "@/admin/pages/AdminHireVehicles";
 import AdminRequests from "@/admin/pages/AdminRequests";
+import AdminBookings from "@/admin/pages/AdminBookings";
+import AdminBookingDetail from "@/admin/pages/AdminBookingDetail";
 import AdminSiteContent from "@/admin/pages/AdminSiteContent";
 import AdminNotices from "@/admin/pages/AdminNotices";
 import AdminUsers from "@/admin/pages/AdminUsers";
@@ -50,6 +52,8 @@ export default function AppRoutes() {
                   <Route path="vehicles" element={<AdminVehicles />} />
                   <Route path="hire-vehicles" element={<AdminHireVehicles />} />
                   <Route path="requests" element={<AdminRequests />} />
+                  <Route path="bookings" element={<AdminBookings />} />
+                  <Route path="bookings/:id" element={<AdminBookingDetail />} />
                   <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
                     <Route path="site-content" element={<AdminSiteContent />} />
                     <Route path="notices" element={<AdminNotices />} />

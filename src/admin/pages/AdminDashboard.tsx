@@ -18,6 +18,11 @@ const BASE_CARDS = [
     title: "Submitted Requests",
     description: "View inquiries, import, clearing, hire, and contact submissions.",
   },
+  {
+    to: "/admin/bookings",
+    title: "Bookings",
+    description: "See confirmed hire bookings with live countdowns to pickup/return.",
+  },
 ];
 
 const SITE_CONTENT_CARD = {

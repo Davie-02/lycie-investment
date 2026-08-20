@@ -281,6 +281,140 @@
   }
 }
 
+.booking-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+@media (min-width: 640px) {
+  .booking-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1000px) {
+  .booking-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.booking-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+
+.booking-card:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--color-accent-dark);
+}
+
+.booking-card__image {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+.booking-card__body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.booking-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.booking-card__total {
+  font-size: var(--fs-md);
+  color: var(--color-primary);
+  margin-top: var(--space-2);
+}
+
+.booking-detail__back {
+  display: inline-block;
+  margin-bottom: var(--space-4);
+}
+
+.booking-detail__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+@media (min-width: 800px) {
+  .booking-detail__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.booking-detail__notes {
+  margin-top: var(--space-4);
+}
+
+.booking-detail__actions {
+  margin-top: var(--space-6);
+}
+
+.booking-countdown {
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  text-align: center;
+  margin-top: var(--space-5);
+}
+
+.booking-countdown--completed {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+}
+
+.booking-countdown--completed .booking-countdown__label {
+  color: var(--color-muted);
+}
+
+.booking-countdown__label {
+  color: #cfd4dc;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--space-4);
+}
+
+.booking-countdown__digits {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.booking-countdown__unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.booking-countdown__value {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: #fff;
+}
+
+.booking-countdown__unit-label {
+  font-size: var(--fs-xs);
+  color: #a9b0bd;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: var(--space-1);
+}
+
 .admin-error-text {
   color: var(--color-error);
   font-size: var(--fs-sm);

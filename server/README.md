@@ -167,6 +167,9 @@ wherever MinIO serves public reads from.
 | GET    | `/api/clearing-requests`  | Any admin role     | List submitted clearing requests         |
 | POST   | `/api/hire-requests`      | Public             | Submit a hire request                    |
 | GET    | `/api/hire-requests`      | Any admin role     | List submitted hire requests             |
+| GET    | `/api/hire-requests/bookings` | Any admin role | List confirmed, not-yet-completed bookings |
+| GET    | `/api/hire-requests/:id`  | Any admin role     | Get a single hire request/booking        |
+| PATCH  | `/api/hire-requests/:id/status` | Owner/Manager | Confirm, cancel, or revert a booking     |
 | POST   | `/api/contact-messages`   | Public             | Submit a contact form message            |
 | GET    | `/api/contact-messages`   | Any admin role     | List submitted contact messages          |
 | POST   | `/api/auth/login`         | Public             | Admin login, returns a JWT + user profile |
@@ -224,6 +227,22 @@ Currently day-granularity only, matching the rates that exist on
 `HireVehicle` today (daily/weekly). Adding hourly pricing later would mean
 adding an hourly rate field and extending this function — the shape of the
 calculation wouldn't need to change.
+
+## Bookings
+
+A hire request only becomes a real "booking" once an admin **confirms** it
+(`PATCH /api/hire-requests/:id/status`) — until then it's just a submission
+sitting under Submitted Requests → Hire Requests, same as any other
+inquiry. Confirming checks for overlapping confirmed bookings on the same
+vehicle first and rejects with a `409` if found, so two customers can't end
+up confirmed for the same car on overlapping dates.
+
+`GET /api/hire-requests/bookings` returns confirmed bookings whose return
+date hasn't passed — this is what the admin **Bookings** page shows, along
+with a live countdown to pickup (if upcoming) or return (if the vehicle is
+currently out). "Completed" is derived from the current date vs. the
+booking's return date on the frontend — there's no separate stored status
+for it, since it's fully computed from data that already exists.
 
 ## What's not here
 

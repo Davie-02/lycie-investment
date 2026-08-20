@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
 import "../components/AdminLayout.css";
@@ -48,6 +49,7 @@ interface HireRequestRecord {
   days: number;
   totalCost: number;
   currency: string;
+  status: "pending" | "confirmed" | "cancelled";
   createdAt: string;
 }
 
@@ -240,6 +242,8 @@ function HireRequestsTable() {
             <th>Return</th>
             <th>Days</th>
             <th>Total</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -253,6 +257,24 @@ function HireRequestsTable() {
               <td>{new Date(row.returnDate).toLocaleDateString()}</td>
               <td className="mono">{row.days}</td>
               <td className="mono">{row.currency} {row.totalCost.toLocaleString()}</td>
+              <td>
+                <span
+                  className={`admin-badge ${
+                    row.status === "confirmed"
+                      ? "admin-badge--available"
+                      : row.status === "cancelled"
+                        ? "admin-badge--sold"
+                        : "admin-badge--reserved"
+                  }`}
+                >
+                  {row.status}
+                </span>
+              </td>
+              <td>
+                <Link to={`/admin/bookings/${row.id}`} className="btn-ghost">
+                  View / Manage
+                </Link>
+              </td>
             </tr>
           ))}
         </tbody>

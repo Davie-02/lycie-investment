@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateHireRequestDto } from "./dto/create-hire-request.dto";
+import { UpdateHireRequestStatusDto } from "./dto/update-hire-request-status.dto";
 import { calculateHireCost } from "./hire-pricing.util";
 
 @Injectable()
@@ -21,9 +22,6 @@ export class HireRequestsService {
       throw new BadRequestException("Return date cannot be before pickup date.");
     }
 
-    // Computed here, server-side, from the vehicle's actual current rates —
-    // never trust a price the client might send, since that's the exact
-    // kind of field a tampered request would try to lower.
     const { days, totalCost } = calculateHireCost(
       vehicle.dailyRate,
       vehicle.weeklyRate,
@@ -51,7 +49,62 @@ export class HireRequestsService {
   findAll() {
     return this.prisma.hireRequest.findMany({
       orderBy: { createdAt: "desc" },
-      include: { vehicle: { select: { name: true, slug: true } } },
+      include: { vehicle: true },
+    });
+  }
+
+  async findOne(id: string) {
+    const request = await this.prisma.hireRequest.findUnique({
+      where: { id },
+      include: { vehicle: true },
+    });
+    if (!request) {
+      throw new NotFoundException("Hire request not found.");
+    }
+    return request;
+  }
+
+  /**
+   * Only "confirmed" bookings represent a real commitment on a vehicle —
+   * this is what the admin Bookings view shows, filtered to confirmed
+   * requests whose return date hasn't passed yet (still upcoming or active).
+   */
+  findBookings() {
+    return this.prisma.hireRequest.findMany({
+      where: { status: "confirmed", returnDate: { gte: new Date() } },
+      orderBy: { pickupDate: "asc" },
+      include: { vehicle: true },
+    });
+  }
+
+  async updateStatus(id: string, dto: UpdateHireRequestStatusDto) {
+    const request = await this.prisma.hireRequest.findUnique({ where: { id } });
+    if (!request) {
+      throw new NotFoundException("Hire request not found.");
+    }
+
+    if (dto.status === "confirmed") {
+      const overlapping = await this.prisma.hireRequest.findFirst({
+        where: {
+          id: { not: id },
+          vehicleId: request.vehicleId,
+          status: "confirmed",
+          // Two date ranges overlap when each starts before the other ends.
+          pickupDate: { lt: request.returnDate },
+          returnDate: { gt: request.pickupDate },
+        },
+      });
+      if (overlapping) {
+        throw new ConflictException(
+          "This vehicle already has a confirmed booking that overlaps these dates."
+        );
+      }
+    }
+
+    return this.prisma.hireRequest.update({
+      where: { id },
+      data: { status: dto.status },
+      include: { vehicle: true },
     });
   }
 }
