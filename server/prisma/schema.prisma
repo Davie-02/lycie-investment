@@ -93,6 +93,9 @@ model Inquiry {
   vehicleId String?
   vehicle   Vehicle? @relation(fields: [vehicleId], references: [id])
   message   String?
+  /// "new" | "contacted" | "closed" — lets an admin mark that a submission
+  /// has been followed up on, so nothing quietly falls through the cracks.
+  status    String   @default("new")
   createdAt DateTime @default(now())
 }
 
@@ -110,6 +113,7 @@ model ImportRequest {
   vehicleType            String?
   preferredSourceCountry String?
   additionalRequirements String?
+  status                 String   @default("new")
   createdAt              DateTime @default(now())
 }
 
@@ -127,6 +131,7 @@ model ClearingRequest {
   expectedArrivalDate    DateTime?
   availableDocuments     String?
   additionalInformation  String?
+  status                 String    @default("new")
   createdAt              DateTime  @default(now())
 }
 
@@ -148,11 +153,18 @@ model HireRequest {
   totalCost              Int
   currency               String      @default("MWK")
   /// "pending" (just submitted, not yet reviewed) | "confirmed" (a real
-  /// booking — this vehicle is committed for these dates) | "cancelled".
-  /// A request only counts as an actual booking once confirmed — see
-  /// HireRequestsService.updateStatus(), which also checks for overlapping
-  /// confirmed bookings on the same vehicle before allowing confirmation.
+  /// booking — this vehicle is committed for these dates) | "cancelled" |
+  /// "completed" (vehicle actually confirmed returned by an admin — distinct
+  /// from the return date merely passing, which is "overdue" until someone
+  /// marks it returned). A request only counts as an actual booking once
+  /// confirmed — see HireRequestsService.updateStatus(), which also checks
+  /// for overlapping confirmed bookings on the same vehicle before allowing
+  /// confirmation.
   status                 String      @default("pending")
+  /// Prevents the daily reminder job from re-sending the same "due
+  /// tomorrow" / "overdue" email every single day once triggered once.
+  dueReminderSentAt      DateTime?
+  overdueReminderSentAt  DateTime?
   createdAt              DateTime    @default(now())
 }
 
@@ -163,6 +175,7 @@ model ContactMessage {
   phone     String?
   subject   String
   message   String
+  status    String   @default("new")
   createdAt DateTime @default(now())
 }
 

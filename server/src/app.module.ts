@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { PrismaModule } from "./prisma/prisma.module";
+import { EmailModule } from "./email/email.module";
 import { VehiclesModule } from "./vehicles/vehicles.module";
 import { HireVehiclesModule } from "./hire-vehicles/hire-vehicles.module";
 import { InquiriesModule } from "./inquiries/inquiries.module";
@@ -23,7 +25,10 @@ import { HealthController } from "./common/health.controller";
     // the intent is to blunt scripted form-spam on the public POST
     // endpoints, not to throttle real visitors.
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
+    // Enables @Cron() decorators (used by the daily hire-reminder job).
+    ScheduleModule.forRoot(),
     PrismaModule,
+    EmailModule,
     AuthModule,
     AdminUsersModule,
     SiteContentModule,

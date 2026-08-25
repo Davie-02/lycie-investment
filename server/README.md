@@ -161,17 +161,21 @@ wherever MinIO serves public reads from.
 | DELETE | `/api/hire-vehicles/:id`  | Owner/Manager      | Delete a hire vehicle                    |
 | POST   | `/api/inquiries`          | Public             | Submit a vehicle inquiry                 |
 | GET    | `/api/inquiries`          | Any admin role     | List submitted inquiries                 |
+| PATCH  | `/api/inquiries/:id/status` | Owner/Manager    | Mark new/contacted/closed                |
 | POST   | `/api/import-requests`    | Public             | Submit an import request                 |
 | GET    | `/api/import-requests`    | Any admin role     | List submitted import requests           |
+| PATCH  | `/api/import-requests/:id/status` | Owner/Manager | Mark new/contacted/closed           |
 | POST   | `/api/clearing-requests`  | Public             | Submit a clearing request                |
 | GET    | `/api/clearing-requests`  | Any admin role     | List submitted clearing requests         |
+| PATCH  | `/api/clearing-requests/:id/status` | Owner/Manager | Mark new/contacted/closed          |
 | POST   | `/api/hire-requests`      | Public             | Submit a hire request                    |
 | GET    | `/api/hire-requests`      | Any admin role     | List submitted hire requests             |
-| GET    | `/api/hire-requests/bookings` | Any admin role | List confirmed, not-yet-completed bookings |
+| GET    | `/api/hire-requests/bookings` | Any admin role | List confirmed bookings not yet marked returned (includes overdue) |
 | GET    | `/api/hire-requests/:id`  | Any admin role     | Get a single hire request/booking        |
-| PATCH  | `/api/hire-requests/:id/status` | Owner/Manager | Confirm, cancel, or revert a booking     |
+| PATCH  | `/api/hire-requests/:id/status` | Owner/Manager | Confirm, cancel, complete, or revert a booking |
 | POST   | `/api/contact-messages`   | Public             | Submit a contact form message            |
 | GET    | `/api/contact-messages`   | Any admin role     | List submitted contact messages          |
+| PATCH  | `/api/contact-messages/:id/status` | Owner/Manager | Mark new/contacted/closed           |
 | POST   | `/api/auth/login`         | Public             | Admin login, returns a JWT + user profile |
 | POST   | `/api/uploads`            | Owner/Manager      | Upload an image, returns its URL         |
 | GET    | `/api/site-content`       | Public             | Get all editable site content sections   |
@@ -228,6 +232,17 @@ Currently day-granularity only, matching the rates that exist on
 adding an hourly rate field and extending this function — the shape of the
 calculation wouldn't need to change.
 
+## Follow-up status tracking
+
+Inquiries, import requests, clearing requests, and contact messages each
+have a `status`: `new` → `contacted` → `closed` (defaults to `new` on
+submission). This is a simple three-state model, not a full CRM pipeline —
+the admin UI lets Owner/Manager cycle a submission through the three states
+with one click, so it's obvious at a glance what still needs following up.
+Hire requests use a different, richer status model (`pending` →
+`confirmed`/`cancelled`/`completed`) since a hire request becomes an actual
+vehicle booking — see "Bookings" below.
+
 ## Bookings
 
 A hire request only becomes a real "booking" once an admin **confirms** it
@@ -237,18 +252,75 @@ inquiry. Confirming checks for overlapping confirmed bookings on the same
 vehicle first and rejects with a `409` if found, so two customers can't end
 up confirmed for the same car on overlapping dates.
 
-`GET /api/hire-requests/bookings` returns confirmed bookings whose return
-date hasn't passed — this is what the admin **Bookings** page shows, along
-with a live countdown to pickup (if upcoming) or return (if the vehicle is
-currently out). "Completed" is derived from the current date vs. the
-booking's return date on the frontend — there's no separate stored status
-for it, since it's fully computed from data that already exists.
+`GET /api/hire-requests/bookings` returns every **confirmed** booking that
+hasn't been marked returned yet — including ones whose return date has
+already passed. The frontend derives the actual display phase (Upcoming /
+Active / Overdue) from the current date vs. the booking's pickup/return
+dates; "Overdue" is not the same as "Completed" — an admin has to explicitly
+mark a booking **Mark as Returned** for it to become `completed` and drop
+off the Bookings list. This distinction matters: without it, a vehicle that
+was never actually brought back would silently look "done" once its return
+date passed.
+
+## Email notifications
+
+Emails are sent via [Resend](https://resend.com)'s REST API, called
+directly with `fetch` (see `src/email/email.service.ts`) rather than adding
+their SDK as a dependency — this project only sends a handful of simple
+transactional emails.
+
+**If `RESEND_API_KEY` isn't set, sending is skipped and logged as a
+warning** rather than the app crashing — so local development works without
+a real email account. To enable it:
+
+1. Sign up free at [resend.com](https://resend.com) (3,000 emails/month,
+   100/day, no credit card — verify current terms before relying on this
+   long-term, free tiers change).
+2. Verify a sending domain (or use `onboarding@resend.dev` for testing).
+3. Set `RESEND_API_KEY`, `EMAIL_FROM`, and `ADMIN_NOTIFICATION_EMAIL` in
+   `.env`.
+
+**What triggers an email:**
+
+| Event | Recipient | Email |
+| --- | --- | --- |
+| Any form submitted (inquiry, import, clearing, hire, contact) | Admin (`ADMIN_NOTIFICATION_EMAIL`) | "New \[type\] submission" with a summary |
+| Hire request submitted | Customer | "We've received your hire request" |
+| Booking confirmed | Customer | "Your hire booking is confirmed" |
+| Booking cancelled | Customer | "Your hire booking has been cancelled" |
+| Booking marked returned | Customer | "Thanks for hiring with Lycie Investment" |
+| Confirmed booking due back tomorrow | Customer | Reminder (once per booking — see below) |
+| Confirmed booking overdue | Customer | Overdue notice (once per booking — see below) |
+
+Reverting a booking to "pending" doesn't send anything — that's treated as
+an internal admin correction, not something the customer needs to hear
+about.
+
+## Due/overdue reminders
+
+`src/hire-requests/hire-reminders.cron.ts` runs once a day
+(`@nestjs/schedule`, 8am server time) and checks confirmed bookings for two
+things: return date is tomorrow (sends a "due back soon" reminder), or
+return date has already passed (sends an overdue notice). Each booking only
+ever gets one of each — `dueReminderSentAt` / `overdueReminderSentAt` on
+`HireRequest` track whether it's already been sent, so the same booking
+doesn't get emailed every single day once it's overdue.
+
+This requires the Node process to actually stay running continuously (cron
+jobs don't fire if the server is asleep) — worth keeping in mind if you're
+on a hosting tier that spins down on inactivity (see `DEPLOYMENT.md`).
 
 ## What's not here
 
 - Password reset / "forgot password" self-service flow — an Owner can reset
   anyone's password via **Admin Users** in the dashboard, but there's no
   email-based reset link flow yet.
+- Reliable cron on a spin-down-after-inactivity host — Render's free web
+  service tier sleeps after 15 minutes with no traffic, and a sleeping
+  process doesn't run scheduled jobs. The daily due/overdue reminder cron
+  will silently stop firing on a quiet site with no visitors around 8am.
+  Options: upgrade to Render's always-on Starter tier, or ping the API
+  periodically from an external uptime monitor to keep it awake.
 
 ## Rate limiting
 

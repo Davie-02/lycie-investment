@@ -9,10 +9,10 @@ import { getBookingPhase, type Booking } from "@/types/booking";
 import { ApiError } from "@/services/http";
 import "../components/AdminLayout.css";
 
-function CountdownDisplay({ target, label }: { target: Date; label: string }) {
+function CountdownDisplay({ target, label, countingUp }: { target: Date; label: string; countingUp?: boolean }) {
   const countdown = useCountdown(target);
   return (
-    <div className="booking-countdown">
+    <div className={countingUp ? "booking-countdown booking-countdown--overdue" : "booking-countdown"}>
       <p className="booking-countdown__label">{label}</p>
       <div className="booking-countdown__digits">
         <CountdownUnit value={countdown.days} label="days" />
@@ -33,6 +33,13 @@ function CountdownUnit({ value, label }: { value: number; label: string }) {
   );
 }
 
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  pending: "admin-badge--reserved",
+  confirmed: "admin-badge--available",
+  cancelled: "admin-badge--sold",
+  completed: "admin-badge--sold",
+};
+
 export default function AdminBookingDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser } = useAdminAuth();
@@ -47,7 +54,7 @@ export default function AdminBookingDetail() {
     [id, refreshKey]
   );
 
-  async function handleStatusChange(status: "confirmed" | "cancelled" | "pending") {
+  async function handleStatusChange(status: "confirmed" | "cancelled" | "pending" | "completed") {
     if (!booking) return;
     setActionError(null);
     setIsUpdating(true);
@@ -74,12 +81,6 @@ export default function AdminBookingDetail() {
   const phase = getBookingPhase(booking);
   const pickupDate = new Date(booking.pickupDate);
   const returnDate = new Date(booking.returnDate);
-  const statusBadgeClass =
-    booking.status === "confirmed"
-      ? "admin-badge--available"
-      : booking.status === "cancelled"
-        ? "admin-badge--sold"
-        : "admin-badge--reserved";
 
   return (
     <div>
@@ -87,20 +88,24 @@ export default function AdminBookingDetail() {
 
       <div className="admin-toolbar">
         <h1>{booking.vehicle.name}</h1>
-        <span className={`admin-badge ${statusBadgeClass}`}>{booking.status}</span>
+        <span className={`admin-badge ${STATUS_BADGE_CLASS[booking.status]}`}>{booking.status}</span>
       </div>
 
       {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
 
-      {booking.status === "confirmed" && phase === "upcoming" && (
-        <CountdownDisplay target={pickupDate} label="Time until pickup" />
+      {phase === "upcoming" && <CountdownDisplay target={pickupDate} label="Time until pickup" />}
+      {phase === "active" && <CountdownDisplay target={returnDate} label="Time remaining on hire" />}
+      {phase === "overdue" && (
+        <CountdownDisplay target={returnDate} label="Overdue by" countingUp />
       )}
-      {booking.status === "confirmed" && phase === "active" && (
-        <CountdownDisplay target={returnDate} label="Time remaining on hire" />
-      )}
-      {booking.status === "confirmed" && phase === "completed" && (
+      {phase === "completed" && (
         <div className="booking-countdown booking-countdown--completed">
-          <p className="booking-countdown__label">This hire has been completed.</p>
+          <p className="booking-countdown__label">This hire has been completed and the vehicle returned.</p>
+        </div>
+      )}
+      {phase === "cancelled" && (
+        <div className="booking-countdown booking-countdown--completed">
+          <p className="booking-countdown__label">This booking was cancelled.</p>
         </div>
       )}
 
@@ -143,6 +148,16 @@ export default function AdminBookingDetail() {
                 onClick={() => handleStatusChange("confirmed")}
               >
                 Confirm Booking
+              </button>
+            )}
+            {booking.status === "confirmed" && (phase === "active" || phase === "overdue") && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={isUpdating}
+                onClick={() => handleStatusChange("completed")}
+              >
+                Mark as Returned
               </button>
             )}
             {booking.status !== "cancelled" && (

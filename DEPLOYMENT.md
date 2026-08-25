@@ -20,6 +20,13 @@ fine — the first visitor after a quiet period just waits a bit longer. If
 that's not acceptable, Render's paid "Starter" tier ($7/mo) keeps it always
 on; nothing else about this guide changes if you upgrade later.
 
+This spin-down also means the daily hire-reminder cron job (see
+`server/README.md`) won't fire if nobody's visited the site around when it's
+scheduled to run. If reminder emails matter to how you operate, either
+upgrade to Starter or set up a free external uptime monitor (e.g.
+UptimeRobot) pinging `/api/health` every few minutes to keep the service
+awake.
+
 Verify current pricing/limits yourself before relying on this long-term —
 free tiers change. This guide was checked against each provider's docs
 around the time it was written.
@@ -74,6 +81,7 @@ That's the whole database step. No server to manage.
    | `ADMIN_PASSWORD_HASH` | Generate with `node -e "console.log(require('bcryptjs').hashSync('your-password', 10))"` |
    | `JWT_SECRET` | If using the blueprint, Render generates this for you automatically |
    | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, `S3_PUBLIC_URL_BASE` | Your R2 (or S3/MinIO) values from `server/README.md` |
+   | `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL` | Optional — leave blank to skip email notifications entirely, or see `server/README.md`'s email section |
 
 4. Deploy. Watch the build logs — the start command runs
    `prisma migrate deploy`, which applies your committed migration to the

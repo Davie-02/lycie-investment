@@ -79,6 +79,7 @@ CREATE TABLE "Inquiry" (
     "email" TEXT NOT NULL,
     "vehicleId" TEXT,
     "message" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'new',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Inquiry_pkey" PRIMARY KEY ("id")
@@ -99,6 +100,7 @@ CREATE TABLE "ImportRequest" (
     "vehicleType" TEXT,
     "preferredSourceCountry" TEXT,
     "additionalRequirements" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'new',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ImportRequest_pkey" PRIMARY KEY ("id")
@@ -119,6 +121,7 @@ CREATE TABLE "ClearingRequest" (
     "expectedArrivalDate" TIMESTAMP(3),
     "availableDocuments" TEXT,
     "additionalInformation" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'new',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ClearingRequest_pkey" PRIMARY KEY ("id")
@@ -139,6 +142,8 @@ CREATE TABLE "HireRequest" (
     "totalCost" INTEGER NOT NULL,
     "currency" TEXT NOT NULL DEFAULT 'MWK',
     "status" TEXT NOT NULL DEFAULT 'pending',
+    "dueReminderSentAt" TIMESTAMP(3),
+    "overdueReminderSentAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "HireRequest_pkey" PRIMARY KEY ("id")
@@ -152,6 +157,7 @@ CREATE TABLE "ContactMessage" (
     "phone" TEXT,
     "subject" TEXT NOT NULL,
     "message" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'new',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ContactMessage_pkey" PRIMARY KEY ("id")

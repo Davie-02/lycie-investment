@@ -8,13 +8,17 @@ import "../components/AdminLayout.css";
 const PHASE_LABELS: Record<string, string> = {
   upcoming: "Upcoming",
   active: "Active — vehicle out",
+  overdue: "Overdue — follow up",
   completed: "Completed",
+  cancelled: "Cancelled",
 };
 
 const PHASE_BADGE_CLASS: Record<string, string> = {
   upcoming: "admin-badge--reserved",
   active: "admin-badge--available",
+  overdue: "admin-badge--overdue",
   completed: "admin-badge--sold",
+  cancelled: "admin-badge--sold",
 };
 
 export default function AdminBookings() {

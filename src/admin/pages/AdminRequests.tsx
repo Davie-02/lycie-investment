@@ -1,10 +1,31 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import { ApiError } from "@/services/http";
 import "../components/AdminLayout.css";
 
 type TabKey = "inquiries" | "import" | "clearing" | "hire" | "contact";
+type RequestStatus = "new" | "contacted" | "closed";
+
+const STATUS_BADGE_CLASS: Record<RequestStatus, string> = {
+  new: "admin-badge--reserved",
+  contacted: "admin-badge--available",
+  closed: "admin-badge--sold",
+};
+
+const STATUS_CYCLE: Record<RequestStatus, RequestStatus> = {
+  new: "contacted",
+  contacted: "closed",
+  closed: "new",
+};
+
+const STATUS_CYCLE_LABEL: Record<RequestStatus, string> = {
+  new: "Mark Contacted",
+  contacted: "Mark Closed",
+  closed: "Reopen",
+};
 
 interface Inquiry {
   id: string;
@@ -13,6 +34,7 @@ interface Inquiry {
   email: string;
   message: string | null;
   vehicle: { make: string; model: string; year: number } | null;
+  status: RequestStatus;
   createdAt: string;
 }
 
@@ -24,6 +46,7 @@ interface ImportRequestRecord {
   preferredMake: string;
   preferredModel: string | null;
   budget: number | null;
+  status: RequestStatus;
   createdAt: string;
 }
 
@@ -35,6 +58,7 @@ interface ClearingRequestRecord {
   vehicleMake: string;
   vin: string;
   currentLocation: string;
+  status: RequestStatus;
   createdAt: string;
 }
 
@@ -49,7 +73,7 @@ interface HireRequestRecord {
   days: number;
   totalCost: number;
   currency: string;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled" | "completed";
   createdAt: string;
 }
 
@@ -59,6 +83,7 @@ interface ContactMessageRecord {
   email: string;
   subject: string;
   message: string;
+  status: RequestStatus;
   createdAt: string;
 }
 
@@ -74,6 +99,34 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
 }
 
+/**
+ * Status badge + (for Owner/Manager) a one-click button that cycles
+ * new → contacted → closed → new. Shared across all four non-hire request
+ * tables, which all use the identical three-state status model.
+ */
+function StatusCell({
+  status,
+  canManage,
+  isUpdating,
+  onCycle,
+}: {
+  status: RequestStatus;
+  canManage: boolean;
+  isUpdating: boolean;
+  onCycle: () => void;
+}) {
+  return (
+    <div className="request-status-cell">
+      <span className={`admin-badge ${STATUS_BADGE_CLASS[status]}`}>{status}</span>
+      {canManage && (
+        <button type="button" className="btn-ghost" disabled={isUpdating} onClick={onCycle}>
+          {STATUS_CYCLE_LABEL[status]}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AdminRequests() {
   const [activeTab, setActiveTab] = useState<TabKey>("inquiries");
 
@@ -81,7 +134,7 @@ export default function AdminRequests() {
     <div>
       <h1>Submitted Requests</h1>
       <p className="admin-page-intro">
-        Read-only. To follow up, use the contact details shown for each submission.
+        Mark a submission Contacted once you've followed up, and Closed once it's resolved.
       </p>
 
       <div className="admin-nav admin-tabs" role="tablist" aria-label="Request type">
@@ -111,111 +164,216 @@ export default function AdminRequests() {
 }
 
 function InquiriesTable() {
-  const { data, isLoading, error } = useAsyncData(() => adminApi.get<Inquiry[]>("/inquiries"), []);
+  const { currentUser } = useAdminAuth();
+  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const { data, isLoading, error } = useAsyncData(
+    () => adminApi.get<Inquiry[]>("/inquiries"),
+    [refreshKey]
+  );
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  async function handleCycle(row: Inquiry) {
+    setActionError(null);
+    setUpdatingId(row.id);
+    try {
+      await adminApi.patch(`/inquiries/${row.id}/status`, { status: STATUS_CYCLE[row.status] });
+      refresh();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to update status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (error) return <p className="text-muted" role="alert">Unable to load inquiries.</p>;
   if (!data || data.length === 0) return <div className="admin-empty-state">No inquiries yet.</div>;
 
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Vehicle</th>
-            <th>Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{formatDate(row.createdAt)}</td>
-              <td>{row.fullName}</td>
-              <td>{row.phone} · {row.email}</td>
-              <td>{row.vehicle ? `${row.vehicle.make} ${row.vehicle.model} (${row.vehicle.year})` : "—"}</td>
-              <td>{row.message || "—"}</td>
+    <div>
+      {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Vehicle</th>
+              <th>Message</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDate(row.createdAt)}</td>
+                <td>{row.fullName}</td>
+                <td>{row.phone} · {row.email}</td>
+                <td>{row.vehicle ? `${row.vehicle.make} ${row.vehicle.model} (${row.vehicle.year})` : "—"}</td>
+                <td>{row.message || "—"}</td>
+                <td>
+                  <StatusCell
+                    status={row.status}
+                    canManage={canManage}
+                    isUpdating={updatingId === row.id}
+                    onCycle={() => handleCycle(row)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 function ImportRequestsTable() {
+  const { currentUser } = useAdminAuth();
+  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const { data, isLoading, error } = useAsyncData(
     () => adminApi.get<ImportRequestRecord[]>("/import-requests"),
-    []
+    [refreshKey]
   );
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  async function handleCycle(row: ImportRequestRecord) {
+    setActionError(null);
+    setUpdatingId(row.id);
+    try {
+      await adminApi.patch(`/import-requests/${row.id}/status`, { status: STATUS_CYCLE[row.status] });
+      refresh();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to update status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (error) return <p className="text-muted" role="alert">Unable to load import requests.</p>;
   if (!data || data.length === 0) return <div className="admin-empty-state">No import requests yet.</div>;
 
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Preferred Vehicle</th>
-            <th>Budget</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{formatDate(row.createdAt)}</td>
-              <td>{row.fullName}</td>
-              <td>{row.phone} · {row.email}</td>
-              <td>{row.preferredMake} {row.preferredModel ?? ""}</td>
-              <td className="mono">{row.budget ? row.budget.toLocaleString() : "—"}</td>
+    <div>
+      {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Preferred Vehicle</th>
+              <th>Budget</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDate(row.createdAt)}</td>
+                <td>{row.fullName}</td>
+                <td>{row.phone} · {row.email}</td>
+                <td>{row.preferredMake} {row.preferredModel ?? ""}</td>
+                <td className="mono">{row.budget ? row.budget.toLocaleString() : "—"}</td>
+                <td>
+                  <StatusCell
+                    status={row.status}
+                    canManage={canManage}
+                    isUpdating={updatingId === row.id}
+                    onCycle={() => handleCycle(row)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
 function ClearingRequestsTable() {
+  const { currentUser } = useAdminAuth();
+  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const { data, isLoading, error } = useAsyncData(
     () => adminApi.get<ClearingRequestRecord[]>("/clearing-requests"),
-    []
+    [refreshKey]
   );
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  async function handleCycle(row: ClearingRequestRecord) {
+    setActionError(null);
+    setUpdatingId(row.id);
+    try {
+      await adminApi.patch(`/clearing-requests/${row.id}/status`, { status: STATUS_CYCLE[row.status] });
+      refresh();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to update status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (error) return <p className="text-muted" role="alert">Unable to load clearing requests.</p>;
   if (!data || data.length === 0) return <div className="admin-empty-state">No clearing requests yet.</div>;
 
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Contact</th>
-            <th>Vehicle</th>
-            <th>VIN</th>
-            <th>Location</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{formatDate(row.createdAt)}</td>
-              <td>{row.fullName}</td>
-              <td>{row.phone} · {row.email}</td>
-              <td>{row.vehicleMake}</td>
-              <td className="mono">{row.vin}</td>
-              <td>{row.currentLocation}</td>
+    <div>
+      {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Vehicle</th>
+              <th>VIN</th>
+              <th>Location</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDate(row.createdAt)}</td>
+                <td>{row.fullName}</td>
+                <td>{row.phone} · {row.email}</td>
+                <td>{row.vehicleMake}</td>
+                <td className="mono">{row.vin}</td>
+                <td>{row.currentLocation}</td>
+                <td>
+                  <StatusCell
+                    status={row.status}
+                    canManage={canManage}
+                    isUpdating={updatingId === row.id}
+                    onCycle={() => handleCycle(row)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -262,7 +420,7 @@ function HireRequestsTable() {
                   className={`admin-badge ${
                     row.status === "confirmed"
                       ? "admin-badge--available"
-                      : row.status === "cancelled"
+                      : row.status === "cancelled" || row.status === "completed"
                         ? "admin-badge--sold"
                         : "admin-badge--reserved"
                   }`}
@@ -284,38 +442,72 @@ function HireRequestsTable() {
 }
 
 function ContactMessagesTable() {
+  const { currentUser } = useAdminAuth();
+  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const { data, isLoading, error } = useAsyncData(
     () => adminApi.get<ContactMessageRecord[]>("/contact-messages"),
-    []
+    [refreshKey]
   );
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  async function handleCycle(row: ContactMessageRecord) {
+    setActionError(null);
+    setUpdatingId(row.id);
+    try {
+      await adminApi.patch(`/contact-messages/${row.id}/status`, { status: STATUS_CYCLE[row.status] });
+      refresh();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "Failed to update status.");
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (error) return <p className="text-muted" role="alert">Unable to load messages.</p>;
   if (!data || data.length === 0) return <div className="admin-empty-state">No messages yet.</div>;
 
   return (
-    <div className="admin-table-wrap">
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Subject</th>
-            <th>Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{formatDate(row.createdAt)}</td>
-              <td>{row.fullName}</td>
-              <td>{row.email}</td>
-              <td>{row.subject}</td>
-              <td>{row.message}</td>
+    <div>
+      {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Subject</th>
+              <th>Message</th>
+              <th>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id}>
+                <td>{formatDate(row.createdAt)}</td>
+                <td>{row.fullName}</td>
+                <td>{row.email}</td>
+                <td>{row.subject}</td>
+                <td>{row.message}</td>
+                <td>
+                  <StatusCell
+                    status={row.status}
+                    canManage={canManage}
+                    isUpdating={updatingId === row.id}
+                    onCycle={() => handleCycle(row)}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
