@@ -1,4 +1,10 @@
 import { ApiError } from "@/services/http";
+import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
+
+// Re-exported so existing admin code importing from "../adminApi" keeps
+// working unchanged — the actual logic lives in one shared place now, used
+// by both admin and public-site image display.
+export const resolveUploadUrl = sharedResolveUploadUrl;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 export const ADMIN_TOKEN_KEY = "lycie_admin_token";
@@ -116,8 +122,4 @@ export async function adminLogin(
   });
 }
 
-export function resolveUploadUrl(path: string): string {
-  if (path.startsWith("http")) return path;
-  const origin = API_BASE_URL.replace(/\/api\/?$/, "");
-  return `${origin}${path}`;
-}
+

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
 import { formatCurrency } from "@/utils/format";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import { getBookingPhase, type Booking } from "@/types/booking";
 import "../components/AdminLayout.css";
 
@@ -51,7 +52,7 @@ export default function AdminBookings() {
             return (
               <Link to={`/admin/bookings/${booking.id}`} className="booking-card" key={booking.id}>
                 <img
-                  src={booking.vehicle.image}
+                  src={resolveUploadUrl(booking.vehicle.image)}
                   alt={booking.vehicle.name}
                   className="booking-card__image"
                 />

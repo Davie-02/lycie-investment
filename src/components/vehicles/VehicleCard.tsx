@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { formatCurrency, formatMileage } from "@/utils/format";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import "./VehicleCard.css";
 
 interface VehicleCardProps {
@@ -18,7 +19,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
     <article className="vehicle-card">
       <div className="vehicle-card__image-wrap">
         <img
-          src={vehicle.images[0]}
+          src={resolveUploadUrl(vehicle.images[0])}
           alt={`${vehicle.make} ${vehicle.model}, ${vehicle.year}`}
           loading="lazy"
           className="vehicle-card__image"
