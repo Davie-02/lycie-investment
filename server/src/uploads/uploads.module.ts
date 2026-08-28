@@ -7,5 +7,6 @@ import { AuthModule } from "../auth/auth.module";
   imports: [AuthModule],
   controllers: [UploadsController],
   providers: [UploadsService],
+  exports: [UploadsService],
 })
 export class UploadsModule {}

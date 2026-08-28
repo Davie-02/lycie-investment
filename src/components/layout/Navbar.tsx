@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import "./Navbar.css";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 const NAV_LINKS = [
   { to: "/", label: "Home" },
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthenticated } = useCustomerAuth();
 
   return (
     <header className="navbar">
@@ -40,6 +42,12 @@ export default function Navbar() {
 
         <NavLink to="/vehicles" className="btn btn-primary navbar__cta">
           Get a Quote
+        </NavLink>
+        <NavLink
+          to={isAuthenticated ? "/account" : "/account/login"}
+          className="navbar__account-link"
+        >
+          {isAuthenticated ? "My account" : "Sign in"}
         </NavLink>
 
         <button
@@ -74,6 +82,13 @@ export default function Navbar() {
             onClick={() => setIsOpen(false)}
           >
             Get a Quote
+          </NavLink>
+          <NavLink
+            to={isAuthenticated ? "/account" : "/account/login"}
+            className="btn-ghost navbar__mobile-account"
+            onClick={() => setIsOpen(false)}
+          >
+            {isAuthenticated ? "My account" : "Sign in"}
           </NavLink>
         </nav>
       )}

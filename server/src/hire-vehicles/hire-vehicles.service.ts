@@ -7,10 +7,17 @@ import { UpdateHireVehicleDto } from "./dto/update-hire-vehicle.dto";
 export class HireVehiclesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.hireVehicle.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+  async findAll(page = 1, pageSize = 24) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.hireVehicle.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.hireVehicle.count(),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   async create(dto: CreateHireVehicleDto) {

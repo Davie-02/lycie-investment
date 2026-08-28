@@ -22,6 +22,7 @@ model AdminUser {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  reviewedPayments PaymentSubmission[]
 }
 
 /// Customer identity is separate from staff administration. Names are
@@ -37,6 +38,48 @@ model CustomerUser {
 
   account   Account?
   auditLogs AuditLog[]
+  paymentSubmissions PaymentSubmission[]
+  cases             CustomerCase[]
+}
+
+enum CustomerCaseStatus {
+  REQUESTED
+  IN_PROGRESS
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+model CustomerCase {
+  id            String             @id @default(uuid()) @db.Uuid
+  customerId    String             @db.Uuid
+  vehicleId     String?
+  hireVehicleId String?
+  title         String
+  status        CustomerCaseStatus @default(REQUESTED)
+  details       String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  customer    CustomerUser         @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle     Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  hireVehicle HireVehicle?         @relation(fields: [hireVehicleId], references: [id], onDelete: Restrict)
+  updates     CustomerCaseUpdate[]
+
+  @@index([customerId, updatedAt])
+  @@index([status, updatedAt])
+}
+
+model CustomerCaseUpdate {
+  id           String            @id @default(uuid()) @db.Uuid
+  caseId       String            @db.Uuid
+  status       CustomerCaseStatus
+  message      String
+  createdAt    DateTime          @default(now())
+
+  customerCase CustomerCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  @@index([caseId, createdAt])
 }
 
 model Account {
@@ -49,6 +92,7 @@ model Account {
 
   customer     CustomerUser           @relation(fields: [customerId], references: [id], onDelete: Restrict)
   transactions FinancialTransaction[]
+  paymentSubmissions PaymentSubmission[]
 
   @@index([customerId])
 }
@@ -72,6 +116,37 @@ model FinancialTransaction {
 
   @@index([accountId, createdAt])
   @@index([accountId, type, createdAt])
+}
+
+enum PaymentSubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PaymentSubmission {
+  id                String                  @id @default(uuid()) @db.Uuid
+  customerId        String                  @db.Uuid
+  accountId         String                  @db.Uuid
+  amount            Decimal                 @db.Decimal(19, 2)
+  currency          String
+  proofUrl          String
+  reference         String                  @unique
+  note              String?
+  status            PaymentSubmissionStatus @default(PENDING)
+  reviewNote        String?
+  reviewedAt        DateTime?
+  reviewedByAdminId String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  customer        CustomerUser @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  account         Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  reviewedByAdmin AdminUser?   @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([accountId, createdAt])
+  @@index([status, createdAt])
 }
 
 model AuditLog {
@@ -131,6 +206,7 @@ model Vehicle {
   updatedAt    DateTime @updatedAt
 
   inquiries Inquiry[]
+  customerCases CustomerCase[]
 }
 
 model HireVehicle {
@@ -149,6 +225,7 @@ model HireVehicle {
   updatedAt    DateTime @updatedAt
 
   hireRequests HireRequest[]
+  customerCases CustomerCase[]
 }
 
 model Inquiry {

@@ -1,51 +1,116 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateFinancialTransactionDto } from "./dto/create-financial-transaction.dto";
+import { UploadsService } from "../uploads/uploads.service";
 
 @Injectable()
 export class FinancialService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploads: UploadsService
+  ) {}
 
-  async create(customerId: string, type: "DEPOSIT" | "WITHDRAWAL", dto: CreateFinancialTransactionDto) {
+  async submitPayment(customerId: string, file: Express.Multer.File, dto: CreateFinancialTransactionDto) {
+    const account = await this.prisma.account.findUnique({ where: { customerId } });
+    if (!account) throw new NotFoundException("Account not found.");
+
+    const { url: proofUrl } = await this.uploads.upload(file);
+    const submission = await this.prisma.paymentSubmission.create({
+      data: {
+        customerId,
+        accountId: account.id,
+        amount: new Prisma.Decimal(dto.amount),
+        currency: account.currency,
+        proofUrl,
+        reference: `PAY-${crypto.randomUUID()}`,
+        note: dto.note,
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        proofUrl: true,
+        reference: true,
+        note: true,
+        status: true,
+        reviewNote: true,
+        createdAt: true,
+      },
+    });
+
+    return { ...submission, amount: submission.amount.toString() };
+  }
+
+  async reviewPayment(paymentId: string, adminId: string, approved: boolean, reviewNote?: string) {
     return this.prisma.$transaction(async (tx) => {
-      const account = await tx.account.findUnique({ where: { customerId } });
+      const payment = await tx.paymentSubmission.findUnique({ where: { id: paymentId } });
+      if (!payment) throw new NotFoundException("Payment submission not found.");
+      if (payment.status !== "PENDING") {
+        throw new ConflictException("This payment submission has already been reviewed.");
+      }
+
+      const review = {
+        reviewNote,
+        reviewedAt: new Date(),
+        reviewedByAdminId: adminId,
+      };
+
+      if (!approved) {
+        return tx.paymentSubmission.update({
+          where: { id: paymentId },
+          data: { ...review, status: "REJECTED" },
+        });
+      }
+
+      const account = await tx.account.findUnique({ where: { customerId: payment.customerId } });
       if (!account) throw new NotFoundException("Account not found.");
 
-      const delta = type === "DEPOSIT" ? dto.amount : -dto.amount;
-      const updated = await tx.account.updateMany({
-        where: type === "WITHDRAWAL" ? { id: account.id, balance: { gte: dto.amount } } : { id: account.id },
-        data: { balance: { increment: delta } },
+      await tx.account.update({
+        where: { id: account.id },
+        data: { balance: { increment: payment.amount } },
       });
-      if (updated.count !== 1) throw new BadRequestException("Insufficient funds.");
 
       const transaction = await tx.financialTransaction.create({
         data: {
           accountId: account.id,
-          type,
-          amount: new Prisma.Decimal(dto.amount),
-          currency: account.currency,
-          reference: `TX-${crypto.randomUUID()}`,
-          description: dto.description,
+          type: "DEPOSIT",
+          amount: payment.amount,
+          currency: payment.currency,
+          reference: payment.reference,
+          description: payment.note,
         },
+      });
+
+      await tx.paymentSubmission.update({
+        where: { id: paymentId },
+        data: { ...review, status: "APPROVED" },
       });
       await tx.auditLog.create({
         data: {
-          actorUserId: customerId,
-          action: "CREATE",
+          action: "APPROVE_PAYMENT",
           entityType: "FinancialTransaction",
           entityId: transaction.id,
-          newValue: { type, amount: dto.amount, accountId: account.id },
+          newValue: { amount: payment.amount.toString(), paymentId },
         },
       });
-      return { ...transaction, amount: transaction.amount.toString() };
+
+      return transaction;
     });
   }
 
-  findHistory(customerId: string, page = 1, pageSize = 25) {
+  listPayments(status?: "PENDING" | "APPROVED" | "REJECTED") {
+    return this.prisma.paymentSubmission.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { createdAt: "desc" },
+      include: { customer: { select: { id: true, name: true, email: true } } },
+    });
+  }
+
+  async findHistory(customerId: string, page = 1, pageSize = 25) {
     const safePage = Math.max(1, Math.floor(page));
     const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize)));
-    return this.prisma.account.findUnique({
+    const account = await this.prisma.account.findUnique({
       where: { customerId },
       select: {
         id: true,
@@ -56,14 +121,24 @@ export class FinancialService {
           skip: (safePage - 1) * safePageSize,
           take: safePageSize,
         },
+        paymentSubmissions: {
+          orderBy: { createdAt: "desc" },
+          take: safePageSize,
+        },
       },
-    }).then((account) => account && {
+    });
+
+    if (!account) {
+      return null;
+    }
+
+    return {
       ...account,
       balance: account.balance.toString(),
       transactions: account.transactions.map((transaction) => ({
         ...transaction,
         amount: transaction.amount.toString(),
       })),
-    });
+    };
   }
 }

@@ -7,10 +7,17 @@ import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
 export class VehiclesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.vehicle.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+  async findAll(page = 1, pageSize = 24) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.vehicle.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.vehicle.count(),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   findFeatured(limit: number) {

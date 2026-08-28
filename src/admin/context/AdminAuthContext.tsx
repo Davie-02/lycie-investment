@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import {
   adminLogin,
-  getAdminToken,
-  setAdminToken,
   clearAdminToken,
   getStoredUser,
   setStoredUser,
@@ -23,7 +21,7 @@ interface AdminAuthContextValue {
 const AdminAuthContext = createContext<AdminAuthContextValue | null>(null);
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getAdminToken()));
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(getStoredUser()));
   const [currentUser, setCurrentUser] = useState<AdminUserSummary | null>(() => getStoredUser());
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -32,8 +30,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      const { accessToken, user } = await adminLogin(email, password);
-      setAdminToken(accessToken);
+      const { user } = await adminLogin(email, password);
       setStoredUser(user);
       setIsAuthenticated(true);
       setCurrentUser(user);

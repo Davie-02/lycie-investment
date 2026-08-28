@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { HireVehiclesService } from "./hire-vehicles.service";
 import { CreateHireVehicleDto } from "./dto/create-hire-vehicle.dto";
 import { UpdateHireVehicleDto } from "./dto/update-hire-vehicle.dto";
@@ -11,8 +11,8 @@ export class HireVehiclesController {
   constructor(private readonly hireVehiclesService: HireVehiclesService) {}
 
   @Get()
-  findAll() {
-    return this.hireVehiclesService.findAll();
+  findAll(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+    return this.hireVehiclesService.findAll(this.parseNumber(page, 1), this.parsePageSize(pageSize, 24));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,5 +34,14 @@ export class HireVehiclesController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.hireVehiclesService.remove(id);
+  }
+
+  private parseNumber(value: string | undefined, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(1, Math.floor(parsed)) : fallback;
+  }
+
+  private parsePageSize(value: string | undefined, fallback: number): number {
+    return Math.min(100, this.parseNumber(value, fallback));
   }
 }

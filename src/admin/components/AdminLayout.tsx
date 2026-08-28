@@ -40,6 +40,9 @@ export default function AdminLayout() {
     { to: "/admin/requests", label: "Submitted Requests" },
     { to: "/admin/bookings", label: "Bookings" },
     ...(currentUser?.role === "OWNER" || currentUser?.role === "MANAGER"
+      ? [{ to: "/admin/payments", label: "Payments" }]
+      : []),
+    ...(currentUser?.role === "OWNER" || currentUser?.role === "MANAGER"
       ? [
           { to: "/admin/site-content", label: "Site Content" },
           { to: "/admin/notices", label: "Notices" },

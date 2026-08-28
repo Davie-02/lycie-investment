@@ -38,7 +38,7 @@ export default function Hire() {
             <div className="section-heading">
               <span className="eyebrow">Available now</span>
               <h2>Choose a vehicle</h2>
-              <p>Sample hire listings shown during development. Rates shown are placeholder rates.</p>
+              <p>Browse our available vehicles and choose the one that best suits your travel and transportation needs. Select your preferred vehicle to view pricing, features and availability.</p>
             </div>
 
             {isLoading && <p className="text-muted">Loading hire vehicles…</p>}

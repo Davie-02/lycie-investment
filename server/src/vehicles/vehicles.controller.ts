@@ -15,7 +15,7 @@ export class VehiclesController {
   @Get()
   findAll(@Query("featured") featured?: string, @Query("limit") limit?: string) {
     if (featured === "true") {
-      const parsedLimit = limit ? Number(limit) : 3;
+      const parsedLimit = this.parsePageSize(limit, 3);
       return this.vehiclesService.findFeatured(parsedLimit);
     }
     return this.vehiclesService.findAll();
@@ -47,5 +47,11 @@ export class VehiclesController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.vehiclesService.remove(id);
+  }
+
+  private parsePageSize(value: string | undefined, fallback: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(100, Math.max(1, Math.floor(parsed)));
   }
 }

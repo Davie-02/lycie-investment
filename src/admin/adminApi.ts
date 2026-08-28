@@ -1,4 +1,5 @@
 import { ApiError } from "@/services/http";
+import { clearCsrfToken, getCsrfToken } from "@/services/csrf";
 import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
 
 // Re-exported so existing admin code importing from "../adminApi" keeps
@@ -7,7 +8,6 @@ import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploa
 export const resolveUploadUrl = sharedResolveUploadUrl;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
-export const ADMIN_TOKEN_KEY = "lycie_admin_token";
 export const SESSION_EXPIRED_EVENT = "admin-session-expired";
 const ADMIN_USER_KEY = "lycie_admin_user";
 
@@ -20,16 +20,16 @@ export interface AdminUserSummary {
   createdAt: string;
 }
 
-export function getAdminToken(): string | null {
-  return localStorage.getItem(ADMIN_TOKEN_KEY);
-}
-
-export function setAdminToken(token: string): void {
-  localStorage.setItem(ADMIN_TOKEN_KEY, token);
-}
-
 export function clearAdminToken(): void {
-  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  void getCsrfToken()
+    .then((token) =>
+      fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "x-csrf-token": token },
+      })
+    )
+    .finally(clearCsrfToken);
 }
 
 export function getStoredUser(): AdminUserSummary | null {
@@ -62,15 +62,16 @@ async function parseErrorMessage(response: Response): Promise<string> {
 }
 
 async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getAdminToken();
+  const csrfToken = init.method && init.method !== "GET" ? await getCsrfToken() : null;
   let response: Response;
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
+      credentials: "include",
       headers: {
+        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
         ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,
       },
     });
@@ -79,12 +80,8 @@ async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (response.status === 401) {
-    const hadActiveSession = Boolean(token);
-    clearAdminToken();
     clearStoredUser();
-    if (hadActiveSession) {
-      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
-    }
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     throw new ApiError("Your session has expired. Please log in again.", 401);
   }
 
@@ -115,8 +112,8 @@ export const adminApi = {
 export async function adminLogin(
   email: string,
   password: string
-): Promise<{ accessToken: string; user: AdminUserSummary }> {
-  return adminFetch<{ accessToken: string; user: AdminUserSummary }>("/auth/login", {
+): Promise<{ user: AdminUserSummary }> {
+  return adminFetch<{ user: AdminUserSummary }>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });

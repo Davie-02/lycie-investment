@@ -1,8 +1,8 @@
 # Lycie Investment — API
 
-NestJS + Prisma + PostgreSQL backend for the Lycie Investment website. Serves
-vehicle/hire-vehicle listings and accepts the site's inquiry, import, clearing,
-hire, and contact form submissions.
+NestJS + Prisma + PostgreSQL backend for the Lycie Investment website. It
+serves vehicle and hire-vehicle listings, accepts public requests, and provides
+staff and customer authentication.
 
 ## Requirements
 
@@ -32,10 +32,11 @@ hire, and contact form submissions.
      -e POSTGRES_DB=lycie_investment -p 5432:5432 -d postgres:16
    ```
 
-3. Generate the Prisma client and run the initial migration:
+3. Generate the Prisma client and apply the committed migrations:
 
    ```bash
-   npx prisma migrate dev --name init
+   npm run prisma:generate
+   npm run prisma:deploy
    ```
 
 4. Seed sample vehicle and hire-vehicle data:
@@ -43,6 +44,10 @@ hire, and contact form submissions.
    ```bash
    npm run prisma:seed
    ```
+
+Use `prisma migrate deploy` for an existing database. Use `prisma migrate dev`
+only when creating a migration during development, and never accept a schema
+reset for a database containing real data.
 
 ## Development
 
@@ -106,6 +111,11 @@ default and served at `/uploads/<filename>`. This works fine for local
 development but **not for production** on most hosts — see "Image storage in
 production" below.
 
+Uploads are limited to 5 MB and accepted only as JPEG, PNG, or WebP. The API
+resizes them to fit within 2000 × 1400 pixels and stores them as WebP at a
+quality setting of 82, so new uploads are smaller and consistent regardless of
+the original format.
+
 ## Image storage in production
 
 Local disk storage doesn't survive a redeploy on most hosting platforms
@@ -150,12 +160,12 @@ wherever MinIO serves public reads from.
 | Method | Path                      | Auth              | Purpose                                  |
 | ------ | ------------------------- | ------------------ | ----------------------------------------- |
 | GET    | `/api/health`             | Public             | Health check                             |
-| GET    | `/api/vehicles`           | Public             | List vehicles (`?featured=true&limit=3`) |
+| GET    | `/api/vehicles`           | Public             | List vehicles (`?page=1&pageSize=24`) |
 | GET    | `/api/vehicles/:slug`     | Public             | Vehicle detail                           |
 | POST   | `/api/vehicles`           | Owner/Manager      | Create a vehicle                         |
 | PATCH  | `/api/vehicles/:id`       | Owner/Manager      | Update a vehicle                         |
 | DELETE | `/api/vehicles/:id`       | Owner/Manager      | Delete a vehicle                         |
-| GET    | `/api/hire-vehicles`      | Public             | List hire vehicles                       |
+| GET    | `/api/hire-vehicles`      | Public             | List hire vehicles (`?page=1&pageSize=24`) |
 | POST   | `/api/hire-vehicles`      | Owner/Manager      | Create a hire vehicle                    |
 | PATCH  | `/api/hire-vehicles/:id`  | Owner/Manager      | Update a hire vehicle                    |
 | DELETE | `/api/hire-vehicles/:id`  | Owner/Manager      | Delete a hire vehicle                    |
@@ -177,6 +187,16 @@ wherever MinIO serves public reads from.
 | GET    | `/api/contact-messages`   | Any admin role     | List submitted contact messages          |
 | PATCH  | `/api/contact-messages/:id/status` | Owner/Manager | Mark new/contacted/closed           |
 | POST   | `/api/auth/login`         | Public             | Admin login, returns a JWT + user profile |
+| POST   | `/api/customers/register` | Public             | Create a customer and account       |
+| POST   | `/api/customers/login`    | Public             | Customer login, returns a JWT + profile |
+| GET    | `/api/customers/me/cases` | Customer           | View staff-managed vehicle/order updates |
+| GET    | `/api/financial/me`       | Customer           | Get balance and paginated history   |
+| POST   | `/api/financial/me/payment-submissions` | Customer | Submit amount and proof for review |
+| GET    | `/api/financial/payments` | Owner/Manager      | List payment submissions to review  |
+| POST   | `/api/financial/payments/:id/approve` | Owner/Manager | Approve and credit a payment |
+| POST   | `/api/financial/payments/:id/reject` | Owner/Manager | Reject a payment submission |
+| POST   | `/api/customer-cases` | Owner/Manager      | Create a customer vehicle/order case |
+| POST   | `/api/customer-cases/:id/updates` | Owner/Manager | Add a customer status update |
 | POST   | `/api/uploads`            | Owner/Manager      | Upload an image, returns its URL         |
 | GET    | `/api/site-content`       | Public             | Get all editable site content sections   |
 | PATCH  | `/api/site-content/:key`  | Owner/Manager      | Update one content section (contact/social/about) |
@@ -190,8 +210,15 @@ wherever MinIO serves public reads from.
 | PATCH  | `/api/admin-users/:id`    | Owner only         | Update role, active status, or password  |
 | DELETE | `/api/admin-users/:id`    | Owner only         | Delete an admin account                  |
 
-Admin routes require an `Authorization: Bearer <token>` header, using the
-token returned from `/api/auth/login`. Role checks happen server-side via
+Payment review is available in the admin dashboard at `/admin/payments` for
+Owners and Managers. A customer submission remains pending until staff checks
+the uploaded proof. Only approval creates a financial transaction and changes
+the account balance.
+
+Admin and customer browser sessions use secure HTTP-only cookies set by the
+login endpoints. The frontend sends them with credentialed requests, so JWTs
+are not exposed to JavaScript or stored in browser storage. Bearer headers are
+still accepted for non-browser API clients. Role checks happen server-side via
 `RolesGuard` (`src/auth/roles.guard.ts`) — the frontend also hides
 unavailable actions in the UI, but that's a UX nicety, not the actual
 security boundary.
@@ -201,14 +228,35 @@ unknown fields (`forbidNonWhitelisted`). Malformed submissions return a `400`
 with details of what failed — the frontend surfaces these as real form errors
 rather than a generic failure message.
 
+Public vehicle and hire-vehicle listings are paginated. Each response contains
+`items`, `total`, `page`, and `pageSize`; page sizes are capped at 100. Public
+read-only content is cacheable for one minute and can be served stale for up to
+five minutes while revalidating. Other API responses are marked `no-store`.
+Responses are compressed with gzip or deflate when the client supports it.
+
 ## Data model
 
-Defined in `prisma/schema.prisma`. Deliberately kept flat: request/inquiry
-records store their own contact details directly rather than through a
-normalized `Customer` table, since nothing yet needs that level of structure
-(see the project brief's "don't overengineer" guidance). `Vehicle` and
-`HireVehicle` store `features`/`images` as native PostgreSQL arrays rather
-than separate tables, for the same reason.
+Defined in `prisma/schema.prisma`. Public request/inquiry records keep their
+submitted contact details directly. Authenticated customers use a separate
+`CustomerUser` identity, one `Account`, and an append-only
+`FinancialTransaction` ledger. `AuditLog` records customer and transaction
+creation events. `Vehicle` and `HireVehicle` store `features`/`images` as
+native PostgreSQL arrays because they do not need independent image records.
+
+Financial writes update the balance and create the ledger entry in one Prisma
+transaction. History queries resolve the account from the authenticated JWT
+subject rather than a name or client-supplied user ID.
+
+Customers cannot create ledger transactions or change their balance directly.
+They submit a payment amount and an image of the proof of payment. Every
+submission starts as `PENDING`. An Owner or Manager must review it and approve
+it before the account balance and append-only ledger change. Rejections leave
+the balance unchanged. Customer-facing sessions expire after 30 minutes of
+inactivity, in addition to the two-hour JWT expiry configured by the server.
+Production cookies use `Secure` and `SameSite=None` because the frontend and
+API are deployed on separate domains. `FRONTEND_URL` is required in production
+and CORS allows only that exact origin. State-changing cookie requests also
+require the CSRF token issued by `/api/auth/csrf`.
 
 ## Hire pricing
 
@@ -330,9 +378,9 @@ on the public POST endpoints (forms), not to restrict normal browsing —
 adjust the limit in `app.module.ts` if it turns out too tight or too loose
 in practice.
 
-## Note on this build
+## Verification
 
-This backend was written in an environment without internet or database
-access, so it hasn't been run, migrated, or seeded here. Please treat your
-first `npm install && npx prisma migrate dev` as the real verification step
-and report back anything that doesn't work as expected.
+Run `npm run build`, `npm run lint`, and `npx prisma validate` before deploying.
+For a database-backed environment, also run `npm run prisma:deploy` and check
+`npx prisma migrate status`. Do not use `prisma migrate dev` against a shared
+or production database.

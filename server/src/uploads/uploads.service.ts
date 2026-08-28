@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
-import { extname, join } from "path";
+import { join } from "path";
 import { promises as fs } from "fs";
+import sharp from "sharp";
 
 /**
  * Two storage strategies, selected automatically based on env config:
@@ -50,15 +51,19 @@ export class UploadsService {
   }
 
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
-    const filename = `${randomUUID()}${extname(file.originalname)}`;
+    const filename = `${randomUUID()}.webp`;
+    const optimizedImage = await sharp(file.buffer)
+      .resize({ width: 2000, height: 1400, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
 
     if (this.s3Client && this.bucket) {
       await this.s3Client.send(
         new PutObjectCommand({
           Bucket: this.bucket,
           Key: filename,
-          Body: file.buffer,
-          ContentType: file.mimetype,
+          Body: optimizedImage,
+          ContentType: "image/webp",
         })
       );
       return { url: this.buildPublicUrl(filename) };
@@ -66,7 +71,7 @@ export class UploadsService {
 
     const uploadsDir = join(process.cwd(), "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
-    await fs.writeFile(join(uploadsDir, filename), file.buffer);
+    await fs.writeFile(join(uploadsDir, filename), optimizedImage);
     return { url: `/uploads/${filename}` };
   }
 

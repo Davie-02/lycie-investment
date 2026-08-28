@@ -52,6 +52,17 @@
   margin-left: auto;
 }
 
+.navbar__account-link {
+  color: var(--color-primary);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.navbar__account-link:hover {
+  color: var(--color-accent-dark);
+}
+
 .navbar__toggle {
   margin-left: auto;
   display: flex;

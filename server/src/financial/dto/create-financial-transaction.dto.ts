@@ -8,5 +8,5 @@ export class CreateFinancialTransactionDto {
 
   @IsOptional()
   @IsString()
-  description?: string;
+  note?: string;
 }

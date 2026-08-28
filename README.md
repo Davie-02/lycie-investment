@@ -3,15 +3,12 @@
 A corporate website for Lycie Investment, covering vehicle sourcing, importing,
 dealership, hire, and clearing services.
 
-This repo has two parts:
+The repository contains two applications:
 
 ```
-lycie-investment/       Frontend (React + TypeScript + Vite) — this folder
+lycie-investment/       Frontend (React + TypeScript + Vite)
 server/                 Backend API (NestJS + Prisma + PostgreSQL)
 ```
-
-## Project status
-
 Phases 1–5 of the build plan are complete: the full UI, all forms, and a real
 backend with a database are in place. Vehicle/hire listings are served from
 PostgreSQL, and form submissions are persisted through the API rather than
@@ -24,7 +21,12 @@ simulated.
 - Vehicle inquiry, import request, clearing request, hire request, and contact
   forms — validated on the client and again on the server, with real
   loading/success/error states throughout
-- Responsive, mobile-first layout
+- Customer registration, login, balance, and transaction history with
+  server-side ownership checks
+- Payment-proof submissions that remain pending until an authorized staff
+  member approves them
+- Staff payment review in the admin dashboard, including proof viewing and
+  approval or rejection with a review note
 - Semantic HTML, keyboard-navigable, labeled forms, visible focus states
 - Per-page SEO (title, meta description)
 - Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
@@ -34,6 +36,14 @@ simulated.
 
 **Frontend:** React 18, TypeScript, Vite, React Router
 **Backend:** NestJS, Prisma, PostgreSQL — see `server/README.md`
+## Not yet built
+
+- Payment-provider integration. The internal customer ledger does not move
+  money through a bank or payment provider.
+
+Browser authentication uses HTTP-only session cookies. JWTs are not stored in
+local storage or exposed to frontend JavaScript. Customer sessions expire
+after 30 minutes of inactivity and also respect the server JWT expiry.
 
 ## Requirements
 
@@ -52,7 +62,7 @@ You need both the API and the frontend running.
 cd server
 npm install
 cp .env.example .env    # then point DATABASE_URL at your Postgres instance
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 npm run prisma:seed
 npm run start:dev
 ```
@@ -81,6 +91,19 @@ npm run build
 ```
 
 Type-checks the project and produces a production build in `dist/`.
+
+## Performance
+
+The frontend uses route-level lazy loading, so public, customer, and admin page
+code is downloaded only when needed. Vehicle and hire-vehicle APIs return
+bounded pages rather than unlimited result sets. Public read-only API responses
+have short-lived cache headers, other API responses are not cached, and the
+API compresses responses when supported by the client.
+
+New uploaded images are resized and converted to WebP on the server. Existing
+large uploads should be replaced through the admin dashboard when practical.
+The current deployment uses one free-tier API instance; horizontal load
+balancing and autoscaling require hosting support beyond the free tier.
 
 ## Preview a production build
 
@@ -181,17 +204,9 @@ inactivity — both configurable in `server/.env` (`JWT_EXPIRES_IN`) and
 See `DEPLOYMENT.md` for step-by-step instructions to get this off localhost
 (frontend + API + Postgres + image storage on real hosting).
 
-## Not yet built
+## Verification
 
-- Payments, CMS
-- Multiple admin accounts / roles — there's one admin login, configured via
-  environment variables
-
-## Note on this build
-
-This project was built in an environment without internet or database
-access, so the backend in particular has not been run, migrated, or seeded
-here, and the frontend hasn't been re-verified against a live API. The
-previous frontend-only pass was confirmed working locally by the project
-owner; please treat connecting the two as the next real verification step
-and report back anything that doesn't work as expected.
+The frontend and backend build successfully, the Prisma schema validates, and
+the committed migrations are applied with `prisma migrate deploy`. Browser
+tests are not currently part of the repository; use the build and API checks
+above as the baseline verification commands.
