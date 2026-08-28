@@ -17,6 +17,8 @@ import { SiteContentModule } from "./site-content/site-content.module";
 import { NoticesModule } from "./notices/notices.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { HealthController } from "./common/health.controller";
+import { CustomersModule } from "./customers/customers.module";
+import { FinancialModule } from "./financial/financial.module";
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { HealthController } from "./common/health.controller";
     HireRequestsModule,
     ContactModule,
     UploadsModule,
+    CustomersModule,
+    FinancialModule,
   ],
   controllers: [HealthController],
   providers: [

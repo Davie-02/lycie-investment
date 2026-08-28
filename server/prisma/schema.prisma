@@ -8,9 +8,9 @@ datasource db {
 }
 
 enum AdminRole {
-  OWNER   // full access, including managing other admin accounts
+  OWNER // full access, including managing other admin accounts
   MANAGER // vehicles, hire vehicles, site content, requests — not user management
-  VIEWER  // read-only on submitted requests
+  VIEWER // read-only on submitted requests
 }
 
 model AdminUser {
@@ -22,6 +22,72 @@ model AdminUser {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/// Customer identity is separate from staff administration. Names are
+/// intentionally not unique; email is the login credential for this domain.
+model CustomerUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  account   Account?
+  auditLogs AuditLog[]
+}
+
+model Account {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @unique @db.Uuid
+  currency   String   @default("MWK")
+  balance    Decimal  @default(0) @db.Decimal(19, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  customer     CustomerUser           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  transactions FinancialTransaction[]
+
+  @@index([customerId])
+}
+
+enum FinancialTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+}
+
+model FinancialTransaction {
+  id          String                   @id @default(uuid()) @db.Uuid
+  accountId   String                   @db.Uuid
+  type        FinancialTransactionType
+  amount      Decimal                  @db.Decimal(19, 2)
+  currency    String
+  reference   String                   @unique
+  description String?
+  createdAt   DateTime                 @default(now())
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+
+  @@index([accountId, createdAt])
+  @@index([accountId, type, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  entityType  String
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  createdAt   DateTime @default(now())
+
+  actor CustomerUser? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId, createdAt])
 }
 
 /// Editable site text — contact details, social links, About page copy —
@@ -42,27 +108,27 @@ model SiteContent {
 // not a requirement, and normalizing photos into their own table isn't
 // justified until an admin/CMS needs to manage them independently.
 model Vehicle {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  make        String
-  model       String
-  year        Int
-  price       Int
-  currency    String   @default("MWK")
-  mileageKm   Int
-  fuelType    String
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  make         String
+  model        String
+  year         Int
+  price        Int
+  currency     String   @default("MWK")
+  mileageKm    Int
+  fuelType     String
   transmission String
-  bodyType    String
-  engine      String
-  driveType   String
-  condition   String
-  location    String
-  status      String   @default("available") // available | reserved | sold
-  description String
-  features    String[]
-  images      String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  bodyType     String
+  engine       String
+  driveType    String
+  condition    String
+  location     String
+  status       String   @default("available") // available | reserved | sold
+  description  String
+  features     String[]
+  images       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   inquiries Inquiry[]
 }
@@ -118,21 +184,21 @@ model ImportRequest {
 }
 
 model ClearingRequest {
-  id                     String    @id @default(cuid())
-  fullName               String
-  phone                  String
-  email                  String
-  vehicleMake            String
-  vehicleModel           String?
-  year                   Int?
-  vin                    String
-  currentLocation        String
-  arrivalPortOrBorder    String?
-  expectedArrivalDate    DateTime?
-  availableDocuments     String?
-  additionalInformation  String?
-  status                 String    @default("new")
-  createdAt              DateTime  @default(now())
+  id                    String    @id @default(cuid())
+  fullName              String
+  phone                 String
+  email                 String
+  vehicleMake           String
+  vehicleModel          String?
+  year                  Int?
+  vin                   String
+  currentLocation       String
+  arrivalPortOrBorder   String?
+  expectedArrivalDate   DateTime?
+  availableDocuments    String?
+  additionalInformation String?
+  status                String    @default("new")
+  createdAt             DateTime  @default(now())
 }
 
 model HireRequest {
