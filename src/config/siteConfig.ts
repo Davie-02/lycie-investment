@@ -14,8 +14,8 @@ import type { SiteContent } from "@/types/siteContent";
  */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
   contact: {
-    phone: "+265 000 000 000",
-    email: "info@lycieinvestment.com",
+    phone: "Contact our team for current details",
+    email: "hello@lycieinvestment.com",
     address: "Lilongwe, Malawi",
     businessHours: "Monday – Friday, 8:00 – 17:00",
     whatsappNumber: null,
@@ -32,7 +32,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     whatWeDo:
       "We work across the full vehicle journey — sourcing a vehicle that matches what a customer needs, arranging the import, coordinating clearing once it arrives, and offering vehicles directly for sale or hire. Rather than handing customers off between separate agents, we stay involved from request to delivery.",
     howWeWork:
-      "We ask what a customer actually needs — budget, timeline, intended use — and communicate clearly at each stage rather than leaving customers to guess where things stand. Specific figures on experience, inventory size, or partnerships will be added here once confirmed by the company.",
+      "We ask what a customer actually needs — budget, timeline, intended use — and communicate clearly at each stage, from the first request through delivery or handover.",
     whyChooseUs:
       "Reliable sourcing, import assistance, clearing support and flexible hire — handled by one team who can answer questions across the whole process rather than pointing you elsewhere.",
   },
