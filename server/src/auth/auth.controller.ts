@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Res } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
@@ -16,6 +17,10 @@ export class AuthController {
     return { token };
   }
 
+  // 5 attempts per minute per IP — tight enough to make password
+  // brute-forcing impractical, loose enough that a real admin mistyping
+  // their password a couple of times never gets blocked.
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("login")
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) response: Response) {
     const session = await this.authService.login(dto.email, dto.password);

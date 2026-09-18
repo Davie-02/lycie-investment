@@ -370,13 +370,96 @@ on a hosting tier that spins down on inactivity (see `DEPLOYMENT.md`).
   Options: upgrade to Render's always-on Starter tier, or ping the API
   periodically from an external uptime monitor to keep it awake.
 
+## Security
+
+A summary of what's in place, and why, for anyone auditing this before a
+production launch:
+
+- **Password hashing** — bcrypt (10 rounds for admins, 12 for customers),
+  never returned by any API response (`SAFE_SELECT`/`CUSTOMER_SELECT`
+  constants exclude `passwordHash` explicitly).
+- **HTTP security headers** — `helmet` (see `main.ts`). Content-Security-Policy
+  is deliberately disabled since this server only ever returns JSON and
+  images, never HTML for a browser to render — CSP protects against
+  malicious *scripts* on a page, which doesn't apply here.
+  `crossOriginResourcePolicy` is set to `cross-origin` rather than helmet's
+  default, because the default would block the frontend from loading
+  vehicle photos served from this API (a different origin).
+- **CSRF protection** — a double-submit-cookie pattern (`src/auth/csrf.ts`):
+  the frontend fetches a token from `GET /api/auth/csrf`, then must send it
+  back as an `x-csrf-token` header on every state-changing request. This
+  matters because admin and customer sessions use httpOnly cookies (not
+  bearer tokens), and cookies are sent automatically by browsers on
+  cross-site requests unless something stops it. Requests using a
+  `Authorization: Bearer` header are exempt, since that pattern isn't
+  vulnerable to CSRF the same way.
+- **Rate limiting** — a generous global default (100 requests/60s per IP,
+  `@nestjs/throttler`) so normal browsing never hits it, plus a much
+  stricter limit specifically on login/register endpoints (5 attempts/60s)
+  to make password brute-forcing impractical. See `AppModule`,
+  `auth.controller.ts`, `customers.controller.ts`.
+- **Concurrency-safe money and booking operations** — payment approval,
+  hire booking confirmation, and admin-account changes that could strand
+  the system with no Owner all run inside Serializable-isolation database
+  transactions (`src/common/run-serializable.ts`), so two simultaneous
+  requests can't both succeed and corrupt data (e.g. double-crediting a
+  payment, double-booking a vehicle).
+- **No name-based or user-supplied-ID-based identity** — every endpoint
+  that returns "your own" data derives who "you" are from the verified JWT
+  (`@CurrentUser()`), never from a client-supplied ID in the request body
+  or query string.
+- **Input validation** — every DTO uses `class-validator` with
+  `whitelist: true, forbidNonWhitelisted: true` globally, so unexpected
+  fields in a request body are rejected rather than silently accepted.
+
+**Known, accepted limitation:** `customers.service.ts`'s login doesn't do a
+dummy password comparison when the email doesn't exist, so there's a
+theoretical timing difference between "no such account" and "wrong
+password." This is a real, low-severity technique some threat models care
+about; for this application's scale it wasn't judged worth the added
+complexity, but it's a one-line fix if that changes.
+
+## Login and logout — how each works
+
+Two independent login systems, both going through the same guard
+(`JwtAuthGuard`) and the same CSRF protection, but issuing separate cookies
+so an admin session and a customer session never get confused with each
+other:
+
+**Admin** (`/api/auth/*`): login checks the submitted email/password against
+the `AdminUser` table, and on success sets an httpOnly cookie
+(`lycie_admin_session`) containing a signed JWT. Logout clears that cookie.
+The frontend never sees or stores the token itself — `src/admin/adminApi.ts`
+relies entirely on the cookie being sent automatically (`credentials:
+"include"`) and reacts to a `401` by clearing local UI state and redirecting
+to `/admin/login`.
+
+**Customer** (`/api/customers/*`): same shape, different cookie
+(`lycie_customer_session`), different table (`CustomerUser`), and the JWT
+payload's `role` is fixed to `"CUSTOMER"` rather than one of the admin
+roles — this is what makes `@Roles("CUSTOMER")` vs `@Roles("OWNER",
+"MANAGER")` guards work correctly on shared route patterns like
+`/api/financial/me`.
+
+**What I verified by reading the code** (both directions of each flow):
+registering/logging in issues a valid session cookie; logging out clears it;
+`JwtAuthGuard` correctly reads the token from either an admin or a customer
+cookie (or a bearer header, for API-style access); role guards correctly
+separate what an admin token vs. a customer token can access; a wrong
+password is rejected with a generic "invalid email or password" (not
+"wrong password", which would let someone enumerate valid emails).
+
+**What I could not verify without a running database** (be sure to check
+these yourself before go-live): actually registering a customer end-to-end
+in a browser and confirming the cookie appears with the right flags in dev
+tools; confirming the CSRF flow works across your real deployed frontend
+and backend domains, not just localhost; confirming session expiry
+(`JWT_EXPIRES_IN`) actually forces a re-login rather than silently failing
+requests.
+
 ## Rate limiting
 
-All endpoints are rate-limited globally to 20 requests per 60 seconds per IP
-(`@nestjs/throttler`, see `AppModule`). This is meant to blunt scripted spam
-on the public POST endpoints (forms), not to restrict normal browsing —
-adjust the limit in `app.module.ts` if it turns out too tight or too loose
-in practice.
+See the Security section above.
 
 ## Verification
 

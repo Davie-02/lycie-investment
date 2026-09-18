@@ -38,6 +38,15 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     const resetTimeout = () => {
       window.clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
+        // Clears the local UI state immediately, and also tells the server
+        // to invalidate the actual session cookie — without this second
+        // part, the cookie stays valid until its full expiry even though
+        // the UI shows "logged out", which would let anyone still using
+        // this browser continue making authenticated requests.
+        void logoutCustomer().catch(() => {
+          // Logout failing shouldn't block clearing the local session below
+          // — the cookie will still expire on its own via JWT_EXPIRES_IN.
+        });
         clearCustomerSession();
         setCurrentUser(null);
         setIsAuthenticated(false);

@@ -1,19 +1,44 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";
+import FormField from "@/components/forms/FormField";
+import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import "./customer.css";
+
+type FormValues = { email: string; password: string };
+
+function validate(values: FormValues) {
+  const errors: Partial<Record<keyof FormValues, string>> = {};
+  if (!values.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!/^\S+@\S+\.\S+$/.test(values.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+  if (!values.password) errors.password = "Password is required.";
+  return errors;
+}
 
 export default function CustomerLogin() {
   const { login, isSubmitting, errorMessage } = useCustomerAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [values, setValues] = useState<FormValues>({ email: "", password: "" });
+  const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
+
+  function handleChange(field: keyof FormValues) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      setValues((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (await login(email, password)) {
+    const validationErrors = validate(values);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    if (await login(values.email, values.password)) {
       const destination = (location.state as { from?: string } | null)?.from ?? "/account";
       navigate(destination, { replace: true });
     }
@@ -29,34 +54,43 @@ export default function CustomerLogin() {
         </div>
       </section>
       <section className="section container customer-auth">
-        <form className="form-card customer-auth__form" onSubmit={handleSubmit}>
+        <form className="form-card customer-auth__form" onSubmit={handleSubmit} noValidate>
           <h2>Sign in</h2>
+
           {errorMessage && (
-            <p className="form-error" role="alert">
-              {errorMessage}
-            </p>
+            <FormStatusBanner status="error" successMessage="" errorMessage={errorMessage} />
           )}
-          <label htmlFor="customer-email">Email</label>
-          <input
-            id="customer-email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          <label htmlFor="customer-password">Password</label>
-          <input
-            id="customer-password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            minLength={8}
-          />
-          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in..." : "Sign in"}
-          </button>
-          <p className="text-muted">
+
+          <div className="form-grid">
+            <FormField
+              id="customer-email"
+              label="Email"
+              type="email"
+              required
+              value={values.email}
+              onChange={handleChange("email")}
+              error={errors.email}
+              autoComplete="username"
+            />
+            <FormField
+              id="customer-password"
+              label="Password"
+              type="password"
+              required
+              value={values.password}
+              onChange={handleChange("password")}
+              error={errors.password}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <div className="form-actions">
+            <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in…" : "Sign In"}
+            </button>
+          </div>
+
+          <p className="text-muted customer-auth__switch">
             New customer? <Link to="/account/register">Create an account</Link>
           </p>
         </form>

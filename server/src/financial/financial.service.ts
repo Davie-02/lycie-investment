@@ -1,8 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateFinancialTransactionDto } from "./dto/create-financial-transaction.dto";
 import { UploadsService } from "../uploads/uploads.service";
+import { runSerializable } from "../common/run-serializable";
 
 @Injectable()
 export class FinancialService {
@@ -23,7 +25,7 @@ export class FinancialService {
         amount: new Prisma.Decimal(dto.amount),
         currency: account.currency,
         proofUrl,
-        reference: `PAY-${crypto.randomUUID()}`,
+        reference: `PAY-${randomUUID()}`,
         note: dto.note,
       },
       select: {
@@ -43,7 +45,7 @@ export class FinancialService {
   }
 
   async reviewPayment(paymentId: string, adminId: string, approved: boolean, reviewNote?: string) {
-    return this.prisma.$transaction(async (tx) => {
+    return runSerializable(this.prisma, async (tx) => {
       const payment = await tx.paymentSubmission.findUnique({ where: { id: paymentId } });
       if (!payment) throw new NotFoundException("Payment submission not found.");
       if (payment.status !== "PENDING") {
@@ -57,6 +59,7 @@ export class FinancialService {
       };
 
       if (!approved) {
+        // Rejecting never touches the account balance — nothing to credit.
         return tx.paymentSubmission.update({
           where: { id: paymentId },
           data: { ...review, status: "REJECTED" },
@@ -66,11 +69,20 @@ export class FinancialService {
       const account = await tx.account.findUnique({ where: { customerId: payment.customerId } });
       if (!account) throw new NotFoundException("Account not found.");
 
+      // `increment` is an atomic database operation — it tells Postgres
+      // "add this amount to whatever the balance currently is", computed
+      // by the database itself in one step. This is deliberately NOT
+      // "read the balance, add in JavaScript, write it back", which would
+      // be unsafe: if two payments were approved at the same moment, the
+      // second write could overwrite the first and silently lose money.
       await tx.account.update({
         where: { id: account.id },
         data: { balance: { increment: payment.amount } },
       });
 
+      // The ledger entry (FinancialTransaction) is the permanent, auditable
+      // record of this credit — it's created in the same transaction as
+      // the balance update, so the two can never end up out of sync.
       const transaction = await tx.financialTransaction.create({
         data: {
           accountId: account.id,

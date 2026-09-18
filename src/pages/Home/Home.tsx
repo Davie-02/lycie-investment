@@ -1,5 +1,6 @@
 import Seo from "@/components/common/Seo";
 import Hero from "@/components/common/Hero";
+import VehicleCarousel from "@/components/common/VehicleCarousel";
 import ServicesSection from "@/components/services/ServicesSection";
 import JourneySection from "@/components/common/JourneySection";
 import FeaturedVehicles from "@/components/vehicles/FeaturedVehicles";
@@ -14,6 +15,7 @@ export default function Home() {
         description="Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi."
       />
       <Hero />
+      <VehicleCarousel />
       <ServicesSection />
       <JourneySection />
       <FeaturedVehicles />

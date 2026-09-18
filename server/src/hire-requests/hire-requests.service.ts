@@ -4,6 +4,7 @@ import { EmailService } from "../email/email.service";
 import { CreateHireRequestDto } from "./dto/create-hire-request.dto";
 import { UpdateHireRequestStatusDto } from "./dto/update-hire-request-status.dto";
 import { calculateHireCost } from "./hire-pricing.util";
+import { runSerializable } from "../common/run-serializable";
 import {
   hireRequestReceivedEmail,
   hireBookingConfirmedEmail,
@@ -112,35 +113,39 @@ export class HireRequestsService {
   }
 
   async updateStatus(id: string, dto: UpdateHireRequestStatusDto) {
-    const request = await this.prisma.hireRequest.findUnique({
-      where: { id },
-      include: { vehicle: true },
-    });
-    if (!request) {
-      throw new NotFoundException("Hire request not found.");
-    }
-
-    if (dto.status === "confirmed") {
-      const overlapping = await this.prisma.hireRequest.findFirst({
-        where: {
-          id: { not: id },
-          vehicleId: request.vehicleId,
-          status: "confirmed",
-          pickupDate: { lt: request.returnDate },
-          returnDate: { gt: request.pickupDate },
-        },
-      });
-      if (overlapping) {
-        throw new ConflictException(
-          "This vehicle already has a confirmed booking that overlaps these dates."
-        );
+    // The overlap check and the actual status write happen inside one
+    // Serializable transaction — otherwise two admins confirming two
+    // overlapping requests for the same vehicle at nearly the same moment
+    // could both pass the "no overlap" check before either one writes,
+    // and both would end up confirmed. See run-serializable.ts.
+    const updated = await runSerializable(this.prisma, async (tx) => {
+      const request = await tx.hireRequest.findUnique({ where: { id }, include: { vehicle: true } });
+      if (!request) {
+        throw new NotFoundException("Hire request not found.");
       }
-    }
 
-    const updated = await this.prisma.hireRequest.update({
-      where: { id },
-      data: { status: dto.status },
-      include: { vehicle: true },
+      if (dto.status === "confirmed") {
+        const overlapping = await tx.hireRequest.findFirst({
+          where: {
+            id: { not: id },
+            vehicleId: request.vehicleId,
+            status: "confirmed",
+            pickupDate: { lt: request.returnDate },
+            returnDate: { gt: request.pickupDate },
+          },
+        });
+        if (overlapping) {
+          throw new ConflictException(
+            "This vehicle already has a confirmed booking that overlaps these dates."
+          );
+        }
+      }
+
+      return tx.hireRequest.update({
+        where: { id },
+        data: { status: dto.status },
+        include: { vehicle: true },
+      });
     });
 
     const emailDetails = {

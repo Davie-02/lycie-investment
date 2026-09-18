@@ -5,6 +5,7 @@ import { NestExpressApplication } from "@nestjs/platform-express";
 import { ForbiddenException, ValidationPipe } from "@nestjs/common";
 import { join } from "path";
 import compression from "compression";
+import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module";
 import { hasValidCsrfToken } from "./auth/csrf";
@@ -22,6 +23,31 @@ async function bootstrap() {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
   });
+
+  // Sets a standard set of protective HTTP response headers (hides which
+  // framework is running, prevents the browser from being tricked into
+  // rendering responses as a different content type than intended, blocks
+  // this API's pages from being embedded in a hidden iframe on another
+  // site, forces HTTPS once deployed, etc).
+  //
+  // Two of helmet's defaults are turned off deliberately, not by oversight:
+  //   - contentSecurityPolicy: this server only ever returns JSON and
+  //     uploaded images, never HTML pages for a browser to render — CSP is
+  //     a browser-side protection against malicious *scripts* running on
+  //     a page, which doesn't apply here and could only cause confusing
+  //     false positives.
+  //   - crossOriginResourcePolicy: helmet's default ("same-origin") would
+  //     block the frontend (a different origin) from loading vehicle
+  //     photos served from this API's /uploads path via <img> tags —
+  //     exactly the image-display bug fixed earlier in this project.
+  //     "cross-origin" explicitly allows that, which is required for the
+  //     site's own images to display at all.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+    })
+  );
 
   app.setGlobalPrefix("api");
   app.use(compression());

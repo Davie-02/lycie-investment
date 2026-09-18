@@ -75,6 +75,7 @@ That's the whole database step. No server to manage.
    | --- | --- |
    | `DATABASE_URL` | The Neon connection string from step 1 |
    | `PORT` | `3001` |
+   | `NODE_ENV` | `production` — **required**, not optional. Session cookies use different security settings in production vs. development, and the app refuses to start without `FRONTEND_URL` set when this is `production`. |
    | `FRONTEND_URL` | Leave as `http://localhost:5173` for now — you'll update this after step 3 |
    | `ADMIN_NAME` | Your name |
    | `ADMIN_EMAIL` | Your email — this becomes your Owner login |
@@ -131,15 +132,34 @@ real Vercel URL (e.g. `https://lycie-investment.vercel.app`), and redeploy
 the backend (Render redeploys automatically when you save an env var
 change, or trigger it manually).
 
+**Why this matters for login specifically:** admin and customer logins use
+session cookies, not tokens stored in the browser. Your frontend
+(`*.vercel.app`) and backend (`*.onrender.com`) are on different domains,
+which browsers treat as "cross-site" — by default, cookies aren't sent on
+cross-site requests at all. With `NODE_ENV=production` set correctly (step
+2), the app configures cookies with `SameSite=None; Secure`, which is the
+one combination browsers allow for this cross-domain setup. If login
+appears to succeed but every subsequent request acts logged-out, this is
+almost always the cause — double check `NODE_ENV` is actually `production`
+on Render, not left at its local-dev default.
+
 ---
 
 ## 5. Verify end-to-end
 
-- Visit your Vercel URL. The homepage should load.
+- Visit your Vercel URL. The homepage should load, including the vehicle
+  carousel if any vehicles are marked available.
 - Visit `/vehicles` — should show the seeded sample vehicles.
 - Visit `/admin`, log in with the `ADMIN_EMAIL`/password you set, add a
   test vehicle with an image, confirm it appears on `/vehicles`.
-- Submit a form (e.g. `/contact`) and confirm it succeeds.
+- Submit a form (e.g. `/contact`) and confirm it succeeds — if you get a
+  "CSRF token" error here, the frontend's CSRF fetch is likely being
+  blocked by a CORS/cookie misconfiguration; recheck `FRONTEND_URL` and
+  `NODE_ENV` above.
+- Visit `/account/register`, create a test customer account, and confirm
+  you land on `/account` logged in.
+- Log out (customer and admin) and confirm you're actually returned to the
+  login screen and can't reach the account page by navigating back.
 
 If any step fails, check Render's **Logs** tab first — most issues at this
 stage are a missing/mistyped environment variable.

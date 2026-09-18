@@ -18,15 +18,22 @@ simulated.
 
 - Home, About, Vehicles (with filters + search), Vehicle Details, Import,
   Clearing, Hire, and Contact pages
+- A landing-page vehicle carousel showcasing featured/available vehicles —
+  auto-advancing, pausable on hover/focus, keyboard and touch navigable,
+  and respects the visitor's reduced-motion preference
 - Vehicle inquiry, import request, clearing request, hire request, and contact
   forms — validated on the client and again on the server, with real
-  loading/success/error states throughout
+  loading/success/error states throughout, and consistent styling across
+  every form on the site (public, customer, and admin)
 - Customer registration, login, balance, and transaction history with
   server-side ownership checks
 - Payment-proof submissions that remain pending until an authorized staff
   member approves them
 - Staff payment review in the admin dashboard, including proof viewing and
   approval or rejection with a review note
+- Security: CSRF protection, HTTP security headers (helmet), rate-limited
+  login endpoints, and Serializable-transaction-protected money/booking
+  operations — see `server/README.md`'s Security section for the full list
 - Semantic HTML, keyboard-navigable, labeled forms, visible focus states
 - Per-page SEO (title, meta description)
 - Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
@@ -36,14 +43,26 @@ simulated.
 
 **Frontend:** React 18, TypeScript, Vite, React Router
 **Backend:** NestJS, Prisma, PostgreSQL — see `server/README.md`
+
 ## Not yet built
 
 - Payment-provider integration. The internal customer ledger does not move
-  money through a bank or payment provider.
+  money through a bank or payment provider — payments are submitted as
+  proof (an image) and approved manually by staff.
+- Automated test suite. The concurrency-safety and login/logout fixes in
+  this project have been verified by careful code review, not by an
+  automated test run — see server/README.md's "Login and logout" section
+  for exactly what was and wasn't verified this way.
 
 Browser authentication uses HTTP-only session cookies. JWTs are not stored in
-local storage or exposed to frontend JavaScript. Customer sessions expire
-after 30 minutes of inactivity and also respect the server JWT expiry.
+local storage or exposed to frontend JavaScript. Sessions expire based on
+`JWT_EXPIRES_IN` (2 hours by default). The admin dashboard additionally
+auto-logs-out after 5 minutes of inactivity (`src/admin/components/AdminLayout.tsx`);
+the customer account area does the same after 30 minutes
+(`src/context/CustomerAuthContext.tsx`) — these are separate, shorter,
+client-side timeouts on top of the server-side session expiry, since a
+still-valid token doesn't help if someone's walked away from an unlocked
+screen.
 
 ## Requirements
 

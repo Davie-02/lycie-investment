@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, Res, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { JwtService } from "@nestjs/jwt";
 import { CustomersService } from "./customers.service";
@@ -17,12 +18,15 @@ export class CustomersController {
     private readonly jwt: JwtService
   ) {}
 
+  // Same reasoning as admin login's throttle — see auth.controller.ts.
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("register")
   async register(@Body() dto: RegisterCustomerDto, @Res({ passthrough: true }) response: Response) {
     const user = await this.customers.register(dto);
     return this.createSession(user, response);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post("login")
   async login(@Body() dto: LoginCustomerDto, @Res({ passthrough: true }) response: Response) {
     const user = await this.customers.authenticate(dto.email, dto.password);

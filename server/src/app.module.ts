@@ -22,11 +22,13 @@ import { FinancialModule } from "./financial/financial.module";
 
 @Module({
   imports: [
-    // Applies globally as a safety net (see the APP_GUARD provider below).
-    // 20 requests per 60 seconds per IP is generous for normal browsing —
-    // the intent is to blunt scripted form-spam on the public POST
-    // endpoints, not to throttle real visitors.
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 20 }]),
+    // Global default: generous enough that normal browsing never hits it
+    // (a single page load can easily make 3-4 GET requests), but still a
+    // real ceiling against scripted abuse. Login/register endpoints have
+    // their own much stricter limit — see auth.controller.ts and
+    // customers.controller.ts — since brute-forcing a password is the
+    // attack this kind of limit actually needs to stop.
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     // Enables @Cron() decorators (used by the daily hire-reminder job).
     ScheduleModule.forRoot(),
     PrismaModule,
