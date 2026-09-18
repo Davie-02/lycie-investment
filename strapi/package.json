@@ -9,11 +9,11 @@
     "preview": "strapi preview"
   },
   "dependencies": {
-    "@strapi/admin": "^5.52.3",
-    "@strapi/content-manager": "^5.52.3",
-    "@strapi/content-type-builder": "^5.52.3",
-    "@strapi/plugin-users-permissions": "^5.52.3",
-    "@strapi/strapi": "^5.52.3",
+    "@strapi/admin": "^5.54.0",
+    "@strapi/content-manager": "^5.54.0",
+    "@strapi/content-type-builder": "^5.54.0",
+    "@strapi/plugin-users-permissions": "^5.54.0",
+    "@strapi/strapi": "^5.54.0",
     "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
