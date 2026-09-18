@@ -7,13 +7,61 @@ import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import {
   getCustomerAccount,
   getCustomerCases,
+  getMyRequests,
   submitPayment,
+  updateCustomerProfile,
+  changeCustomerPassword,
   type CustomerAccount as Account,
   type CustomerCase,
+  type CustomerRequestSummary,
 } from "@/services/customer.service";
 import { ApiError } from "@/services/http";
 import { formatCurrency } from "@/utils/format";
 import "./customer.css";
+
+const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
+  inquiry: "Vehicle inquiry",
+  import: "Import request",
+  clearing: "Clearing request",
+  hire: "Hire request",
+  contact: "Contact message",
+};
+
+interface ProfileFormValues {
+  name: string;
+  email: string;
+}
+
+interface PasswordFormValues {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+function validateProfileForm(values: ProfileFormValues) {
+  const errors: Partial<Record<keyof ProfileFormValues, string>> = {};
+  if (!values.name.trim()) errors.name = "Full name is required.";
+  if (!values.email.trim()) {
+    errors.email = "Email is required.";
+  } else if (!/^\S+@\S+\.\S+$/.test(values.email)) {
+    errors.email = "Enter a valid email address.";
+  }
+  return errors;
+}
+
+function validatePasswordForm(values: PasswordFormValues) {
+  const errors: Partial<Record<keyof PasswordFormValues, string>> = {};
+  if (!values.currentPassword) errors.currentPassword = "Enter your current password.";
+  if (!values.newPassword) {
+    errors.newPassword = "Enter a new password.";
+  } else if (values.newPassword.length < 8) {
+    errors.newPassword = "New password must be at least 8 characters.";
+  }
+  if (values.confirmPassword !== values.newPassword) {
+    errors.confirmPassword = "Passwords do not match.";
+  }
+  return errors;
+}
 
 interface PaymentFormValues {
   amount: string;
@@ -30,10 +78,11 @@ function validatePaymentForm(values: PaymentFormValues, proof: File | null) {
 }
 
 export default function CustomerAccount() {
-  const { currentUser, logout } = useCustomerAuth();
+  const { currentUser, logout, updateCurrentUser } = useCustomerAuth();
   const navigate = useNavigate();
   const [account, setAccount] = useState<Account | null>(null);
   const [cases, setCases] = useState<CustomerCase[]>([]);
+  const [requests, setRequests] = useState<CustomerRequestSummary[]>([]);
   const [values, setValues] = useState<PaymentFormValues>({ amount: "", description: "" });
   const [proof, setProof] = useState<File | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof PaymentFormValues, string>>>({});
@@ -44,11 +93,31 @@ export default function CustomerAccount() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [profileValues, setProfileValues] = useState<ProfileFormValues>({
+    name: currentUser?.name ?? "",
+    email: currentUser?.email ?? "",
+  });
+  const [profileErrors, setProfileErrors] = useState<Partial<Record<keyof ProfileFormValues, string>>>({});
+  const [profileStatus, setProfileStatus] = useState<"idle" | "success" | "error">("idle");
+  const [profileErrorMessage, setProfileErrorMessage] = useState<string | null>(null);
+  const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
+
+  const [passwordValues, setPasswordValues] = useState<PasswordFormValues>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordErrors, setPasswordErrors] = useState<Partial<Record<keyof PasswordFormValues, string>>>({});
+  const [passwordStatus, setPasswordStatus] = useState<"idle" | "success" | "error">("idle");
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState<string | null>(null);
+  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
+
   useEffect(() => {
-    Promise.all([getCustomerAccount(), getCustomerCases()])
-      .then(([loadedAccount, loadedCases]) => {
+    Promise.all([getCustomerAccount(), getCustomerCases(), getMyRequests()])
+      .then(([loadedAccount, loadedCases, loadedRequests]) => {
         setAccount(loadedAccount);
         setCases(loadedCases);
+        setRequests(loadedRequests);
       })
       .catch((error: unknown) =>
         setLoadError(error instanceof ApiError ? error.message : "Unable to load your account.")
@@ -90,6 +159,62 @@ export default function CustomerAccount() {
   function handleLogout() {
     logout();
     navigate("/account/login");
+  }
+
+  function handleProfileChange(field: keyof ProfileFormValues) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      setProfileValues((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+  }
+
+  async function handleProfileSubmit(event: FormEvent) {
+    event.preventDefault();
+    const validationErrors = validateProfileForm(profileValues);
+    setProfileErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setProfileStatus("idle");
+    setProfileErrorMessage(null);
+    setIsProfileSubmitting(true);
+
+    try {
+      const updated = await updateCustomerProfile(profileValues);
+      updateCurrentUser(updated);
+      setProfileStatus("success");
+    } catch (error) {
+      setProfileErrorMessage(error instanceof ApiError ? error.message : "Unable to update your profile.");
+      setProfileStatus("error");
+    } finally {
+      setIsProfileSubmitting(false);
+    }
+  }
+
+  function handlePasswordChange(field: keyof PasswordFormValues) {
+    return (e: ChangeEvent<HTMLInputElement>) => {
+      setPasswordValues((prev) => ({ ...prev, [field]: e.target.value }));
+    };
+  }
+
+  async function handlePasswordSubmit(event: FormEvent) {
+    event.preventDefault();
+    const validationErrors = validatePasswordForm(passwordValues);
+    setPasswordErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setPasswordStatus("idle");
+    setPasswordErrorMessage(null);
+    setIsPasswordSubmitting(true);
+
+    try {
+      await changeCustomerPassword(passwordValues.currentPassword, passwordValues.newPassword);
+      setPasswordValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordStatus("success");
+    } catch (error) {
+      setPasswordErrorMessage(error instanceof ApiError ? error.message : "Unable to change your password.");
+      setPasswordStatus("error");
+    } finally {
+      setIsPasswordSubmitting(false);
+    }
   }
 
   return (
@@ -171,6 +296,52 @@ export default function CustomerAccount() {
                 </button>
               </div>
             </form>
+
+            <div className="customer-account__history">
+              <h2>My requests</h2>
+              {requests.length === 0 ? (
+                <p className="text-muted">
+                  Nothing here yet. Requests you submit while signed in — vehicle inquiries, hire bookings,
+                  import/clearing requests, and contact messages — will show up here.
+                </p>
+              ) : (
+                <div className="customer-account__table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Details</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {requests.map((request) => (
+                        <tr key={`${request.type}-${request.id}`}>
+                          <td>{new Date(request.createdAt).toLocaleDateString()}</td>
+                          <td>{REQUEST_TYPE_LABELS[request.type]}</td>
+                          <td>
+                            {request.summary}
+                            {request.hireDetails && (
+                              <>
+                                {" "}
+                                <span className="text-muted">
+                                  ({new Date(request.hireDetails.pickupDate).toLocaleDateString()} →{" "}
+                                  {new Date(request.hireDetails.returnDate).toLocaleDateString()},{" "}
+                                  {request.hireDetails.days} day{request.hireDetails.days === 1 ? "" : "s"},{" "}
+                                  {formatCurrency(request.hireDetails.totalCost, request.hireDetails.currency)})
+                                </span>
+                              </>
+                            )}
+                          </td>
+                          <td>{request.status.replace("_", " ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             <div className="customer-account__history">
               <h2>Vehicle updates</h2>
@@ -259,6 +430,102 @@ export default function CustomerAccount() {
                   </table>
                 </div>
               )}
+            </div>
+
+            <div className="customer-account__history customer-account__settings">
+              <h2>Profile settings</h2>
+              <form className="form-card customer-account__form" onSubmit={handleProfileSubmit} noValidate>
+                {profileStatus === "success" && (
+                  <FormStatusBanner status="success" successMessage="Profile updated." errorMessage={null} />
+                )}
+                {profileStatus === "error" && (
+                  <FormStatusBanner status="error" successMessage="" errorMessage={profileErrorMessage} />
+                )}
+
+                <div className="form-grid form-grid--2col">
+                  <FormField
+                    id="profile-name"
+                    label="Full Name"
+                    required
+                    value={profileValues.name}
+                    onChange={handleProfileChange("name")}
+                    error={profileErrors.name}
+                    autoComplete="name"
+                  />
+                  <FormField
+                    id="profile-email"
+                    label="Email"
+                    type="email"
+                    required
+                    value={profileValues.email}
+                    onChange={handleProfileChange("email")}
+                    error={profileErrors.email}
+                    autoComplete="username"
+                  />
+                </div>
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={isProfileSubmitting}>
+                    {isProfileSubmitting ? "Saving…" : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div className="customer-account__history customer-account__settings">
+              <h2>Change password</h2>
+              <form className="form-card customer-account__form" onSubmit={handlePasswordSubmit} noValidate>
+                {passwordStatus === "success" && (
+                  <FormStatusBanner
+                    status="success"
+                    successMessage="Password changed."
+                    errorMessage={null}
+                  />
+                )}
+                {passwordStatus === "error" && (
+                  <FormStatusBanner status="error" successMessage="" errorMessage={passwordErrorMessage} />
+                )}
+
+                <div className="form-grid form-grid--2col">
+                  <FormField
+                    id="current-password"
+                    label="Current Password"
+                    type="password"
+                    required
+                    value={passwordValues.currentPassword}
+                    onChange={handlePasswordChange("currentPassword")}
+                    error={passwordErrors.currentPassword}
+                    autoComplete="current-password"
+                    wrapperClassName="form-grid__full"
+                  />
+                  <FormField
+                    id="new-password"
+                    label="New Password"
+                    type="password"
+                    required
+                    value={passwordValues.newPassword}
+                    onChange={handlePasswordChange("newPassword")}
+                    error={passwordErrors.newPassword}
+                    autoComplete="new-password"
+                  />
+                  <FormField
+                    id="confirm-password"
+                    label="Confirm New Password"
+                    type="password"
+                    required
+                    value={passwordValues.confirmPassword}
+                    onChange={handlePasswordChange("confirmPassword")}
+                    error={passwordErrors.confirmPassword}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div className="form-actions">
+                  <button className="btn btn-primary" type="submit" disabled={isPasswordSubmitting}>
+                    {isPasswordSubmitting ? "Saving…" : "Change Password"}
+                  </button>
+                </div>
+              </form>
             </div>
           </>
         )}

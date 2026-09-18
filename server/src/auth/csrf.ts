@@ -1,5 +1,6 @@
 import { randomBytes, timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
+import { readCookie } from "./cookies";
 
 export const CSRF_COOKIE = "lycie_csrf";
 export const CSRF_HEADER = "x-csrf-token";
@@ -27,16 +28,4 @@ export function hasValidCsrfToken(request: Request): boolean {
   if (cookieToken.length !== headerToken.length) return false;
 
   return timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
-}
-
-function readCookie(header: string | undefined, name: string): string | undefined {
-  if (!header) return undefined;
-
-  for (const part of header.split(";")) {
-    const separator = part.indexOf("=");
-    if (separator < 0 || part.slice(0, separator).trim() !== name) continue;
-    return decodeURIComponent(part.slice(separator + 1).trim());
-  }
-
-  return undefined;
 }

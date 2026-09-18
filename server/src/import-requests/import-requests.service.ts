@@ -12,8 +12,8 @@ export class ImportRequestsService {
     private readonly emailService: EmailService
   ) {}
 
-  async create(dto: CreateImportRequestDto) {
-    const request = await this.prisma.importRequest.create({ data: dto });
+  async create(dto: CreateImportRequestDto, customerId?: string) {
+    const request = await this.prisma.importRequest.create({ data: { ...dto, customerId } });
 
     const template = adminNewSubmissionEmail("import request", [
       `${request.fullName} (${request.phone}, ${request.email})`,

@@ -5,14 +5,17 @@ import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto"
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { OptionalCustomerGuard } from "../auth/optional-customer.guard";
+import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 
 @Controller("import-requests")
 export class ImportRequestsController {
   constructor(private readonly importRequestsService: ImportRequestsService) {}
 
+  @UseGuards(OptionalCustomerGuard)
   @Post()
-  create(@Body() dto: CreateImportRequestDto) {
-    return this.importRequestsService.create(dto);
+  create(@Body() dto: CreateImportRequestDto, @CurrentCustomerId() customerId?: string) {
+    return this.importRequestsService.create(dto, customerId);
   }
 
   @UseGuards(JwtAuthGuard)

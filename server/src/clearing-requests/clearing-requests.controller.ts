@@ -5,14 +5,17 @@ import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto"
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { OptionalCustomerGuard } from "../auth/optional-customer.guard";
+import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 
 @Controller("clearing-requests")
 export class ClearingRequestsController {
   constructor(private readonly clearingRequestsService: ClearingRequestsService) {}
 
+  @UseGuards(OptionalCustomerGuard)
   @Post()
-  create(@Body() dto: CreateClearingRequestDto) {
-    return this.clearingRequestsService.create(dto);
+  create(@Body() dto: CreateClearingRequestDto, @CurrentCustomerId() customerId?: string) {
+    return this.clearingRequestsService.create(dto, customerId);
   }
 
   @UseGuards(JwtAuthGuard)

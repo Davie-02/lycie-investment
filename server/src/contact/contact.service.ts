@@ -12,8 +12,8 @@ export class ContactService {
     private readonly emailService: EmailService
   ) {}
 
-  async create(dto: CreateContactMessageDto) {
-    const message = await this.prisma.contactMessage.create({ data: dto });
+  async create(dto: CreateContactMessageDto, customerId?: string) {
+    const message = await this.prisma.contactMessage.create({ data: { ...dto, customerId } });
 
     const template = adminNewSubmissionEmail("contact message", [
       `${message.fullName} (${message.email}${message.phone ? `, ${message.phone}` : ""})`,

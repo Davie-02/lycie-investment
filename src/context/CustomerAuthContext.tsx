@@ -20,6 +20,7 @@ interface CustomerAuthContextValue {
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateCurrentUser: (user: CustomerUser) => void;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextValue | null>(null);
@@ -108,9 +109,26 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   }
 
+  // Called after a successful profile edit so the header greeting and
+  // localStorage-backed session reflect the new name/email immediately,
+  // without forcing a re-login.
+  function updateCurrentUser(user: CustomerUser) {
+    storeCustomerSession({ user });
+    setCurrentUser(user);
+  }
+
   return (
     <CustomerAuthContext.Provider
-      value={{ isAuthenticated, currentUser, isSubmitting, errorMessage, login, register, logout }}
+      value={{
+        isAuthenticated,
+        currentUser,
+        isSubmitting,
+        errorMessage,
+        login,
+        register,
+        logout,
+        updateCurrentUser,
+      }}
     >
       {children}
     </CustomerAuthContext.Provider>

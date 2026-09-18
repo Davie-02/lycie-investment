@@ -21,6 +21,8 @@ const BlogPost = lazy(() => import("@/pages/Blog/BlogPost"));
 const CustomerLogin = lazy(() => import("@/pages/Customer/CustomerLogin"));
 const CustomerRegister = lazy(() => import("@/pages/Customer/CustomerRegister"));
 const CustomerAccount = lazy(() => import("@/pages/Customer/CustomerAccount"));
+const ForgotPassword = lazy(() => import("@/pages/Customer/ForgotPassword"));
+const ResetPassword = lazy(() => import("@/pages/Customer/ResetPassword"));
 const AdminLayout = lazy(() => import("@/admin/components/AdminLayout"));
 const AdminLogin = lazy(() => import("@/admin/pages/AdminLogin"));
 const AdminDashboard = lazy(() => import("@/admin/pages/AdminDashboard"));
@@ -57,6 +59,8 @@ export default function AppRoutes() {
         <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/account/login" element={<CustomerLogin />} />
         <Route path="/account/register" element={<CustomerRegister />} />
+        <Route path="/account/forgot-password" element={<ForgotPassword />} />
+        <Route path="/account/reset-password" element={<ResetPassword />} />
         <Route path="/account" element={<CustomerAccountRoute />} />
         </Route>
 

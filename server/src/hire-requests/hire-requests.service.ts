@@ -20,7 +20,7 @@ export class HireRequestsService {
     private readonly emailService: EmailService
   ) {}
 
-  async create(dto: CreateHireRequestDto) {
+  async create(dto: CreateHireRequestDto, customerId?: string) {
     const vehicle = await this.prisma.hireVehicle.findUnique({
       where: { id: dto.vehicleId },
     });
@@ -54,6 +54,7 @@ export class HireRequestsService {
         days,
         totalCost,
         currency: vehicle.currency,
+        customerId,
       },
     });
 

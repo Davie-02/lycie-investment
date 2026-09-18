@@ -12,9 +12,9 @@ export class InquiriesService {
     private readonly emailService: EmailService
   ) {}
 
-  async create(dto: CreateInquiryDto) {
+  async create(dto: CreateInquiryDto, customerId?: string) {
     const inquiry = await this.prisma.inquiry.create({
-      data: dto,
+      data: { ...dto, customerId },
       include: { vehicle: { select: { make: true, model: true, year: true } } },
     });
 

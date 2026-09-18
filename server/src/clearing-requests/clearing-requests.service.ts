@@ -12,11 +12,12 @@ export class ClearingRequestsService {
     private readonly emailService: EmailService
   ) {}
 
-  async create(dto: CreateClearingRequestDto) {
+  async create(dto: CreateClearingRequestDto, customerId?: string) {
     const request = await this.prisma.clearingRequest.create({
       data: {
         ...dto,
         expectedArrivalDate: dto.expectedArrivalDate ? new Date(dto.expectedArrivalDate) : undefined,
+        customerId,
       },
     });
 

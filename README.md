@@ -28,8 +28,11 @@ simulated.
   forms — validated on the client and again on the server, with real
   loading/success/error states throughout, and consistent styling across
   every form on the site (public, customer, and admin)
-- Customer registration, login, balance, and transaction history with
-  server-side ownership checks
+- Customer registration, login, logout, forgot/reset password, balance, and
+  transaction history with server-side ownership checks
+- A customer profile portal: edit name/email, change password, and a unified
+  history of every inquiry/import/clearing/hire request and contact message
+  submitted while signed in ("My Requests")
 - Payment-proof submissions that remain pending until an authorized staff
   member approves them
 - Staff payment review in the admin dashboard, including proof viewing and
@@ -40,9 +43,14 @@ simulated.
 - Semantic HTML, keyboard-navigable, labeled forms, visible focus states
 - Per-page SEO (title, meta description), with sitewide defaults and social
   metadata sourced from the CMS when it's configured
-- Testimonials, FAQ, and a blog, sourced from a separate Strapi CMS so
-  non-technical staff can publish marketing content without a deploy — see
-  server/README.md's "CMS content (Strapi)" section
+- Testimonials, FAQ, and a blog, designed to be sourced from a separate
+  Strapi CMS (`strapi/`) so non-technical staff can publish marketing
+  content without a deploy — the integration code (schemas, NestJS proxy,
+  frontend pages) is in place and degrades gracefully when unconfigured,
+  but **Strapi itself currently fails to boot under Node 20+** due to an
+  unresolved upstream bug ([strapi/strapi#25993](https://github.com/strapi/strapi/issues/25993))
+  — see server/README.md's "CMS content (Strapi)" section before relying on
+  it
 - Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
@@ -59,13 +67,10 @@ simulated.
   proof (an image) and approved manually by staff.
 - Broader automated test coverage. What exists today: backend unit tests
   (`server/`, run with `npm test`) for the auth guards and hire-pricing
-  math, and a Playwright E2E harness (root, run with `npm run test:e2e`)
-  covering customer register/login/session-persistence/logout and admin
-  login/vehicle-CRUD/logout, each against an isolated `lycie_investment_test`
-  database that's wiped and reseeded on every run — see "Testing" below.
-  Coverage is intentionally narrow (the auth boundary and money/booking math
-  first, since those are the highest-consequence areas) rather than
-  exhaustive; most endpoints still have no automated test.
+  math — the auth boundary and the money/booking math, the two
+  highest-consequence areas — see "Testing" below. No end-to-end/browser
+  test suite; most endpoints and UI flows have no automated coverage and
+  are verified manually.
 
 Browser authentication uses HTTP-only session cookies. JWTs are not stored in
 local storage or exposed to frontend JavaScript. Sessions expire based on
@@ -152,33 +157,9 @@ cd server
 npm test
 ```
 
-End-to-end tests (Playwright — customer and admin auth flows) run against a
-**separate, dedicated database**, never your local dev database. One-time
-setup:
-
-```bash
-createdb lycie_investment_test   # same Postgres user as your dev DB
-npx playwright install chromium  # downloads a browser Playwright drives
-```
-
-Then from the repo root:
-
-```bash
-npm run test:e2e
-```
-
-This boots the frontend and backend itself (`playwright.config.ts`'s
-`webServer` entries) against `lycie_investment_test`, running
-`prisma migrate reset --force` first to wipe and reseed it fresh — so runs
-are reproducible and never touch or depend on your own local data. The seeded
-test admin account's credentials live in `tests/constants.ts` (not a real
-secret — this account only ever exists in a throwaway test database).
-
-Coverage today is intentionally narrow: the customer register → login →
-refresh → logout → protected-route-denied flow, and the admin
-login → create/edit/delete a vehicle → logout → protected-route-denied flow.
-Most endpoints and admin screens still have no automated test — see
-"Not yet built" above.
+There is no end-to-end/browser test suite. New features and fixes are
+verified manually against a running instance of the site — see "Not yet
+built" above.
 
 ## Lint
 

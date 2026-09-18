@@ -189,7 +189,13 @@ wherever MinIO serves public reads from.
 | POST   | `/api/auth/login`         | Public             | Admin login, returns a JWT + user profile |
 | POST   | `/api/customers/register` | Public             | Create a customer and account       |
 | POST   | `/api/customers/login`    | Public             | Customer login, returns a JWT + profile |
+| POST   | `/api/customers/logout`   | Public             | Clear the customer session cookie   |
+| POST   | `/api/customers/forgot-password` | Public      | Email a password reset link if the address has an account (same response either way) |
+| POST   | `/api/customers/reset-password` | Public       | Set a new password using a valid, unexpired reset token |
+| PATCH  | `/api/customers/me`       | Customer           | Update name and/or email            |
+| POST   | `/api/customers/me/change-password` | Customer | Change password (requires current password) |
 | GET    | `/api/customers/me/cases` | Customer           | View staff-managed vehicle/order updates |
+| GET    | `/api/customers/me/requests` | Customer        | Unified history of inquiries/import/clearing/hire requests and contact messages submitted while signed in |
 | GET    | `/api/financial/me`       | Customer           | Get balance and paginated history   |
 | POST   | `/api/financial/me/payment-submissions` | Customer | Submit amount and proof for review |
 | GET    | `/api/financial/payments` | Owner/Manager      | List payment submissions to review  |
@@ -240,6 +246,21 @@ five minutes while revalidating. Other API responses are marked `no-store`.
 Responses are compressed with gzip or deflate when the client supports it.
 
 ## CMS content (Strapi)
+
+**Known blocker, confirmed by actually trying it: Strapi (5.52.3 and
+5.54.0, the latest as of writing) fails to boot at all under Node 20+**,
+including the Node 24 this project otherwise runs on — `strapi develop`
+and `strapi start` both crash immediately with
+`ERR_UNSUPPORTED_DIR_IMPORT` on a `lodash/fp` import inside Strapi's own
+compiled output. This is a known, open, unresolved upstream issue
+([strapi/strapi#25993](https://github.com/strapi/strapi/issues/25993)), not
+something wrong with this project's Strapi setup, and there's no confirmed
+safe workaround as of this writing. Before relying on this integration,
+confirm Strapi actually boots for you — it may work on an older Node LTS
+(the bug reports are inconsistent about exactly which versions are
+affected); if it doesn't, the whole `/cms/*` integration degrades
+gracefully to "no CMS content" rather than breaking the rest of the site
+(see below), so nothing else depends on this working.
 
 Testimonials, FAQ, blog posts and SEO settings are edited in a separate
 Strapi CMS (`../strapi`), not in this API or its database. Everything else —
@@ -369,10 +390,20 @@ a real email account. To enable it:
 | Booking marked returned | Customer | "Thanks for hiring with Lycie Investment" |
 | Confirmed booking due back tomorrow | Customer | Reminder (once per booking — see below) |
 | Confirmed booking overdue | Customer | Overdue notice (once per booking — see below) |
+| Password reset requested | Customer | Reset link, expires in 1 hour |
 
 Reverting a booking to "pending" doesn't send anything — that's treated as
 an internal admin correction, not something the customer needs to hear
 about.
+
+**Password reset specifically needs `RESEND_API_KEY` set to actually work**
+in a way the other notifications don't: those are all "nice to have"
+confirmations, but if email sending is skipped, `POST
+/customers/forgot-password` still returns its generic success response (by
+design — it never reveals whether an account exists) while silently sending
+nothing, leaving a customer with no way to know the reset link never
+arrived. Don't deploy without `RESEND_API_KEY` configured if customer
+self-service password reset needs to actually work.
 
 ## Due/overdue reminders
 

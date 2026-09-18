@@ -5,14 +5,17 @@ import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto"
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { OptionalCustomerGuard } from "../auth/optional-customer.guard";
+import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 
 @Controller("inquiries")
 export class InquiriesController {
   constructor(private readonly inquiriesService: InquiriesService) {}
 
+  @UseGuards(OptionalCustomerGuard)
   @Post()
-  create(@Body() dto: CreateInquiryDto) {
-    return this.inquiriesService.create(dto);
+  create(@Body() dto: CreateInquiryDto, @CurrentCustomerId() customerId?: string) {
+    return this.inquiriesService.create(dto, customerId);
   }
 
   @UseGuards(JwtAuthGuard)

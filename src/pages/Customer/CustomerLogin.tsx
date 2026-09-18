@@ -91,6 +91,9 @@ export default function CustomerLogin() {
           </div>
 
           <p className="text-muted customer-auth__switch">
+            <Link to="/account/forgot-password">Forgot your password?</Link>
+          </p>
+          <p className="text-muted customer-auth__switch">
             New customer? <Link to="/account/register">Create an account</Link>
           </p>
         </form>

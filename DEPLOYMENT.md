@@ -221,8 +221,14 @@ on Render, not left at its local-dev default.
   `NODE_ENV` above.
 - Visit `/account/register`, create a test customer account, and confirm
   you land on `/account` logged in.
+- On `/account`, confirm you can edit your name/email under Profile settings
+  and change your password under Change Password.
 - Log out (customer and admin) and confirm you're actually returned to the
   login screen and can't reach the account page by navigating back.
+- From `/account/login`, click "Forgot your password?", request a reset for
+  your test account, and confirm the email actually arrives (this needs
+  `RESEND_API_KEY` set — see `server/README.md`'s Email notifications
+  section) and that the link lets you set a new password and log in with it.
 - If you set up the CMS (section 2.5): visit `/faq` and confirm published
   FAQ entries appear; visit the homepage and confirm testimonials render if
   you published any.

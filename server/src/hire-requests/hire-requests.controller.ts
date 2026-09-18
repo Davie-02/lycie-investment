@@ -5,14 +5,17 @@ import { UpdateHireRequestStatusDto } from "./dto/update-hire-request-status.dto
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
+import { OptionalCustomerGuard } from "../auth/optional-customer.guard";
+import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 
 @Controller("hire-requests")
 export class HireRequestsController {
   constructor(private readonly hireRequestsService: HireRequestsService) {}
 
+  @UseGuards(OptionalCustomerGuard)
   @Post()
-  create(@Body() dto: CreateHireRequestDto) {
-    return this.hireRequestsService.create(dto);
+  create(@Body() dto: CreateHireRequestDto, @CurrentCustomerId() customerId?: string) {
+    return this.hireRequestsService.create(dto, customerId);
   }
 
   @UseGuards(JwtAuthGuard)

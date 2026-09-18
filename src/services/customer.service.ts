@@ -49,6 +49,22 @@ export interface PaymentSubmission {
   createdAt: string;
 }
 
+export interface CustomerRequestSummary {
+  id: string;
+  type: "inquiry" | "import" | "clearing" | "hire" | "contact";
+  summary: string;
+  status: string;
+  createdAt: string;
+  hireDetails?: {
+    vehicleName: string;
+    pickupDate: string;
+    returnDate: string;
+    days: number;
+    totalCost: number;
+    currency: string;
+  };
+}
+
 export interface CustomerCase {
   id: string;
   title: string;
@@ -151,6 +167,38 @@ export function getCustomerAccount() {
 
 export function getCustomerCases() {
   return customerFetch<CustomerCase[]>("/customers/me/cases");
+}
+
+export function getMyRequests() {
+  return customerFetch<CustomerRequestSummary[]>("/customers/me/requests");
+}
+
+export function updateCustomerProfile(updates: { name?: string; email?: string }) {
+  return customerFetch<CustomerUser>("/customers/me", {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export function changeCustomerPassword(currentPassword: string, newPassword: string) {
+  return customerFetch<{ updated: boolean }>("/customers/me/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+export function forgotPassword(email: string) {
+  return customerFetch<{ requested: boolean }>("/customers/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return customerFetch<{ reset: boolean }>("/customers/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, newPassword }),
+  });
 }
 
 export function submitPayment(amount: number, proof: File, note?: string) {

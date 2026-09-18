@@ -108,6 +108,19 @@ export function hireOverdueReminderEmail(details: HireEmailDetails) {
   };
 }
 
+export function passwordResetEmail(resetUrl: string) {
+  return {
+    subject: "Reset your Lycie Investment password",
+    html: wrapper(`
+      <p>Someone requested a password reset for this account. If that was you, click below to choose a new password — this link expires in 1 hour and only works once.</p>
+      <p style="margin: 24px 0;">
+        <a href="${resetUrl}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 20px; border-radius: 4px; text-decoration: none; display: inline-block;">Reset Password</a>
+      </p>
+      <p style="color: #667085; font-size: 13px;">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+    `),
+  };
+}
+
 export function adminNewSubmissionEmail(formType: string, summaryLines: string[]) {
   return {
     subject: `New ${formType} submission`,

@@ -14,14 +14,14 @@ enum AdminRole {
 }
 
 model AdminUser {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  role         AdminRole @default(MANAGER)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               String              @id @default(cuid())
+  name             String
+  email            String              @unique
+  passwordHash     String
+  role             AdminRole           @default(MANAGER)
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
   reviewedPayments PaymentSubmission[]
 }
 
@@ -36,10 +36,35 @@ model CustomerUser {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  account   Account?
-  auditLogs AuditLog[]
-  paymentSubmissions PaymentSubmission[]
-  cases             CustomerCase[]
+  account             Account?
+  auditLogs           AuditLog[]
+  paymentSubmissions  PaymentSubmission[]
+  cases               CustomerCase[]
+  inquiries           Inquiry[]
+  importRequests      ImportRequest[]
+  clearingRequests    ClearingRequest[]
+  hireRequests        HireRequest[]
+  contactMessages     ContactMessage[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+/// A password-reset link is only ever useful to the customer it was issued
+/// for and expires quickly, so — unlike the app's other CustomerUser
+/// relations, which use onDelete: Restrict to preserve an audit trail —
+/// these rows are deleted along with the customer rather than blocking it.
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  customerId String    @db.Uuid
+  /// SHA-256 of the token actually emailed to the customer — never store
+  /// the raw token, same reasoning as hashing passwords themselves.
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  customer CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
 }
 
 enum CustomerCaseStatus {
@@ -71,11 +96,11 @@ model CustomerCase {
 }
 
 model CustomerCaseUpdate {
-  id           String            @id @default(uuid()) @db.Uuid
-  caseId       String            @db.Uuid
-  status       CustomerCaseStatus
-  message      String
-  createdAt    DateTime          @default(now())
+  id        String             @id @default(uuid()) @db.Uuid
+  caseId    String             @db.Uuid
+  status    CustomerCaseStatus
+  message   String
+  createdAt DateTime           @default(now())
 
   customerCase CustomerCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
 
@@ -90,8 +115,8 @@ model Account {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  customer     CustomerUser           @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  transactions FinancialTransaction[]
+  customer           CustomerUser           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  transactions       FinancialTransaction[]
   paymentSubmissions PaymentSubmission[]
 
   @@index([customerId])
@@ -205,7 +230,7 @@ model Vehicle {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  inquiries Inquiry[]
+  inquiries     Inquiry[]
   customerCases CustomerCase[]
 }
 
@@ -224,26 +249,33 @@ model HireVehicle {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  hireRequests HireRequest[]
+  hireRequests  HireRequest[]
   customerCases CustomerCase[]
 }
 
 model Inquiry {
-  id        String   @id @default(cuid())
-  fullName  String
-  phone     String
-  email     String
-  vehicleId String?
-  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id])
-  message   String?
+  id         String        @id @default(cuid())
+  fullName   String
+  phone      String
+  email      String
+  vehicleId  String?
+  vehicle    Vehicle?      @relation(fields: [vehicleId], references: [id])
+  message    String?
   /// "new" | "contacted" | "closed" — lets an admin mark that a submission
   /// has been followed up on, so nothing quietly falls through the cracks.
-  status    String   @default("new")
-  createdAt DateTime @default(now())
+  status     String        @default("new")
+  /// Set automatically when submitted by a logged-in customer (never
+  /// user-supplied) so it shows up in their account portal — null for
+  /// anonymous/visitor submissions, which remain fully supported.
+  customerId String?       @db.Uuid
+  customer   CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime      @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 model ImportRequest {
-  id                     String   @id @default(cuid())
+  id                     String        @id @default(cuid())
   fullName               String
   phone                  String
   email                  String
@@ -256,12 +288,16 @@ model ImportRequest {
   vehicleType            String?
   preferredSourceCountry String?
   additionalRequirements String?
-  status                 String   @default("new")
-  createdAt              DateTime @default(now())
+  status                 String        @default("new")
+  customerId             String?       @db.Uuid
+  customer               CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt              DateTime      @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 model ClearingRequest {
-  id                    String    @id @default(cuid())
+  id                    String        @id @default(cuid())
   fullName              String
   phone                 String
   email                 String
@@ -274,17 +310,21 @@ model ClearingRequest {
   expectedArrivalDate   DateTime?
   availableDocuments    String?
   additionalInformation String?
-  status                String    @default("new")
-  createdAt             DateTime  @default(now())
+  status                String        @default("new")
+  customerId            String?       @db.Uuid
+  customer              CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt             DateTime      @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 model HireRequest {
-  id                     String      @id @default(cuid())
+  id                     String        @id @default(cuid())
   fullName               String
   phone                  String
   email                  String
   vehicleId              String
-  vehicle                HireVehicle @relation(fields: [vehicleId], references: [id])
+  vehicle                HireVehicle   @relation(fields: [vehicleId], references: [id])
   pickupDate             DateTime
   returnDate             DateTime
   pickupLocation         String
@@ -294,7 +334,7 @@ model HireRequest {
   /// to claim a lower price. See src/hire-requests/hire-pricing.util.ts.
   days                   Int
   totalCost              Int
-  currency               String      @default("MWK")
+  currency               String        @default("MWK")
   /// "pending" (just submitted, not yet reviewed) | "confirmed" (a real
   /// booking — this vehicle is committed for these dates) | "cancelled" |
   /// "completed" (vehicle actually confirmed returned by an admin — distinct
@@ -303,23 +343,31 @@ model HireRequest {
   /// confirmed — see HireRequestsService.updateStatus(), which also checks
   /// for overlapping confirmed bookings on the same vehicle before allowing
   /// confirmation.
-  status                 String      @default("pending")
+  status                 String        @default("pending")
   /// Prevents the daily reminder job from re-sending the same "due
   /// tomorrow" / "overdue" email every single day once triggered once.
   dueReminderSentAt      DateTime?
   overdueReminderSentAt  DateTime?
-  createdAt              DateTime    @default(now())
+  customerId             String?       @db.Uuid
+  customer               CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt              DateTime      @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
-  fullName  String
-  email     String
-  phone     String?
-  subject   String
-  message   String
-  status    String   @default("new")
-  createdAt DateTime @default(now())
+  id         String        @id @default(cuid())
+  fullName   String
+  email      String
+  phone      String?
+  subject    String
+  message    String
+  status     String        @default("new")
+  customerId String?       @db.Uuid
+  customer   CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime      @default(now())
+
+  @@index([customerId, createdAt])
 }
 
 /// Site-wide announcements — banners at the top of every page, or popups
