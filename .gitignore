@@ -4,3 +4,9 @@ dist-ssr
 *.local
 .env
 .DS_Store
+strapi/build
+strapi/.strapi
+strapi/.strapi-updater.json
+strapi/tsconfig.tsbuildinfo
+playwright-report
+test-results

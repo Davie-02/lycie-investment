@@ -19,6 +19,7 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { HealthController } from "./common/health.controller";
 import { CustomersModule } from "./customers/customers.module";
 import { FinancialModule } from "./financial/financial.module";
+import { CmsModule } from "./cms/cms.module";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { FinancialModule } from "./financial/financial.module";
     UploadsModule,
     CustomersModule,
     FinancialModule,
+    CmsModule,
   ],
   controllers: [HealthController],
   providers: [

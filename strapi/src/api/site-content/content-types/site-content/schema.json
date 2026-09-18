@@ -1,0 +1,28 @@
+{
+  "kind": "singleType",
+  "collectionName": "site_contents",
+  "info": {
+    "displayName": "Site Content",
+    "singularName": "site-content",
+    "pluralName": "site-contents"
+  },
+  "attributes": {
+    "contactName": { "type": "string", "required": true },
+    "contactPhone": { "type": "string" },
+    "contactEmail": { "type": "email", "required": true },
+    "contactAddress": { "type": "string" },
+    "contactOpenHours": { "type": "string" },
+    "facebook": { "type": "string" },
+    "instagram": { "type": "string" },
+    "tiktok": { "type": "string" },
+    "youtube": { "type": "string" },
+    "aboutHeadline": { "type": "string" },
+    "aboutBody": { "type": "richtext", "required": true },
+    "aboutImageUrl": { "type": "string" },
+    "aboutImageAlt": { "type": "string" },
+    "servicesIntro": { "type": "string" },
+    "servicesEachTitle": { "type": "json", "required": true },
+    "servicesEachBody": { "type": "json", "required": true },
+    "servicesEachIcon": { "type": "json", "required": true }
+  }
+}

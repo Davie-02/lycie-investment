@@ -1,0 +1,16 @@
+{
+  "kind": "singleType",
+  "collectionName": "seo_settings",
+  "info": {
+    "displayName": "SEO Settings",
+    "singularName": "seo-setting",
+    "pluralName": "seo-settings"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "siteName": { "type": "string", "default": "Lycie Investment", "required": true },
+    "defaultDescription": { "type": "text", "required": false },
+    "facebookAppId": { "type": "string", "required": false },
+    "googleAnalyticsId": { "type": "string", "required": false }
+  }
+}

@@ -83,6 +83,7 @@ That's the whole database step. No server to manage.
    | `JWT_SECRET` | If using the blueprint, Render generates this for you automatically |
    | `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, `S3_PUBLIC_URL_BASE` | Your R2 (or S3/MinIO) values from `server/README.md` |
    | `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL` | Optional — leave blank to skip email notifications entirely, or see `server/README.md`'s email section |
+   | `STRAPI_URL`, `STRAPI_API_TOKEN` | Optional — leave blank to skip the CMS entirely, or see section 2.5 below |
 
 4. Deploy. Watch the build logs — the start command runs
    `prisma migrate deploy`, which applies your committed migration to the
@@ -102,6 +103,68 @@ That's the whole database step. No server to manage.
    ```bash
    npm run prisma:seed
    ```
+
+---
+
+## 2.5 CMS — Strapi (optional)
+
+Testimonials, FAQ, blog posts and SEO settings are served through a separate
+Strapi CMS (`strapi/`) — everything else (vehicles, hire vehicles, notices,
+site content, auth, bookings) stays in the main API above and needs nothing
+here. Skip this section entirely if you don't need those four content types
+yet: the API's `/cms/*` endpoints return empty results when Strapi isn't
+configured, so the homepage's testimonials/FAQ sections just don't render
+rather than breaking.
+
+If using the `render.yaml` **Blueprint** deploy, Strapi and its database
+(`lycie-strapi-cms`, `lycie-strapi-db`) are provisioned automatically as part
+of the same blueprint — skip to step 4 below. For a manual setup:
+
+1. **New → Web Service** on Render → select the repo → set:
+   - **Root Directory:** `strapi`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm run start`
+   - **Plan:** Free
+2. Provision a **separate** Postgres database for it (Neon or Render — do
+   not reuse the main app's database; Strapi manages its own schema).
+   Set these environment variables before the first deploy:
+
+   | Key | Value |
+   | --- | --- |
+   | `DATABASE_URL` | The Strapi database's connection string |
+   | `HOST` | `0.0.0.0` |
+   | `PORT` | `1337` |
+   | `NODE_ENV` | `production` |
+   | `STRAPI_URL` | This service's own public URL once you know it, e.g. `https://lycie-strapi-cms.onrender.com` (Strapi needs this to build correct absolute media URLs) |
+   | `APP_KEYS`, `ADMIN_AUTH_SECRET`, `API_TOKEN_SALT`, `TRANSFER_TOKEN_SALT`, `ADMIN_ENCRYPTION_KEY` | Random secrets — the blueprint generates these for you; if setting up manually, generate your own (e.g. `openssl rand -base64 32`) |
+
+3. Deploy. Visit `https://<your-strapi-url>/admin` and create your first
+   Strapi admin account (this is separate from the main app's admin
+   accounts — different system, different login).
+4. In Strapi admin, add content under **Content Manager** for Testimonial,
+   FAQ, Blog Post and SEO Settings, and **publish** each entry (Strapi
+   drafts don't appear over the API until published).
+5. Generate an API token the main backend will use to read this content:
+   **Settings → API Tokens → Create new API Token** — name it something
+   like `nestjs-read`, set **Token type** to `Read-only`, leave it with
+   unlimited duration or set an expiry you'll remember to rotate. Copy the
+   token — Strapi only shows it once.
+6. Back on the main API service (step 2), set:
+
+   | Key | Value |
+   | --- | --- |
+   | `STRAPI_URL` | Your Strapi service's public URL |
+   | `STRAPI_API_TOKEN` | The read-only token from step 5 |
+
+   and redeploy the main API. Visit `/api/cms/testimonials` on it to confirm
+   you get your published content back instead of an empty array.
+
+Note the Strapi content API is only reachable with that token — Strapi's
+built-in "Public" role is left with no permissions granted (see
+`strapi/config/plugins.js`), so anonymous requests to `/api/testimonials`
+etc. get nothing back. Uploaded images under `/uploads/` are still served
+publicly by Strapi, same as the main app's own image uploads — that's
+expected for content actually meant to be shown on the site.
 
 ---
 
@@ -160,6 +223,9 @@ on Render, not left at its local-dev default.
   you land on `/account` logged in.
 - Log out (customer and admin) and confirm you're actually returned to the
   login screen and can't reach the account page by navigating back.
+- If you set up the CMS (section 2.5): visit `/faq` and confirm published
+  FAQ entries appear; visit the homepage and confirm testimonials render if
+  you published any.
 
 If any step fails, check Render's **Logs** tab first — most issues at this
 stage are a missing/mistyped environment variable.
@@ -174,3 +240,7 @@ Prisma migrations run automatically on each backend deploy via
 `schema.prisma` locally, run `npx prisma migrate dev --name <description>`
 to generate the migration file, commit it, and push; Render applies it on
 the next deploy.
+
+If you're running the Strapi CMS, it redeploys the same way on push and
+applies its own content-type schema changes to its database automatically
+on startup — there's no separate migration command for it.

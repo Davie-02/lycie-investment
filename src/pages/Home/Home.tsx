@@ -5,6 +5,8 @@ import ServicesSection from "@/components/services/ServicesSection";
 import JourneySection from "@/components/common/JourneySection";
 import FeaturedVehicles from "@/components/vehicles/FeaturedVehicles";
 import WhyChooseUs from "@/components/common/WhyChooseUs";
+import TestimonialsSection from "@/components/common/TestimonialsSection";
+import FaqSection from "@/components/common/FaqSection";
 import CtaBand from "@/components/common/CtaBand";
 
 export default function Home() {
@@ -20,6 +22,8 @@ export default function Home() {
       <JourneySection />
       <FeaturedVehicles />
       <WhyChooseUs />
+      <TestimonialsSection />
+      <FaqSection />
       <CtaBand
         heading="Ready to get your next vehicle?"
         body="Browse what's available now, or tell us what you're looking for."

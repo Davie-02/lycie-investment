@@ -8,6 +8,9 @@ The repository contains two applications:
 ```
 lycie-investment/       Frontend (React + TypeScript + Vite)
 server/                 Backend API (NestJS + Prisma + PostgreSQL)
+strapi/                 CMS for marketing content — testimonials, FAQ, blog
+                         posts, SEO settings (optional, see server/README.md
+                         "CMS content (Strapi)")
 ```
 Phases 1–5 of the build plan are complete: the full UI, all forms, and a real
 backend with a database are in place. Vehicle/hire listings are served from
@@ -35,7 +38,11 @@ simulated.
   login endpoints, and Serializable-transaction-protected money/booking
   operations — see `server/README.md`'s Security section for the full list
 - Semantic HTML, keyboard-navigable, labeled forms, visible focus states
-- Per-page SEO (title, meta description)
+- Per-page SEO (title, meta description), with sitewide defaults and social
+  metadata sourced from the CMS when it's configured
+- Testimonials, FAQ, and a blog, sourced from a separate Strapi CMS so
+  non-technical staff can publish marketing content without a deploy — see
+  server/README.md's "CMS content (Strapi)" section
 - Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
@@ -43,16 +50,22 @@ simulated.
 
 **Frontend:** React 18, TypeScript, Vite, React Router
 **Backend:** NestJS, Prisma, PostgreSQL — see `server/README.md`
+**CMS (optional):** Strapi — marketing content only, see `server/README.md`'s "CMS content (Strapi)"
 
 ## Not yet built
 
 - Payment-provider integration. The internal customer ledger does not move
   money through a bank or payment provider — payments are submitted as
   proof (an image) and approved manually by staff.
-- Automated test suite. The concurrency-safety and login/logout fixes in
-  this project have been verified by careful code review, not by an
-  automated test run — see server/README.md's "Login and logout" section
-  for exactly what was and wasn't verified this way.
+- Broader automated test coverage. What exists today: backend unit tests
+  (`server/`, run with `npm test`) for the auth guards and hire-pricing
+  math, and a Playwright E2E harness (root, run with `npm run test:e2e`)
+  covering customer register/login/session-persistence/logout and admin
+  login/vehicle-CRUD/logout, each against an isolated `lycie_investment_test`
+  database that's wiped and reseeded on every run — see "Testing" below.
+  Coverage is intentionally narrow (the auth boundary and money/booking math
+  first, since those are the highest-consequence areas) rather than
+  exhaustive; most endpoints still have no automated test.
 
 Browser authentication uses HTTP-only session cookies. JWTs are not stored in
 local storage or exposed to frontend JavaScript. Sessions expire based on
@@ -130,6 +143,43 @@ balancing and autoscaling require hosting support beyond the free tier.
 npm run preview
 ```
 
+## Testing
+
+Backend unit tests (Jest — auth guards, hire-pricing math):
+
+```bash
+cd server
+npm test
+```
+
+End-to-end tests (Playwright — customer and admin auth flows) run against a
+**separate, dedicated database**, never your local dev database. One-time
+setup:
+
+```bash
+createdb lycie_investment_test   # same Postgres user as your dev DB
+npx playwright install chromium  # downloads a browser Playwright drives
+```
+
+Then from the repo root:
+
+```bash
+npm run test:e2e
+```
+
+This boots the frontend and backend itself (`playwright.config.ts`'s
+`webServer` entries) against `lycie_investment_test`, running
+`prisma migrate reset --force` first to wipe and reseed it fresh — so runs
+are reproducible and never touch or depend on your own local data. The seeded
+test admin account's credentials live in `tests/constants.ts` (not a real
+secret — this account only ever exists in a throwaway test database).
+
+Coverage today is intentionally narrow: the customer register → login →
+refresh → logout → protected-route-denied flow, and the admin
+login → create/edit/delete a vehicle → logout → protected-route-denied flow.
+Most endpoints and admin screens still have no automated test — see
+"Not yet built" above.
+
 ## Lint
 
 ```bash
@@ -140,6 +190,10 @@ npm run lint
 
 `VITE_API_BASE_URL` — base URL of the backend API. Defaults to
 `http://localhost:3001/api` if unset. See `.env.example`.
+
+The frontend has no separate CMS configuration — it always talks to the
+NestJS API, which proxies Strapi server-side when configured. See
+`server/.env.example` for `STRAPI_URL`/`STRAPI_API_TOKEN`.
 
 ## Project structure
 
@@ -161,7 +215,8 @@ src/
 ├── pages/               One folder per public route
 ├── hooks/                useAsyncData, useFormSubmission
 ├── services/              API client (http.ts) and per-resource service
-│                           functions (vehicles.service.ts, inquiries.service.ts)
+│                           functions (vehicles.service.ts, inquiries.service.ts,
+│                           cms.service.ts for testimonials/FAQ/blog/SEO)
 ├── types/                 Domain types (Vehicle, HireVehicle, request types)
 ├── utils/                  Formatting and filter helpers
 ├── styles/                 Design tokens, reset, global styles

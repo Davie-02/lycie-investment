@@ -209,6 +209,11 @@ wherever MinIO serves public reads from.
 | POST   | `/api/admin-users`        | Owner only         | Create an admin account                  |
 | PATCH  | `/api/admin-users/:id`    | Owner only         | Update role, active status, or password  |
 | DELETE | `/api/admin-users/:id`    | Owner only         | Delete an admin account                  |
+| GET    | `/api/cms/testimonials`   | Public             | List published testimonials (from Strapi) |
+| GET    | `/api/cms/faq`            | Public             | List published FAQ entries (from Strapi) |
+| GET    | `/api/cms/blog-posts`     | Public             | List published blog posts (from Strapi)  |
+| GET    | `/api/cms/blog-posts/:slug` | Public          | Get a single blog post (from Strapi)     |
+| GET    | `/api/cms/seo-settings`   | Public             | Sitewide SEO defaults (from Strapi)      |
 
 Payment review is available in the admin dashboard at `/admin/payments` for
 Owners and Managers. A customer submission remains pending until staff checks
@@ -233,6 +238,31 @@ Public vehicle and hire-vehicle listings are paginated. Each response contains
 read-only content is cacheable for one minute and can be served stale for up to
 five minutes while revalidating. Other API responses are marked `no-store`.
 Responses are compressed with gzip or deflate when the client supports it.
+
+## CMS content (Strapi)
+
+Testimonials, FAQ, blog posts and SEO settings are edited in a separate
+Strapi CMS (`../strapi`), not in this API or its database. Everything else —
+vehicles, hire vehicles, notices, site content, auth, bookings, payments —
+stays here in Prisma; those four content types were simply never built
+anywhere in this app, so Strapi fills that gap without duplicating data that
+already has a working implementation.
+
+The frontend never talks to Strapi directly. `src/cms/` proxies reads
+server-side: `StrapiClientService` calls Strapi's REST API with a bearer
+`STRAPI_API_TOKEN` and caches each response for 60 seconds (content that
+changes a few times a week doesn't need a fresh fetch on every page load).
+If `STRAPI_URL`/`STRAPI_API_TOKEN` aren't set, the `/cms/*` endpoints return
+empty results instead of erroring — the homepage's testimonials/FAQ sections
+and the `/blog`, `/faq` pages just render nothing rather than breaking, so
+running this API without Strapi at all (e.g. in early development) is fine.
+
+To run Strapi locally: `cd strapi && npm install && cp .env.example .env`
+(point `DATABASE_URL` at its own Postgres database — not this one), then
+`npm run develop`, create an admin account at `http://localhost:1337/admin`,
+add and publish some content, and generate a **Read-only** API token under
+Settings → API Tokens. Put that token and `http://localhost:1337` into this
+service's `.env` as `STRAPI_API_TOKEN`/`STRAPI_URL`.
 
 ## Data model
 

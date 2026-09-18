@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "notices",
+  "info": {
+    "displayName": "Notice",
+    "singularName": "notice",
+    "pluralName": "notices"
+  },
+  "attributes": {
+    "title": { "type": "string", "required": true },
+    "body": { "type": "string", "required": true },
+    "noticeType": {
+      "type": "enumeration",
+      "enum": ["banner", "popup"],
+      "default": "banner"
+    },
+    "target": {
+      "type": "enumeration",
+      "enum": [
+        "vehicles",
+        "hire",
+        "all",
+        "services",
+        "inquiry",
+        "import",
+        "contact",
+        "clearing",
+        "vehicle-detail",
+        "hire-request",
+        "home",
+        "admin"
+      ],
+      "default": "all"
+    },
+    "buttonText": { "type": "string" },
+    "buttonUrl": { "type": "string" },
+    "isActive": { "type": "boolean", "default": true },
+    "createdAt": { "type": "datetime" },
+    "updatedAt": { "type": "datetime" },
+    "publishedAt": { "type": "datetime" },
+    "createdBy": { "type": "relation", "relation": "manyToOne", "target": "plugin::users-permissions/user" },
+    "updatedBy": { "type": "relation", "relation": "manyToOne", "target": "plugin::users-permissions/user" }
+  }
+}

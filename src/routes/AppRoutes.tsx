@@ -15,6 +15,9 @@ const Import = lazy(() => import("@/pages/Import/Import"));
 const Clearing = lazy(() => import("@/pages/Clearing/Clearing"));
 const Hire = lazy(() => import("@/pages/Hire/Hire"));
 const Contact = lazy(() => import("@/pages/Contact/Contact"));
+const Faq = lazy(() => import("@/pages/Faq/Faq"));
+const BlogList = lazy(() => import("@/pages/Blog/BlogList"));
+const BlogPost = lazy(() => import("@/pages/Blog/BlogPost"));
 const CustomerLogin = lazy(() => import("@/pages/Customer/CustomerLogin"));
 const CustomerRegister = lazy(() => import("@/pages/Customer/CustomerRegister"));
 const CustomerAccount = lazy(() => import("@/pages/Customer/CustomerAccount"));
@@ -49,6 +52,9 @@ export default function AppRoutes() {
         <Route path="/hire" element={<Hire />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/faq" element={<Faq />} />
+        <Route path="/blog" element={<BlogList />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/account/login" element={<CustomerLogin />} />
         <Route path="/account/register" element={<CustomerRegister />} />
         <Route path="/account" element={<CustomerAccountRoute />} />
