@@ -1,6 +1,6 @@
-# Lycie Investment — Website
+# Lycie Investments — Website
 
-A corporate website for Lycie Investment, covering vehicle sourcing, importing,
+A corporate website for Lycie Investments, covering vehicle sourcing, importing,
 dealership, hire, and clearing services.
 
 The repository contains two applications:
@@ -45,7 +45,7 @@ simulated.
   separate Strapi CMS was tried first; dropped after confirming Strapi 5
   can't currently boot under Node 20+ due to an unresolved upstream bug —
   see server/README.md's "Marketing content" section.)
-- Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
+- Branding pulled from the actual Lycie Investments logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
 ## Tech stack
@@ -172,7 +172,7 @@ src/
 ├── admin/                Admin dashboard — auth, layout, vehicle/hire-vehicle
 │                          CRUD forms, submitted-requests viewer (separate
 │                          from the public site's design system)
-├── assets/            Static assets, including the Lycie Investment logo
+├── assets/            Static assets, including the Lycie Investments logo
 ├── components/
 │   ├── common/         Shared building blocks (Hero, Seo, CtaBand, etc.)
 │   ├── layout/          Navbar, Footer, page Layout

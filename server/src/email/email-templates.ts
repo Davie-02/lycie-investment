@@ -78,7 +78,7 @@ export function hireBookingCancelledEmail(details: HireEmailDetails) {
 
 export function hireBookingCompletedEmail(details: HireEmailDetails) {
   return {
-    subject: "Thanks for hiring with Lycie Investment",
+    subject: "Thanks for hiring with Lycie Investments",
     html: wrapper(`
       <p>Hi ${details.fullName},</p>
       <p>Thanks for hiring the ${details.vehicleName} with us — we hope it served you well. We'd love to help again next time you need a vehicle.</p>
@@ -110,7 +110,7 @@ export function hireOverdueReminderEmail(details: HireEmailDetails) {
 
 export function passwordResetEmail(resetUrl: string) {
   return {
-    subject: "Reset your Lycie Investment password",
+    subject: "Reset your Lycie Investments password",
     html: wrapper(`
       <p>Someone requested a password reset for this account. If that was you, click below to choose a new password — this link expires in 1 hour and only works once.</p>
       <p style="margin: 24px 0;">

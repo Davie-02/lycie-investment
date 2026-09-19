@@ -123,7 +123,7 @@ async function bootstrap() {
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`Lycie Investment API listening on http://localhost:${port}/api`);
+  console.log(`Lycie Investments API listening on http://localhost:${port}/api`);
 }
 
 bootstrap();

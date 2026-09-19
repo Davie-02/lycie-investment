@@ -66,7 +66,7 @@ export default function ResetPassword() {
 
   return (
     <>
-      <Seo title="Reset Password" description="Choose a new password for your Lycie Investment account." />
+      <Seo title="Reset Password" description="Choose a new password for your Lycie Investments account." />
       <section className="service-hero">
         <div className="container">
           <h1>Choose a new password</h1>

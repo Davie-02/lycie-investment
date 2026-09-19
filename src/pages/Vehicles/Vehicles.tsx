@@ -19,7 +19,7 @@ export default function Vehicles() {
     <>
       <Seo
         title="Vehicles"
-        description="Browse vehicles available from Lycie Investment, with filters for make, price, fuel type and more."
+        description="Browse vehicles available from Lycie Investments, with filters for make, price, fuel type and more."
       />
 
       <section className="service-hero">

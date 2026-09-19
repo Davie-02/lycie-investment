@@ -67,7 +67,7 @@ async function seedSiteContent() {
       key: "about",
       value: {
         intro:
-          "Lycie Investment sources, imports, sells, hires and clears vehicles for customers who'd rather deal with one company than coordinate several.",
+          "Lycie Investments sources, imports, sells, hires and clears vehicles for customers who'd rather deal with one company than coordinate several.",
         whatWeDo:
           "We work across the full vehicle journey — sourcing a vehicle that matches what a customer needs, arranging the import, coordinating clearing once it arrives, and offering vehicles directly for sale or hire. Rather than handing customers off between separate agents, we stay involved from request to delivery.",
         howWeWork:
@@ -79,9 +79,9 @@ async function seedSiteContent() {
     {
       key: "seo",
       value: {
-        siteName: "Lycie Investment",
+        siteName: "Lycie Investments",
         defaultDescription:
-          "Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi.",
+          "Lycie Investments sources, imports, sells, hires and clears vehicles for customers in Malawi.",
         facebookAppId: null,
       },
     },

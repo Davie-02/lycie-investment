@@ -129,7 +129,7 @@ p {
 
 /* Official WhatsApp brand green — kept as a literal hex rather than a
    design-system token, since this specific color is a brand requirement
-   for WhatsApp CTAs, not part of Lycie Investment's own palette. */
+   for WhatsApp CTAs, not part of Lycie Investments' own palette. */
 .btn-whatsapp {
   background: #25d366;
   color: #fff;

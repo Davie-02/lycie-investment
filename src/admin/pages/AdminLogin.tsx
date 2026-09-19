@@ -36,7 +36,7 @@ export default function AdminLogin() {
     <div className="admin-login">
       <form className="form-card admin-login__card" onSubmit={handleSubmit} noValidate>
         <h1 className="admin-login__title">Admin Login</h1>
-        <p className="text-muted admin-login__subtitle">Lycie Investment content management</p>
+        <p className="text-muted admin-login__subtitle">Lycie Investments content management</p>
 
         {reasonMessage && !loginError && (
           <FormStatusBanner status="error" successMessage="" errorMessage={reasonMessage} />

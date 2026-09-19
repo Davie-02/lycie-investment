@@ -49,7 +49,7 @@ export default function CustomerRegister() {
 
   return (
     <>
-      <Seo title="Create Customer Account" description="Create a Lycie Investment customer account." />
+      <Seo title="Create Customer Account" description="Create a Lycie Investments customer account." />
       <section className="service-hero">
         <div className="container">
           <h1>Open an account</h1>

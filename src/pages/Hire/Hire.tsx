@@ -14,7 +14,7 @@ export default function Hire() {
     <>
       <Seo
         title="Vehicle Hire"
-        description="Hire a vehicle for short-term or long-term use from Lycie Investment."
+        description="Hire a vehicle for short-term or long-term use from Lycie Investments."
       />
 
       <section className="service-hero">

@@ -25,7 +25,7 @@ export class EmailService {
   }
 
   private get fromAddress(): string {
-    return process.env.EMAIL_FROM || "Lycie Investment <onboarding@resend.dev>";
+    return process.env.EMAIL_FROM || "Lycie Investments <onboarding@resend.dev>";
   }
 
   get adminNotificationEmail(): string | undefined {

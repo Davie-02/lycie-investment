@@ -58,7 +58,7 @@ export default function AdminLayout() {
     <div className="admin-shell">
       <header className="admin-header">
         <div className="admin-header__row">
-          <span className="admin-header__title">Lycie Investment — Admin</span>
+          <span className="admin-header__title">Lycie Investments — Admin</span>
           <nav className="admin-nav" aria-label="Admin">
             {navItems.map((item) => (
               <NavLink

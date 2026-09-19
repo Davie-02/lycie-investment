@@ -15,7 +15,7 @@ export default function Home() {
     <>
       <Seo
         title="Home"
-        description="Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi."
+        description="Lycie Investments sources, imports, sells, hires and clears vehicles for customers in Malawi."
       />
       <Hero />
       <VehicleCarousel />

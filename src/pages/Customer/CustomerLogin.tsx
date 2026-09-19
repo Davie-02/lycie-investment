@@ -46,7 +46,7 @@ export default function CustomerLogin() {
 
   return (
     <>
-      <Seo title="Customer Login" description="Sign in to view your Lycie Investment account." />
+      <Seo title="Customer Login" description="Sign in to view your Lycie Investments account." />
       <section className="service-hero">
         <div className="container">
           <h1>Customer account</h1>

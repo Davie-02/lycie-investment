@@ -20,7 +20,7 @@ export default function Faq() {
     <>
       <Seo
         title="FAQ"
-        description="Answers to common questions about buying, importing, hiring and clearing vehicles with Lycie Investment."
+        description="Answers to common questions about buying, importing, hiring and clearing vehicles with Lycie Investments."
       />
 
       <section className="service-hero">

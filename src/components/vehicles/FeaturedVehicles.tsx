@@ -13,7 +13,7 @@ export default function FeaturedVehicles() {
         <div>
           <span className="eyebrow">In stock now</span>
           <h2>Featured vehicles</h2>
-          <p>Explore a selection of vehicles currently available through Lycie Investment.</p>
+          <p>Explore a selection of vehicles currently available through Lycie Investments.</p>
         </div>
         <Link to="/vehicles" className="btn btn-secondary">
           View all vehicles

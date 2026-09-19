@@ -29,7 +29,7 @@ export default function Clearing() {
           </p>
           <div className="service-note service-note--on-dark">
             Clearance timelines, duty rates and outcomes are determined by customs authorities,
-            not by Lycie Investment. We coordinate and support the process — we can't guarantee
+            not by Lycie Investments. We coordinate and support the process — we can't guarantee
             government processing times or costs.
           </div>
         </div>

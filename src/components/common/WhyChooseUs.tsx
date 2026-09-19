@@ -9,7 +9,7 @@ export default function WhyChooseUs() {
   return (
     <section className="section container why-choose-us">
       <div className="section-heading">
-        <span className="eyebrow">Why Lycie Investment</span>
+        <span className="eyebrow">Why Lycie Investments</span>
         <h2>What working with us looks like</h2>
       </div>
       <div className="why-choose-us__grid">

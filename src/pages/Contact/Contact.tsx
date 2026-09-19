@@ -11,7 +11,7 @@ export default function Contact() {
     <>
       <Seo
         title="Contact Us"
-        description="Get in touch with Lycie Investment — phone, email, location and business hours."
+        description="Get in touch with Lycie Investments — phone, email, location and business hours."
       />
 
       <section className="service-hero">

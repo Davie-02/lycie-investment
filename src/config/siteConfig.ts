@@ -28,7 +28,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   },
   about: {
     intro:
-      "Lycie Investment sources, imports, sells, hires and clears vehicles for customers who'd rather deal with one company than coordinate several.",
+      "Lycie Investments sources, imports, sells, hires and clears vehicles for customers who'd rather deal with one company than coordinate several.",
     whatWeDo:
       "We work across the full vehicle journey — sourcing a vehicle that matches what a customer needs, arranging the import, coordinating clearing once it arrives, and offering vehicles directly for sale or hire. Rather than handing customers off between separate agents, we stay involved from request to delivery.",
     howWeWork:
@@ -37,12 +37,12 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       "Reliable sourcing, import assistance, clearing support and flexible hire — handled by one team who can answer questions across the whole process rather than pointing you elsewhere.",
   },
   seo: {
-    siteName: "Lycie Investment",
+    siteName: "Lycie Investments",
     defaultDescription:
-      "Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi.",
+      "Lycie Investments sources, imports, sells, hires and clears vehicles for customers in Malawi.",
     facebookAppId: null,
   },
 };
 
 // Not stored in the database — this is branding, not editable copy.
-export const companyName = "Lycie Investment";
+export const companyName = "Lycie Investments";

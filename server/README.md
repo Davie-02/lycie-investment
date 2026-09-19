@@ -1,6 +1,6 @@
-# Lycie Investment — API
+# Lycie Investments — API
 
-NestJS + Prisma + PostgreSQL backend for the Lycie Investment website. It
+NestJS + Prisma + PostgreSQL backend for the Lycie Investments website. It
 serves vehicle and hire-vehicle listings, accepts public requests, and provides
 staff and customer authentication.
 
@@ -388,7 +388,7 @@ a real email account. To enable it:
 | Hire request submitted | Customer | "We've received your hire request" |
 | Booking confirmed | Customer | "Your hire booking is confirmed" |
 | Booking cancelled | Customer | "Your hire booking has been cancelled" |
-| Booking marked returned | Customer | "Thanks for hiring with Lycie Investment" |
+| Booking marked returned | Customer | "Thanks for hiring with Lycie Investments" |
 | Confirmed booking due back tomorrow | Customer | Reminder (once per booking — see below) |
 | Confirmed booking overdue | Customer | Overdue notice (once per booking — see below) |
 | Password reset requested | Customer | Reset link, expires in 1 hour |

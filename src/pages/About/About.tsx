@@ -10,7 +10,7 @@ export default function About() {
     <>
       <Seo
         title="About"
-        description="Learn about Lycie Investment — vehicle sourcing, importing, sales, hire and clearing."
+        description="Learn about Lycie Investments — vehicle sourcing, importing, sales, hire and clearing."
       />
 
       <section className="service-hero">

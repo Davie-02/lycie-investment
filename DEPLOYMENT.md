@@ -1,4 +1,4 @@
-# Deploying Lycie Investment
+# Deploying Lycie Investments
 
 This gets the site off `localhost` onto real hosting: a database, the API,
 and the frontend, each on its own service. Total cost: **$0/month** on the

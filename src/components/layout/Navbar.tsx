@@ -22,7 +22,7 @@ export default function Navbar() {
     <header className="navbar">
       <div className="container navbar__row">
         <NavLink to="/" className="navbar__brand" onClick={() => setIsOpen(false)}>
-          <img src={logo} alt="Lycie Investment" className="navbar__logo" />
+          <img src={logo} alt="Lycie Investments" className="navbar__logo" />
         </NavLink>
 
         <nav className="navbar__links navbar__links--desktop" aria-label="Primary">

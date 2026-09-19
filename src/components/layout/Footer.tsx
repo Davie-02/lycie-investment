@@ -26,7 +26,7 @@ export default function Footer() {
       <div className="container footer__grid">
         <div className="footer__about">
           <p className="footer__brand">
-            Lycie <span>Investment</span>
+            Lycie <span>Investments</span>
           </p>
           <p className="text-muted">
             Vehicle sourcing, importing, dealership, hire and clearing services.

@@ -53,7 +53,7 @@ export default function Hero() {
           <span className="hero__eyebrow">Source · Import · Clear · Deliver</span>
           <h1>From order to your driveway, one company handles the whole journey.</h1>
           <p>
-            Lycie Investment sources, imports, sells, hires and clears vehicles for
+            Lycie Investments sources, imports, sells, hires and clears vehicles for
             customers who want one point of contact from request to delivery — not
             four separate agents to chase.
           </p>

@@ -14,12 +14,12 @@ export default function BlogList() {
 
   return (
     <>
-      <Seo title="Blog" description="News, guides and updates from Lycie Investment." />
+      <Seo title="Blog" description="News, guides and updates from Lycie Investments." />
 
       <section className="service-hero">
         <div className="container">
           <h1>Blog</h1>
-          <p>News, guides and updates from the Lycie Investment team.</p>
+          <p>News, guides and updates from the Lycie Investments team.</p>
         </div>
       </section>
 
