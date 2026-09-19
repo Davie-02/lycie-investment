@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import Seo from "@/components/common/Seo";
+import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFaqs } from "@/services/faq.service";
 
@@ -43,18 +44,20 @@ export default function Faq() {
           <p className="text-muted">No questions have been published yet.</p>
         )}
 
-        {groups.map(([category, items]) => (
-          <div className="faq-page__group" key={category}>
-            <h2>{category}</h2>
-            <div className="faq-section__list">
-              {items.map((faq) => (
-                <details className="faq-item" key={faq.id}>
-                  <summary>{faq.question}</summary>
-                  <p className="text-muted">{faq.answer}</p>
-                </details>
-              ))}
+        {groups.map(([category, items], index) => (
+          <Reveal key={category} delayMs={Math.min(index, 4) * 80}>
+            <div className="faq-page__group">
+              <h2>{category}</h2>
+              <div className="faq-section__list">
+                {items.map((faq) => (
+                  <details className="faq-item" key={faq.id}>
+                    <summary>{faq.question}</summary>
+                    <p className="text-muted">{faq.answer}</p>
+                  </details>
+                ))}
+              </div>
             </div>
-          </div>
+          </Reveal>
         ))}
       </section>
     </>

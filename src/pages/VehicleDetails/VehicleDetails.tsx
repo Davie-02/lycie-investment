@@ -4,6 +4,7 @@ import VehicleGallery from "@/components/vehicles/VehicleGallery";
 import VehicleSpecifications from "@/components/vehicles/VehicleSpecifications";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import InquiryForm from "@/components/forms/InquiryForm";
+import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicleBySlug } from "@/services/vehicles.service";
 import { formatCurrency, formatMileage } from "@/utils/format";
@@ -77,24 +78,30 @@ export default function VehicleDetails() {
             altBase={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
           />
 
-          <div className="vehicle-details__description">
-            <h2>Description</h2>
-            <p className="text-muted">{vehicle.description}</p>
-          </div>
+          <Reveal>
+            <div className="vehicle-details__description">
+              <h2>Description</h2>
+              <p className="text-muted">{vehicle.description}</p>
+            </div>
+          </Reveal>
 
-          <div className="vehicle-details__description">
-            <h2>Features</h2>
-            <ul className="vehicle-details__features">
-              {vehicle.features.map((feature) => (
-                <li key={feature}>{feature}</li>
-              ))}
-            </ul>
-          </div>
+          <Reveal>
+            <div className="vehicle-details__description">
+              <h2>Features</h2>
+              <ul className="vehicle-details__features">
+                {vehicle.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
 
-          <div className="vehicle-details__description">
-            <h2>Specifications</h2>
-            <VehicleSpecifications vehicle={vehicle} />
-          </div>
+          <Reveal>
+            <div className="vehicle-details__description">
+              <h2>Specifications</h2>
+              <VehicleSpecifications vehicle={vehicle} />
+            </div>
+          </Reveal>
         </div>
 
         <aside className="vehicle-details__sidebar">
