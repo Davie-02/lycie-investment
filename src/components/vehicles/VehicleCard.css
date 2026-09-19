@@ -16,10 +16,18 @@
 .vehicle-card__image-wrap {
   position: relative;
   aspect-ratio: 3 / 2;
+  overflow: hidden;
   background: var(--color-background);
 }
 
+/* Absolutely positioned rather than width/height: 100% — a percentage
+   height doesn't reliably resolve against an aspect-ratio-driven auto
+   height (especially as a flex item), so portrait photos were silently
+   falling back to their natural intrinsic size instead of being cropped
+   to this card's fixed box, breaking the grid's consistent sizing. */
 .vehicle-card__image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
