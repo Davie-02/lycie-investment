@@ -5,6 +5,7 @@
 // src/services/customer.service.ts — those two already handle CSRF the
 // same way this file does.
 import { getCsrfToken } from "./csrf";
+import { parseErrorMessage } from "@/utils/apiError";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 
@@ -13,19 +14,6 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
-}
-
-// Nest sends validation errors as either a single string or an array of
-// strings (one per failed field) — normalize both into one readable line.
-async function parseErrorMessage(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    if (Array.isArray(body?.message)) return body.message.join(" ");
-    if (typeof body?.message === "string") return body.message;
-  } catch {
-    // Response body wasn't JSON (e.g. a proxy/500 page) — fall back below.
-  }
-  return `Request failed (${response.status}).`;
 }
 
 export async function apiGet<T>(path: string): Promise<T> {

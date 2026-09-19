@@ -1,6 +1,7 @@
 import type { Vehicle } from "@/types/vehicle";
 import { ApiError } from "./http";
 import { clearCsrfToken, getCsrfToken } from "./csrf";
+import { parseErrorMessage } from "@/utils/apiError";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 const CUSTOMER_USER_KEY = "lycie_customer_user";
@@ -130,22 +131,10 @@ async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T
       clearCustomerSession();
       window.dispatchEvent(new Event(CUSTOMER_SESSION_EXPIRED_EVENT));
     }
-    throw new ApiError(await getErrorMessage(response), response.status);
+    throw new ApiError(await parseErrorMessage(response), response.status);
   }
 
   return response.json() as Promise<T>;
-}
-
-async function getErrorMessage(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    if (Array.isArray(body?.message)) return body.message.join(" ");
-    if (typeof body?.message === "string") return body.message;
-  } catch {
-    // Use a generic message when the response is not JSON.
-  }
-
-  return `Request failed (${response.status}).`;
 }
 
 export function registerCustomer(name: string, email: string, password: string) {

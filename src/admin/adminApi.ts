@@ -1,6 +1,7 @@
 import { ApiError } from "@/services/http";
 import { clearCsrfToken, getCsrfToken } from "@/services/csrf";
 import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
+import { parseErrorMessage } from "@/utils/apiError";
 
 // Re-exported so existing admin code importing from "../adminApi" keeps
 // working unchanged — the actual logic lives in one shared place now, used
@@ -48,17 +49,6 @@ export function setStoredUser(user: AdminUserSummary): void {
 
 export function clearStoredUser(): void {
   localStorage.removeItem(ADMIN_USER_KEY);
-}
-
-async function parseErrorMessage(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    if (Array.isArray(body?.message)) return body.message.join(" ");
-    if (typeof body?.message === "string") return body.message;
-  } catch {
-    // response wasn't JSON — fall through to the generic message below
-  }
-  return `Request failed (${response.status}).`;
 }
 
 async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
