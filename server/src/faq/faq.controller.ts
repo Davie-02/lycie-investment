@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { FaqService } from "./faq.service";
 import { CreateFaqDto } from "./dto/create-faq.dto";
 import { UpdateFaqDto } from "./dto/update-faq.dto";
@@ -11,8 +11,8 @@ export class FaqController {
   constructor(private readonly faqService: FaqService) {}
 
   @Get()
-  findAll() {
-    return this.faqService.findAll();
+  findAll(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+    return this.faqService.findAll(this.parseNumber(page, 1), this.parsePageSize(pageSize, 100));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,5 +34,14 @@ export class FaqController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.faqService.remove(id);
+  }
+
+  private parseNumber(value: string | undefined, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(1, Math.floor(parsed)) : fallback;
+  }
+
+  private parsePageSize(value: string | undefined, fallback: number): number {
+    return Math.min(100, this.parseNumber(value, fallback));
   }
 }

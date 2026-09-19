@@ -216,16 +216,16 @@ wherever MinIO serves public reads from.
 | POST   | `/api/admin-users`        | Owner only         | Create an admin account                  |
 | PATCH  | `/api/admin-users/:id`    | Owner only         | Update role, active status, or password  |
 | DELETE | `/api/admin-users/:id`    | Owner only         | Delete an admin account                  |
-| GET    | `/api/testimonials`       | Public             | List testimonials                        |
+| GET    | `/api/testimonials`       | Public             | List testimonials (`?page=1&pageSize=100`) |
 | POST   | `/api/testimonials`       | Owner/Manager      | Create a testimonial                     |
 | PATCH  | `/api/testimonials/:id`   | Owner/Manager      | Update a testimonial                     |
 | DELETE | `/api/testimonials/:id`   | Owner/Manager      | Delete a testimonial                     |
-| GET    | `/api/faq`                | Public             | List FAQ entries                         |
+| GET    | `/api/faq`                | Public             | List FAQ entries (`?page=1&pageSize=100`) |
 | POST   | `/api/faq`                | Owner/Manager      | Create an FAQ entry                      |
 | PATCH  | `/api/faq/:id`            | Owner/Manager      | Update an FAQ entry                      |
 | DELETE | `/api/faq/:id`            | Owner/Manager      | Delete an FAQ entry                      |
 | GET    | `/api/blog-posts`         | Public             | List published blog posts                |
-| GET    | `/api/blog-posts/all`     | Owner/Manager      | List all blog posts, including drafts    |
+| GET    | `/api/blog-posts/all`     | Owner/Manager      | List all blog posts, including drafts (`?page=1&pageSize=20`) |
 | GET    | `/api/blog-posts/:slug`   | Public             | Get a single published blog post         |
 | POST   | `/api/blog-posts`         | Owner/Manager      | Create a blog post (draft or published)  |
 | PATCH  | `/api/blog-posts/:id`     | Owner/Manager      | Update a blog post, including publish/unpublish |
@@ -279,6 +279,12 @@ draft/published state (`publishedAt: null` = draft, hidden from
 Facebook App ID) are just a fourth `SiteContent` key (`"seo"`, alongside
 `contact`/`social`/`about`), editable from the same "Site Content" admin
 page — see `src/types/siteContent.ts` on the frontend.
+
+The three admin tables (`/admin/testimonials`, `/admin/faq`, `/admin/blog`)
+are paginated — 20 rows per page, with Previous/Next controls
+(`src/admin/components/AdminPagination.tsx`) — rather than fetching
+everything at once. Deleting the last item on a page falls back a page
+automatically instead of showing a blank table.
 
 ## Data model
 

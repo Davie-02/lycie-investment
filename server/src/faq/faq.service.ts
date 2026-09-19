@@ -7,8 +7,17 @@ import { UpdateFaqDto } from "./dto/update-faq.dto";
 export class FaqService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.faq.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  async findAll(page = 1, pageSize = 100) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.faq.findMany({
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.faq.count(),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   create(dto: CreateFaqDto) {

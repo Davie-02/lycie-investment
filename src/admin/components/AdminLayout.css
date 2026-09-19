@@ -147,6 +147,14 @@
   flex-shrink: 0;
 }
 
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
 .admin-badge {
   display: inline-block;
   padding: var(--space-1) var(--space-3);

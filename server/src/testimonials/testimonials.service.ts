@@ -7,10 +7,17 @@ import { UpdateTestimonialDto } from "./dto/update-testimonial.dto";
 export class TestimonialsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll() {
-    return this.prisma.testimonial.findMany({
-      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
-    });
+  async findAll(page = 1, pageSize = 100) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.testimonial.findMany({
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.testimonial.count(),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   create(dto: CreateTestimonialDto) {

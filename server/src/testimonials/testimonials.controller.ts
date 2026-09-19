@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { TestimonialsService } from "./testimonials.service";
 import { CreateTestimonialDto } from "./dto/create-testimonial.dto";
 import { UpdateTestimonialDto } from "./dto/update-testimonial.dto";
@@ -11,8 +11,8 @@ export class TestimonialsController {
   constructor(private readonly testimonialsService: TestimonialsService) {}
 
   @Get()
-  findAll() {
-    return this.testimonialsService.findAll();
+  findAll(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+    return this.testimonialsService.findAll(this.parseNumber(page, 1), this.parsePageSize(pageSize, 100));
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,5 +34,14 @@ export class TestimonialsController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.testimonialsService.remove(id);
+  }
+
+  private parseNumber(value: string | undefined, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(1, Math.floor(parsed)) : fallback;
+  }
+
+  private parsePageSize(value: string | undefined, fallback: number): number {
+    return Math.min(100, this.parseNumber(value, fallback));
   }
 }

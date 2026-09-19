@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { BlogPostsService } from "./blog-posts.service";
 import { CreateBlogPostDto } from "./dto/create-blog-post.dto";
 import { UpdateBlogPostDto } from "./dto/update-blog-post.dto";
@@ -19,8 +19,8 @@ export class BlogPostsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("OWNER", "MANAGER")
   @Get("all")
-  findAll() {
-    return this.blogPostsService.findAll();
+  findAll(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+    return this.blogPostsService.findAll(this.parseNumber(page, 1), this.parsePageSize(pageSize, 20));
   }
 
   @Get(":slug")
@@ -47,5 +47,14 @@ export class BlogPostsController {
   @Delete(":id")
   remove(@Param("id") id: string) {
     return this.blogPostsService.remove(id);
+  }
+
+  private parseNumber(value: string | undefined, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(1, Math.floor(parsed)) : fallback;
+  }
+
+  private parsePageSize(value: string | undefined, fallback: number): number {
+    return Math.min(100, this.parseNumber(value, fallback));
   }
 }

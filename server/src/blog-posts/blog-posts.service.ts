@@ -22,8 +22,17 @@ export class BlogPostsService {
     return post;
   }
 
-  findAll() {
-    return this.prisma.blogPost.findMany({ orderBy: { createdAt: "desc" } });
+  async findAll(page = 1, pageSize = 20) {
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.blogPost.findMany({
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.blogPost.count(),
+    ]);
+
+    return { items, total, page, pageSize };
   }
 
   async create(dto: CreateBlogPostDto) {
