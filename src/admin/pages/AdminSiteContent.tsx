@@ -18,6 +18,20 @@ import type {
 } from "@/types/siteContent";
 import "../components/AdminLayout.css";
 
+const SECTION_LINKS = [
+  { id: "site-content-hero", label: "Hero" },
+  { id: "site-content-services", label: "Services" },
+  { id: "site-content-journey", label: "How It Works" },
+  { id: "site-content-whyChooseUs", label: "Why Choose Us" },
+  { id: "site-content-importPage", label: "Import Page" },
+  { id: "site-content-clearingPage", label: "Clearing Page" },
+  { id: "site-content-hirePage", label: "Hire Page" },
+  { id: "site-content-contact", label: "Contact Info" },
+  { id: "site-content-social", label: "Social Links" },
+  { id: "site-content-about", label: "About Page" },
+  { id: "site-content-seo", label: "SEO" },
+];
+
 export default function AdminSiteContent() {
   const { content, isLoading, refresh } = useSiteContent();
   // Each section below keeps its own local form state (so typing in one
@@ -43,19 +57,28 @@ export default function AdminSiteContent() {
       {isLoading && !hasLoadedOnce ? (
         <p className="text-muted">Loading current content…</p>
       ) : (
-        <div className="site-content-sections">
-          <HeroSection initial={content.hero} onSaved={refresh} />
-          <ServicesSection initial={content.services} onSaved={refresh} />
-          <JourneySection initial={content.journey} onSaved={refresh} />
-          <WhyChooseUsSection initial={content.whyChooseUs} onSaved={refresh} />
-          <ImportPageSection initial={content.importPage} onSaved={refresh} />
-          <ClearingPageSection initial={content.clearingPage} onSaved={refresh} />
-          <HirePageSection initial={content.hirePage} onSaved={refresh} />
-          <ContactSection initial={content.contact} onSaved={refresh} />
-          <SocialSection initial={content.social} onSaved={refresh} />
-          <AboutSection initial={content.about} onSaved={refresh} />
-          <SeoSection initial={content.seo} onSaved={refresh} />
-        </div>
+        <>
+          <nav className="site-content-jumpnav" aria-label="Jump to section">
+            {SECTION_LINKS.map((link) => (
+              <a key={link.id} href={`#${link.id}`}>
+                {link.label}
+              </a>
+            ))}
+          </nav>
+          <div className="site-content-sections">
+            <HeroSection initial={content.hero} onSaved={refresh} />
+            <ServicesSection initial={content.services} onSaved={refresh} />
+            <JourneySection initial={content.journey} onSaved={refresh} />
+            <WhyChooseUsSection initial={content.whyChooseUs} onSaved={refresh} />
+            <ImportPageSection initial={content.importPage} onSaved={refresh} />
+            <ClearingPageSection initial={content.clearingPage} onSaved={refresh} />
+            <HirePageSection initial={content.hirePage} onSaved={refresh} />
+            <ContactSection initial={content.contact} onSaved={refresh} />
+            <SocialSection initial={content.social} onSaved={refresh} />
+            <AboutSection initial={content.about} onSaved={refresh} />
+            <SeoSection initial={content.seo} onSaved={refresh} />
+          </div>
+        </>
       )}
     </div>
   );
@@ -86,7 +109,7 @@ function HeroSection({ initial, onSaved }: { initial: HeroContent; onSaved: () =
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-hero" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Homepage Hero</h2>
       <p className="text-muted">The first thing a visitor sees — headline, intro text, and buttons.</p>
       {status === "success" && (
@@ -209,7 +232,7 @@ function ServicesSection({ initial, onSaved }: { initial: ServicesContent; onSav
   const SLOT_LABELS = ["Vehicle Importing", "Vehicle Dealership", "Vehicle Hire", "Vehicle Clearing"];
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-services" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>"What We Do" Section</h2>
       <p className="text-muted">The four service cards shown on the homepage.</p>
       {status === "success" && (
@@ -293,7 +316,7 @@ function JourneySection({ initial, onSaved }: { initial: JourneyContent; onSaved
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-journey" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>"How It Works" Section</h2>
       <p className="text-muted">The step-by-step process shown on the homepage and Import page.</p>
       {status === "success" && (
@@ -377,7 +400,7 @@ function WhyChooseUsSection({ initial, onSaved }: { initial: WhyChooseUsContent;
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-whyChooseUs" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>"Why Choose Us" Section</h2>
       <p className="text-muted">The value-proposition grid shown on the homepage.</p>
       {status === "success" && (
@@ -449,7 +472,7 @@ function ContactSection({ initial, onSaved }: { initial: ContactContent; onSaved
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-contact" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Contact Info</h2>
       {status === "success" && (
         <FormStatusBanner status="success" successMessage="Contact info updated." errorMessage={null} />
@@ -525,7 +548,7 @@ function SocialSection({ initial, onSaved }: { initial: SocialContent; onSaved: 
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-social" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Social Links</h2>
       <p className="text-muted">Leave blank to hide a link — only filled-in links show in the footer.</p>
       {status === "success" && (
@@ -589,7 +612,7 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-about" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>About Page</h2>
       {status === "success" && (
         <FormStatusBanner status="success" successMessage="About page updated." errorMessage={null} />
@@ -656,7 +679,7 @@ function SeoSection({ initial, onSaved }: { initial: SeoContent; onSaved: () => 
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-seo" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>SEO</h2>
       <p className="text-muted">Site-wide defaults used when a page doesn't set its own.</p>
       {status === "success" && (
@@ -716,7 +739,7 @@ function ImportPageSection({ initial, onSaved }: { initial: ServicePageContent; 
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-importPage" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Import Page</h2>
       <p className="text-muted">The headline and intro text at the top of /import.</p>
       {status === "success" && (
@@ -775,7 +798,7 @@ function ClearingPageSection({ initial, onSaved }: { initial: ClearingPageConten
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-clearingPage" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Clearing Page</h2>
       <p className="text-muted">The headline, disclaimer, and areas-of-support list on /clearing.</p>
       {status === "success" && (
@@ -851,7 +874,7 @@ function HirePageSection({ initial, onSaved }: { initial: ServicePageContent; on
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
+    <form id="site-content-hirePage" className="form-card" onSubmit={handleSubmit} noValidate>
       <h2>Hire Page</h2>
       <p className="text-muted">The headline and intro text at the top of /hire.</p>
       {status === "success" && (
