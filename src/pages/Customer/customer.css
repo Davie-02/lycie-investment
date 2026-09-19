@@ -29,6 +29,24 @@
   gap: var(--space-4);
 }
 
+.customer-account__logout {
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  transition: background-color var(--transition), border-color var(--transition);
+}
+
+.customer-account__logout:hover,
+.customer-account__logout:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+}
+
 .customer-account {
   display: grid;
   gap: var(--space-7);

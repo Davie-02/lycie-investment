@@ -246,7 +246,9 @@ export default function CustomerAccount() {
             <h1>My account</h1>
             <p>Welcome back, {currentUser?.name}.</p>
           </div>
-          <button type="button" className="btn-ghost" onClick={handleLogout}>Log out</button>
+          <button type="button" className="customer-account__logout" onClick={handleLogout}>
+            Log out
+          </button>
         </div>
       </section>
       <section className="section container customer-account">
