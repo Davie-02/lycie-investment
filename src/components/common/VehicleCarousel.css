@@ -5,12 +5,38 @@
 .vehicle-carousel__slide {
   position: relative;
   min-height: 420px;
-  background-size: cover;
-  background-position: center;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  transition: background-image 0.5s ease;
+}
+
+/* Crossfade between slides: CSS can't tween between two background-image
+   URLs directly (transitioning that property is a no-op in every browser),
+   so every vehicle's image is stacked and only opacity animates between
+   them. The active layer also gets a slow, subtle zoom (Ken Burns) for a
+   more premium, "alive" feel while it's showing. */
+.vehicle-carousel__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 900ms ease;
+}
+
+.vehicle-carousel__bg--active {
+  opacity: 1;
+  animation: vehicle-carousel-kenburns 7s ease-out forwards;
+}
+
+@keyframes vehicle-carousel-kenburns {
+  from {
+    transform: scale(1.04);
+  }
+  to {
+    transform: scale(1.12);
+  }
 }
 
 /* Darkens the photo toward the bottom so white text stays readable
@@ -37,6 +63,13 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.vehicle-carousel__save {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: 2;
 }
 
 .vehicle-carousel__eyebrow {
@@ -153,5 +186,12 @@
 @media (prefers-reduced-motion: reduce) {
   .vehicle-carousel__content {
     animation: none;
+  }
+
+  .vehicle-carousel__bg,
+  .vehicle-carousel__bg--active {
+    animation: none;
+    transform: none;
+    transition: opacity 300ms ease;
   }
 }

@@ -4,6 +4,7 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFeaturedVehicles } from "@/services/vehicles.service";
 import { formatCurrency } from "@/utils/format";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import "./VehicleCarousel.css";
 
 const AUTO_ADVANCE_MS = 6000;
@@ -80,12 +81,24 @@ export default function VehicleCarousel() {
     >
       <div
         className="vehicle-carousel__slide"
-        style={{ backgroundImage: `url(${resolveUploadUrl(vehicle.images[0])})` }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
+        {vehicles.map((v, index) => (
+          <div
+            key={v.id}
+            className={
+              index === activeIndex
+                ? "vehicle-carousel__bg vehicle-carousel__bg--active"
+                : "vehicle-carousel__bg"
+            }
+            style={{ backgroundImage: `url(${resolveUploadUrl(v.images[0])})` }}
+            aria-hidden={index !== activeIndex}
+          />
+        ))}
         <div className="vehicle-carousel__scrim" />
-        <div className="container vehicle-carousel__content">
+        <SaveVehicleButton vehicleId={vehicle.id} className="vehicle-carousel__save" />
+        <div className="container vehicle-carousel__content" key={vehicle.id}>
           <span className="vehicle-carousel__eyebrow">Featured &amp; Available Now</span>
           <h2>
             {vehicle.make} {vehicle.model}
