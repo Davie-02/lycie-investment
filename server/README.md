@@ -519,9 +519,71 @@ and backend domains, not just localhost; confirming session expiry
 (`JWT_EXPIRES_IN`) actually forces a re-login rather than silently failing
 requests.
 
+## Reviews, insights and the Lycie assistant
+
+**Reviews** (`/api/reviews`): public submission (5/min, optionally tied to a
+logged-in customer), public list of *approved* reviews only, admin moderation
+(`/reviews/all`, `/reviews/:id/status`, delete — Owner/Manager). Sentiment is
+computed offline (`src/insights/sentiment.util.ts`: word lexicon with
+negation/intensifiers, blended with the star rating) — no external service.
+
+**Insights** (`GET /api/insights/overview`, Owner/Manager): KPIs, sentiment
+split, weekly volume, vehicle demand (saves, anonymous per-day view counts,
+inquiries) and rule-based recommendations (`recommendations.util.ts`).
+`POST /api/insights/vehicle-views/:vehicleId` is a throttled public counter that
+stores only `(vehicle, day, count)` — no visitor identifiers.
+
+**Lycie** (`src/lycie/`, Google Gemini REST API, key in `GEMINI_API_KEY`):
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/lycie/status` | Public | `{enabled}` — widget hides itself without a key |
+| POST | `/api/lycie/chat` | Public, 10/min | Ask a question (`message` ≤ 500 chars, ≤ 6 history turns) |
+| POST | `/api/lycie/feedback` | Public, 30/min | 👍/👎 on an answer (by unguessable log id) |
+| POST | `/api/lycie/submissions` | Public, 5/min | Anonymous "Ask us" question/comment from `/faq` |
+| GET/POST/PATCH/DELETE | `/api/lycie/knowledge[/:id]` | Owner/Manager | Admin-fed knowledge notes |
+| GET | `/api/lycie/analytics` | Owner/Manager | Outcomes, helpful votes, gaps, recent chats |
+| GET/PATCH/DELETE | `/api/lycie/submissions[/:id]` | Owner/Manager | Visitor messages inbox |
+| GET | `/api/lycie/top-questions` | Owner/Manager | Most-asked topics (last 30 days) + whether the FAQ covers them |
+| GET | `/api/lycie/suggestions` | Owner/Manager | AI-drafted FAQ entries (`?status=pending|published|rejected`) |
+| POST | `/api/lycie/suggestions/generate` | Owner/Manager, 3/min | Analyse questions and draft entries (max 5 AI calls) |
+| PATCH / POST | `/api/lycie/suggestions/:id[/publish|/reject]` | Owner/Manager | Edit, publish to the FAQ, or reject |
+
+How a chat request flows: validate → redact PII → per-IP and daily caps →
+build the prompt from the *live database* (contact/about/services from
+`SiteContent`, ≤ 40 vehicles, hire fleet, FAQ, active knowledge notes; cached
+45 s, cleared on knowledge/FAQ edits) → Gemini with an ordered model fallback
+chain (`gemini.client.ts`: per-model cooldowns for quota/overload/404, 10 s
+per attempt, 25 s total) → parse the reply (`[[NO_INFO]]` marks a knowledge
+gap; `[[vehicle:slug]]` markers are only honoured for real vehicles) → log the
+redacted question/answer → respond. If every model fails, the reply is the
+company's contact details. Knowledge beyond `LYCIE_KNOWLEDGE_CHARS` is
+narrowed with Postgres full-text search (`websearch_to_tsquery`, GIN index in
+the migration) then keyword overlap.
+
+Safety properties, each covered by unit tests where marked ✓: customer text and
+admin-authored notes are wrapped in delimited data blocks and delimiter
+look-alikes are stripped ✓; the chat has no tools/actions; PII redaction runs
+before sending and before logging ✓; the API key is sent in a header, never a
+URL ✓; vehicle cards can only reference real inventory ✓; learning is
+human-in-the-loop — raw chats never change behaviour, an admin promotes gaps to
+knowledge or approves FAQ drafts.
+
+**FAQ suggestions:** questions from chat logs and visitor submissions are
+grouped by shared topic words (`question-clusters.util.ts`, no AI, ✓). For
+popular topics (asked ≥ `LYCIE_SUGGEST_MIN_ASKS`, default 2) that neither the FAQ
+nor an earlier draft covers, Lycie drafts a Q&A from company data only; if the
+data doesn't cover it the draft is flagged `needsInput` and can't be published
+until an admin writes the answer. Runs weekly (Mon 06:00) and on demand.
+Rejected topics are never re-suggested. Chat logs and visitor messages are
+purged after `LYCIE_LOG_RETENTION_DAYS` (daily 03:00 job).
+
 ## Rate limiting
 
-See the Security section above.
+See the Security section above. Behind a reverse proxy (Render, Nginx…) set
+`TRUST_PROXY=1`, otherwise `request.ip` is the proxy's address and every visitor
+shares one limit. Lycie's hourly per-IP and daily caps are in-memory (single
+instance) — see `DEPLOYMENT.md`.
 
 ## Verification
 
