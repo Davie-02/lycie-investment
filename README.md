@@ -9,9 +9,10 @@ The repository contains two applications:
 lycie-investment/       Frontend (React + TypeScript + Vite)
 server/                 Backend API (NestJS + Prisma + PostgreSQL)
 ```
-Phases 1–5 of the build plan are complete: the full UI, all forms, and a real
-backend with a database are in place. Vehicle/hire listings are served from
-PostgreSQL, and form submissions are persisted through the API rather than
+The site is fully dynamic: vehicle/hire listings, homepage sections, page
+copy, FAQ, blog, notices, reviews and the Lycie AI assistant's knowledge are
+all served from PostgreSQL and managed from `/admin` — no code edits needed to
+change content. Form submissions are persisted through the API rather than
 simulated.
 
 ## Features
@@ -45,13 +46,29 @@ simulated.
   separate Strapi CMS was tried first; dropped after confirming Strapi 5
   can't currently boot under Node 20+ due to an unresolved upstream bug —
   see server/README.md's "Marketing content" section.)
+- Motion and interaction: auto-advancing vehicle carousels, scroll-reveal
+  sections, and like/save on every vehicle (all respect reduced-motion)
+- Customer reviews (company-wide and per vehicle) with moderation, plus
+  automatic sentiment analysis, vehicle-demand tracking and rule-based
+  recommendations on `/admin/insights` — see `server/README.md`
+- **Lycie**, an AI chat assistant (Google Gemini free tier) on every public
+  page. She answers from your live vehicles, hire fleet, FAQ, site content and
+  the knowledge notes admins add under `/admin/lycie`; she is read-only, never
+  invents prices/availability, strips personal details before anything is
+  sent or stored, and falls back to your contact details if the AI is
+  unavailable. See "Lycie" below and `DEPLOYMENT.md`.
+- A self-improving FAQ: an anonymous "Ask us" form on `/faq` and the chat
+  questions are grouped by topic; Lycie drafts answers for popular topics
+  **strictly from company data**, and an admin approves, edits or rejects each
+  draft — nothing is published automatically
 - Branding pulled from the actual Lycie Investments logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
 ## Tech stack
 
-**Frontend:** React 18, TypeScript, Vite, React Router
+**Frontend:** React 18, TypeScript, Vite, React Router 7
 **Backend:** NestJS, Prisma, PostgreSQL — see `server/README.md`
+**AI:** Google Gemini (free tier), called only from the backend
 
 ## Not yet built
 
@@ -59,11 +76,14 @@ simulated.
   money through a bank or payment provider — payments are submitted as
   proof (an image) and approved manually by staff.
 - Broader automated test coverage. What exists today: backend unit tests
-  (`server/`, run with `npm test`) for the auth guards and hire-pricing
-  math — the auth boundary and the money/booking math, the two
-  highest-consequence areas — see "Testing" below. No end-to-end/browser
-  test suite; most endpoints and UI flows have no automated coverage and
-  are verified manually.
+  (`server/`, run with `npm test`) for the auth guards, hire-pricing math,
+  email escaping, review sentiment/recommendations, and Lycie's safety
+  layers (PII redaction, prompt building, model fallback, rate limits,
+  question clustering) — see "Testing" below. No end-to-end/browser test
+  suite; most endpoints and UI flows are verified manually.
+- Real vehicle photos: the seeded sample listings use placeholder images.
+  Upload real photos in `/admin/vehicles` and `/admin/hire-vehicles`.
+- Dark mode.
 
 Browser authentication uses HTTP-only session cookies. JWTs are not stored in
 local storage or exposed to frontend JavaScript. Sessions expire based on
@@ -143,7 +163,8 @@ npm run preview
 
 ## Testing
 
-Backend unit tests (Jest — auth guards, hire-pricing math):
+Backend unit tests (Jest — auth guards, hire-pricing math, email escaping,
+review sentiment, and the Lycie assistant's safety/fallback logic):
 
 ```bash
 cd server
@@ -164,6 +185,9 @@ npm run lint
 
 `VITE_API_BASE_URL` — base URL of the backend API. Defaults to
 `http://localhost:3001/api` if unset. See `.env.example`.
+
+The backend has its own variables (database, auth, storage, email, and the
+Lycie/Gemini settings) — see `server/.env.example` and `DEPLOYMENT.md`.
 
 ## Project structure
 
@@ -231,10 +255,12 @@ and `src/context/SiteContentContext.tsx`.
 
 Visit `/admin` (e.g. `http://localhost:5173/admin`) to manage vehicle and
 hire-vehicle listings, edit site content (contact info, social links, About
-page copy — no redeploy needed), manage site-wide notices (color-coded
-banners and popups for announcements or special offers), manage other admin
-accounts (Owner/Manager/Viewer roles), and view submitted form requests, all
-without touching the database directly. See `server/README.md` for how to
+page copy, homepage sections — no redeploy needed), manage site-wide notices
+(color-coded banners and popups for announcements or special offers),
+moderate customer reviews, read sentiment insights and recommendations,
+teach and monitor the Lycie AI assistant, manage other admin accounts
+(Owner/Manager/Viewer roles), and view submitted form requests, all without
+touching the database directly. See `server/README.md` for how to
 bootstrap your first login — nothing works until `ADMIN_EMAIL`,
 `ADMIN_PASSWORD_HASH`, and `JWT_SECRET` are set in `server/.env` and
 `npm run prisma:seed` has been run.
@@ -242,6 +268,27 @@ bootstrap your first login — nothing works until `ADMIN_EMAIL`,
 Admin sessions expire after 2 hours, and auto-logout after 5 minutes of
 inactivity — both configurable in `server/.env` (`JWT_EXPIRES_IN`) and
 `src/admin/components/AdminLayout.tsx` (`IDLE_TIMEOUT_MS`) respectively.
+
+## Lycie (AI assistant)
+
+1. Get a free key at <https://aistudio.google.com/apikey> and put it in
+   `server/.env` as `GEMINI_API_KEY`. Restart the API. Without a key the chat
+   button simply doesn't appear.
+2. Sign in to `/admin` → **Lycie AI**:
+   - **Knowledge** — write policies, deposits, timelines and anything else she
+     should know. Changes apply to her very next answer.
+   - **Conversations & gaps** — what was asked, what she couldn't answer, and
+     which answers visitors marked unhelpful. "Add to knowledge" turns a gap
+     into a note.
+   - **FAQ suggestions** — most-asked topics plus AI-drafted FAQ entries to
+     approve, edit or reject (runs weekly, or press "Analyse & draft FAQs").
+   - **Visitor messages** — questions and comments sent from the `/faq` form.
+3. How she stays safe: answers only from your database (plus general vehicle
+   know-how, with duty/tax figures always deferred to your team); chat text is
+   treated as data, never as instructions; personal details are stripped before
+   sending/logging; per-visitor and daily limits protect the free quota; chat
+   logs are deleted after 90 days. Privacy details and tuning: `DEPLOYMENT.md`
+   ("Lycie AI assistant").
 
 ## Deployment
 

@@ -20,9 +20,12 @@ fine — the first visitor after a quiet period just waits a bit longer. If
 that's not acceptable, Render's paid "Starter" tier ($7/mo) keeps it always
 on; nothing else about this guide changes if you upgrade later.
 
-This spin-down also means the daily hire-reminder cron job (see
-`server/README.md`) won't fire if nobody's visited the site around when it's
-scheduled to run. If reminder emails matter to how you operate, either
+This spin-down also means the scheduled jobs — the daily hire-reminder
+emails, the daily 03:00 chat-log cleanup and Lycie's Monday 06:00 FAQ
+analysis (see `server/README.md`) — won't fire if nobody's visited the site
+around when they're scheduled to run. (The FAQ analysis can also be run any
+time from the admin's **Lycie AI → FAQ suggestions** tab, and the log cleanup
+just catches up on the next day it's awake.) If reminder emails matter to how you operate, either
 upgrade to Starter or set up a free external uptime monitor (e.g.
 UptimeRobot) pinging `/api/health` every few minutes to keep the service
 awake.
@@ -64,7 +67,7 @@ That's the whole database step. No server to manage.
    If you'd rather set it up manually instead of using the blueprint:
    **New → Web Service** → select the repo → set:
    - **Root Directory:** `server`
-   - **Build Command:** `npm install && npx prisma generate && npm run build`
+   - **Build Command:** `npm install --include=dev && npx prisma generate && npm run build`
    - **Start Command:** `npx prisma migrate deploy && npm run start:prod`
    - **Plan:** Free
 
@@ -77,6 +80,8 @@ That's the whole database step. No server to manage.
    | `PORT` | `3001` |
    | `NODE_ENV` | `production` — **required**, not optional. Session cookies use different security settings in production vs. development, and the app refuses to start without `FRONTEND_URL` set when this is `production`. |
    | `FRONTEND_URL` | Leave as `http://localhost:5173` for now — you'll update this after step 3 |
+   | `TRUST_PROXY` | `1` — **required behind Render** (the blueprint sets it). Render sits behind one reverse proxy; without this, every visitor looks like the same IP and the per-visitor rate limits (login, forms, Lycie chat) would apply to everyone at once. Never set it when the API is exposed directly to the internet — clients could then fake their IP. |
+   | `GEMINI_API_KEY` | Optional but recommended — powers the Lycie chat assistant. See "Lycie AI assistant" below. |
    | `ADMIN_NAME` | Your name |
    | `ADMIN_EMAIL` | Your email — this becomes your Owner login |
    | `ADMIN_PASSWORD_HASH` | Generate with `node -e "console.log(require('bcryptjs').hashSync('your-password', 10))"` |
@@ -102,6 +107,64 @@ That's the whole database step. No server to manage.
    ```bash
    npm run prisma:seed
    ```
+
+---
+
+## 2b. Lycie AI assistant (Google Gemini, free)
+
+Lycie is the chat assistant on every public page. She answers from your live
+vehicles, hire fleet, FAQ, site content and the notes you add under
+**Admin → Lycie AI → Knowledge**. She is read-only: she can't place orders,
+change prices or see anyone's account.
+
+**Setup**
+
+1. Create a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+   (no card needed) and set it as `GEMINI_API_KEY` on Render.
+2. That's all. Without a key the chat button hides itself and the rest of the
+   site works normally.
+
+**Optional tuning** (all have sensible defaults — see `server/.env.example`)
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `LYCIE_CHAT_MODELS` | `gemini-3.8-flash,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite` | Tried in order. If a model is over quota, overloaded or unavailable to your key it is skipped for a while and the next is used. Model names change over time — if answers start failing, check the Render logs for `Gemini model … failed (model not available to this key)` and update this list from Google's current model list. |
+| `LYCIE_DAILY_LIMIT` | `300` | Maximum AI answers per day, so the free quota is never exhausted by one busy day. Past it, visitors see your contact details instead. |
+| `LYCIE_HOURLY_LIMIT_PER_IP` | `40` | Per-visitor questions per hour (there is also a 10/minute burst limit). |
+| `LYCIE_KNOWLEDGE_CHARS` | `12000` | How much of your knowledge notes go into each prompt. |
+| `LYCIE_LOG_RETENTION_DAYS` | `90` | Chat logs and visitor messages are deleted after this many days. |
+| `LYCIE_AUTO_SUGGEST` | `true` | Weekly Monday FAQ analysis (max 5 AI calls). `false` = only when you press the button. |
+
+**Privacy — worth knowing before you go live.** On Google's free tier, text
+sent to the model may be used by Google to improve its products. To limit
+this, Lycie strips email addresses, phone numbers, long ID/card-style numbers
+and "my name is …" introductions from every message *before* it is sent or
+stored, and the chat window tells visitors not to share personal details. This
+is best-effort, not a guarantee. If that isn't acceptable for your customers,
+upgrade the Google project to a paid plan (which excludes your data from
+training) or leave `GEMINI_API_KEY` unset. Consider adding a line about the
+assistant to your privacy policy.
+
+**Free-tier limits.** Google's quotas are per model, per day and per minute,
+and can change. The model chain, the daily cap and the friendly fallback
+message exist so visitors are never shown an error. Check the quota usage in
+Google AI Studio occasionally.
+
+**Rate limits are per server instance** (kept in memory). That is correct on
+Render's free plan (one instance). If you ever scale to several instances,
+move the limiter to Redis.
+
+**Teaching Lycie / growing the FAQ.** Every question asked in the chat, plus
+the anonymous "Ask us" form on `/faq`, is grouped by topic. Under **Lycie AI**:
+
+- *Conversations & gaps* — questions she couldn't answer or that visitors
+  marked 👎. Use "Add to knowledge" to teach her the answer.
+- *FAQ suggestions* — the most-asked topics, with drafts Lycie wrote **only from
+  your company data**. Approve to publish to `/faq` (and to Lycie herself),
+  edit first, or reject. Drafts marked "Needs your input" mean your data didn't
+  cover that topic — write the answer yourself. **Nothing is ever published
+  without your approval.**
+- *Visitor messages* — the questions and comments sent through the form.
 
 ---
 
@@ -168,6 +231,17 @@ on Render, not left at its local-dev default.
   section) and that the link lets you set a new password and log in with it.
 - Add a testimonial and an FAQ entry via `/admin/testimonials` and
   `/admin/faq`, and confirm they show up on the homepage and `/faq`.
+- Open the "Ask Lycie" button (bottom-right), ask "What vehicles do you
+  have?", and confirm she answers with your real vehicles. If the button is
+  missing, `GEMINI_API_KEY` isn't set (or `/api/lycie/status` returns
+  `{"enabled":false}`). If she replies with your phone number/email instead of
+  an answer, check the Render logs for `Gemini model … failed`.
+- Add a note under **Admin → Lycie AI → Knowledge**, ask her about it, and
+  confirm it's used in her next answer.
+- Submit a comment via the "Ask us" form at the bottom of `/faq` and confirm it
+  appears under **Lycie AI → Visitor messages**.
+- Submit a review on a vehicle page, approve it in `/admin/reviews`, and check
+  it appears publicly and in `/admin/insights`.
 
 If any step fails, check Render's **Logs** tab first — most issues at this
 stage are a missing/mistyped environment variable.

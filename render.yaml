@@ -9,7 +9,10 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    buildCommand: npm install && npx prisma generate && npm run build
+    # --include=dev: NODE_ENV=production (set below) makes plain `npm install` skip
+    # devDependencies, but the Nest CLI, TypeScript and Prisma CLI needed to build
+    # and migrate live there.
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     # migrate deploy applies committed migrations without prompting (safe for
     # CI/CD, unlike `migrate dev`); seed is intentionally NOT run automatically
     # here — run it manually once after the first deploy if you want the
@@ -26,6 +29,15 @@ services:
         value: production
       - key: FRONTEND_URL
         sync: false # set this to your deployed frontend URL after it exists
+      # Render puts one reverse proxy in front of the app. Without this every
+      # visitor appears to share the proxy's IP, so per-visitor rate limits
+      # (login, forms, Lycie chat) would throttle everyone together.
+      - key: TRUST_PROXY
+        value: 1
+      # Free key from https://aistudio.google.com/apikey — leave blank and the
+      # Lycie chat widget simply hides itself.
+      - key: GEMINI_API_KEY
+        sync: false
       - key: ADMIN_NAME
         sync: false
       - key: ADMIN_EMAIL
