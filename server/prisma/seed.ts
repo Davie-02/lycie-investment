@@ -181,6 +181,41 @@ async function seedSiteContent() {
         ],
       },
     },
+    {
+      key: "importPage",
+      value: {
+        heading: "We source and import the vehicle you actually want",
+        body:
+          "Tell us the make, model and budget you're working with. We handle sourcing, import arrangements, and coordinate clearing once it arrives.",
+      },
+    },
+    {
+      key: "clearingPage",
+      value: {
+        heading: "Clearing support once your vehicle arrives",
+        body:
+          "We assist with vehicle clearing, documentation, and coordination through the clearance and delivery process.",
+        disclaimer:
+          "Clearance timelines, duty rates and outcomes are determined by customs authorities, not by Lycie Investments. We coordinate and support the process — we can't guarantee government processing times or costs.",
+        areas: [
+          "Customs clearance coordination",
+          "Import documentation",
+          "Vehicle processing",
+          "Port/border clearance coordination",
+          "Customs-related documentation",
+          "Payment/document coordination",
+          "Vehicle release coordination",
+          "Delivery arrangements",
+        ],
+      },
+    },
+    {
+      key: "hirePage",
+      value: {
+        heading: "Vehicles ready for hire",
+        body: "Short-term and long-term hire for individuals and businesses.",
+      },
+    },
   ];
 
   for (const section of defaults) {

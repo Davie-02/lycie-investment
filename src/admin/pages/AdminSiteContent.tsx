@@ -13,6 +13,8 @@ import type {
   ServicesContent,
   JourneyContent,
   WhyChooseUsContent,
+  ServicePageContent,
+  ClearingPageContent,
 } from "@/types/siteContent";
 import "../components/AdminLayout.css";
 
@@ -46,6 +48,9 @@ export default function AdminSiteContent() {
           <ServicesSection initial={content.services} onSaved={refresh} />
           <JourneySection initial={content.journey} onSaved={refresh} />
           <WhyChooseUsSection initial={content.whyChooseUs} onSaved={refresh} />
+          <ImportPageSection initial={content.importPage} onSaved={refresh} />
+          <ClearingPageSection initial={content.clearingPage} onSaved={refresh} />
+          <HirePageSection initial={content.hirePage} onSaved={refresh} />
           <ContactSection initial={content.contact} onSaved={refresh} />
           <SocialSection initial={content.social} onSaved={refresh} />
           <AboutSection initial={content.about} onSaved={refresh} />
@@ -685,6 +690,195 @@ function SeoSection({ initial, onSaved }: { initial: SeoContent; onSaved: () => 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
           {status === "saving" ? "Saving…" : "Save SEO Settings"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ImportPageSection({ initial, onSaved }: { initial: ServicePageContent; onSaved: () => void }) {
+  const [values, setValues] = useState<ServicePageContent>(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus("saving");
+    setError(null);
+    try {
+      await adminApi.patch("/site-content/importPage", { value: values });
+      setStatus("success");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save the Import page.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <form className="form-card" onSubmit={handleSubmit} noValidate>
+      <h2>Import Page</h2>
+      <p className="text-muted">The headline and intro text at the top of /import.</p>
+      {status === "success" && (
+        <FormStatusBanner status="success" successMessage="Import page updated." errorMessage={null} />
+      )}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+
+      <div className="form-grid">
+        <FormField
+          id="importPage-heading"
+          label="Headline"
+          as="textarea"
+          value={values.heading}
+          onChange={(e) => setValues({ ...values, heading: e.target.value })}
+        />
+        <FormField
+          id="importPage-body"
+          label="Intro text"
+          as="textarea"
+          value={values.body}
+          onChange={(e) => setValues({ ...values, body: e.target.value })}
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Import Page"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ClearingPageSection({ initial, onSaved }: { initial: ClearingPageContent; onSaved: () => void }) {
+  const [values, setValues] = useState<ClearingPageContent>(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus("saving");
+    setError(null);
+    try {
+      await adminApi.patch("/site-content/clearingPage", { value: values });
+      setStatus("success");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save the Clearing page.");
+      setStatus("error");
+    }
+  }
+
+  function updateArea(index: number, value: string) {
+    const areas = values.areas.map((area, i) => (i === index ? value : area));
+    setValues({ ...values, areas });
+  }
+
+  return (
+    <form className="form-card" onSubmit={handleSubmit} noValidate>
+      <h2>Clearing Page</h2>
+      <p className="text-muted">The headline, disclaimer, and areas-of-support list on /clearing.</p>
+      {status === "success" && (
+        <FormStatusBanner status="success" successMessage="Clearing page updated." errorMessage={null} />
+      )}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+
+      <div className="form-grid">
+        <FormField
+          id="clearingPage-heading"
+          label="Headline"
+          as="textarea"
+          value={values.heading}
+          onChange={(e) => setValues({ ...values, heading: e.target.value })}
+        />
+        <FormField
+          id="clearingPage-body"
+          label="Intro text"
+          as="textarea"
+          value={values.body}
+          onChange={(e) => setValues({ ...values, body: e.target.value })}
+        />
+        <FormField
+          id="clearingPage-disclaimer"
+          label="Disclaimer (shown on the dark hero background)"
+          as="textarea"
+          value={values.disclaimer}
+          onChange={(e) => setValues({ ...values, disclaimer: e.target.value })}
+        />
+      </div>
+
+      <fieldset className="site-content-fieldset">
+        <legend>Areas of support</legend>
+        <div className="form-grid form-grid--2col">
+          {values.areas.map((area, index) => (
+            <FormField
+              key={index}
+              id={`clearingPage-area-${index}`}
+              label={`Area ${index + 1}`}
+              value={area}
+              onChange={(e) => updateArea(index, e.target.value)}
+            />
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Clearing Page"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function HirePageSection({ initial, onSaved }: { initial: ServicePageContent; onSaved: () => void }) {
+  const [values, setValues] = useState<ServicePageContent>(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus("saving");
+    setError(null);
+    try {
+      await adminApi.patch("/site-content/hirePage", { value: values });
+      setStatus("success");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save the Hire page.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <form className="form-card" onSubmit={handleSubmit} noValidate>
+      <h2>Hire Page</h2>
+      <p className="text-muted">The headline and intro text at the top of /hire.</p>
+      {status === "success" && (
+        <FormStatusBanner status="success" successMessage="Hire page updated." errorMessage={null} />
+      )}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+
+      <div className="form-grid">
+        <FormField
+          id="hirePage-heading"
+          label="Headline"
+          as="textarea"
+          value={values.heading}
+          onChange={(e) => setValues({ ...values, heading: e.target.value })}
+        />
+        <FormField
+          id="hirePage-body"
+          label="Intro text"
+          as="textarea"
+          value={values.body}
+          onChange={(e) => setValues({ ...values, body: e.target.value })}
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Hire Page"}
         </button>
       </div>
     </form>

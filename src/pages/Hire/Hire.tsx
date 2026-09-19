@@ -5,12 +5,14 @@ import HireRequestForm from "@/components/forms/HireRequestForm";
 import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getHireVehicles } from "@/services/vehicles.service";
+import { useSiteContent } from "@/context/SiteContentContext";
 import type { HireVehicle } from "@/types/vehicle";
 
 const STAGGER_STEP_MS = 70;
 const STAGGER_CAP = 6;
 
 export default function Hire() {
+  const { content } = useSiteContent();
   const { data: vehicles, isLoading, error } = useAsyncData(() => getHireVehicles(), []);
   const [selectedVehicle, setSelectedVehicle] = useState<HireVehicle | null>(null);
 
@@ -23,8 +25,8 @@ export default function Hire() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>Vehicles ready for hire</h1>
-          <p>Short-term and long-term hire for individuals and businesses.</p>
+          <h1>{content.hirePage.heading}</h1>
+          <p>{content.hirePage.body}</p>
         </div>
       </section>
 

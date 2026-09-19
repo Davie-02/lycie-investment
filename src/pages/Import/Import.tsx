@@ -2,8 +2,12 @@ import Seo from "@/components/common/Seo";
 import JourneySection from "@/components/common/JourneySection";
 import ImportRequestForm from "@/components/forms/ImportRequestForm";
 import Reveal from "@/components/common/Reveal";
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function Import() {
+  const { content } = useSiteContent();
+  const { heading, body } = content.importPage;
+
   return (
     <>
       <Seo
@@ -13,11 +17,8 @@ export default function Import() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>We source and import the vehicle you actually want</h1>
-          <p>
-            Tell us the make, model and budget you're working with. We handle sourcing,
-            import arrangements, and coordinate clearing once it arrives.
-          </p>
+          <h1>{heading}</h1>
+          <p>{body}</p>
         </div>
       </section>
 

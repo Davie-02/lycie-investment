@@ -1,19 +1,12 @@
 import Seo from "@/components/common/Seo";
 import ClearingRequestForm from "@/components/forms/ClearingRequestForm";
 import Reveal from "@/components/common/Reveal";
-
-const AREAS = [
-  "Customs clearance coordination",
-  "Import documentation",
-  "Vehicle processing",
-  "Port/border clearance coordination",
-  "Customs-related documentation",
-  "Payment/document coordination",
-  "Vehicle release coordination",
-  "Delivery arrangements",
-];
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function Clearing() {
+  const { content } = useSiteContent();
+  const { heading, body, disclaimer, areas } = content.clearingPage;
+
   return (
     <>
       <Seo
@@ -23,16 +16,9 @@ export default function Clearing() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>Clearing support once your vehicle arrives</h1>
-          <p>
-            We assist with vehicle clearing, documentation, and coordination through the
-            clearance and delivery process.
-          </p>
-          <div className="service-note service-note--on-dark">
-            Clearance timelines, duty rates and outcomes are determined by customs authorities,
-            not by Lycie Investments. We coordinate and support the process — we can't guarantee
-            government processing times or costs.
-          </div>
+          <h1>{heading}</h1>
+          <p>{body}</p>
+          <div className="service-note service-note--on-dark">{disclaimer}</div>
         </div>
       </section>
 
@@ -43,7 +29,7 @@ export default function Clearing() {
             <h2>Areas of support</h2>
           </div>
           <ul className="clearing-areas">
-            {AREAS.map((area) => (
+            {areas.map((area) => (
               <li key={area}>{area}</li>
             ))}
           </ul>

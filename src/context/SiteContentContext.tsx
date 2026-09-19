@@ -21,6 +21,9 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
     services: { ...DEFAULT_SITE_CONTENT.services, ...(partial.services as object) },
     journey: { ...DEFAULT_SITE_CONTENT.journey, ...(partial.journey as object) },
     whyChooseUs: { ...DEFAULT_SITE_CONTENT.whyChooseUs, ...(partial.whyChooseUs as object) },
+    importPage: { ...DEFAULT_SITE_CONTENT.importPage, ...(partial.importPage as object) },
+    clearingPage: { ...DEFAULT_SITE_CONTENT.clearingPage, ...(partial.clearingPage as object) },
+    hirePage: { ...DEFAULT_SITE_CONTENT.hirePage, ...(partial.hirePage as object) },
   };
 }
 

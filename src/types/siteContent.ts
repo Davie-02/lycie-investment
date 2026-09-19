@@ -81,6 +81,16 @@ export interface WhyChooseUsContent {
   items: WhyChooseUsItem[];
 }
 
+export interface ServicePageContent {
+  heading: string;
+  body: string;
+}
+
+export interface ClearingPageContent extends ServicePageContent {
+  disclaimer: string;
+  areas: string[];
+}
+
 export interface SiteContent {
   contact: ContactContent;
   social: SocialContent;
@@ -90,6 +100,9 @@ export interface SiteContent {
   services: ServicesContent;
   journey: JourneyContent;
   whyChooseUs: WhyChooseUsContent;
+  importPage: ServicePageContent;
+  clearingPage: ClearingPageContent;
+  hirePage: ServicePageContent;
 }
 
 export type SiteContentKey = keyof SiteContent;
