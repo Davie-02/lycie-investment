@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ContactService } from "./contact.service";
 import { CreateContactMessageDto } from "./dto/create-contact-message.dto";
 import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto";
@@ -12,13 +13,15 @@ import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 export class ContactController {
   constructor(private readonly contactService: ContactService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalCustomerGuard)
   @Post()
   create(@Body() dto: CreateContactMessageDto, @CurrentCustomerId() customerId?: string) {
     return this.contactService.create(dto, customerId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
   @Get()
   findAll() {
     return this.contactService.findAll();

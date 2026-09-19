@@ -52,7 +52,12 @@ export class UploadsService {
 
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
     const filename = `${randomUUID()}.webp`;
-    const optimizedImage = await sharp(file.buffer)
+    // Caps decoded pixel count before resize runs — sharp's own default
+    // (~268 megapixels) is generous enough that a crafted "decompression
+    // bomb" image (tiny file, extreme declared dimensions) could still
+    // spike memory/CPU during decode. No real vehicle photo needs more
+    // than a fraction of this.
+    const optimizedImage = await sharp(file.buffer, { limitInputPixels: 50_000_000 })
       .resize({ width: 2000, height: 1400, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer();

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ImportRequestsService } from "./import-requests.service";
 import { CreateImportRequestDto } from "./dto/create-import-request.dto";
 import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto";
@@ -12,13 +13,15 @@ import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 export class ImportRequestsController {
   constructor(private readonly importRequestsService: ImportRequestsService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalCustomerGuard)
   @Post()
   create(@Body() dto: CreateImportRequestDto, @CurrentCustomerId() customerId?: string) {
     return this.importRequestsService.create(dto, customerId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
   @Get()
   findAll() {
     return this.importRequestsService.findAll();

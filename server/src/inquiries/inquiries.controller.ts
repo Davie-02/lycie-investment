@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { InquiriesService } from "./inquiries.service";
 import { CreateInquiryDto } from "./dto/create-inquiry.dto";
 import { UpdateRequestStatusDto } from "../common/dto/update-request-status.dto";
@@ -12,13 +13,15 @@ import { CurrentCustomerId } from "../auth/current-customer-id.decorator";
 export class InquiriesController {
   constructor(private readonly inquiriesService: InquiriesService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalCustomerGuard)
   @Post()
   create(@Body() dto: CreateInquiryDto, @CurrentCustomerId() customerId?: string) {
     return this.inquiriesService.create(dto, customerId);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
   @Get()
   findAll() {
     return this.inquiriesService.findAll();

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { HireRequestsService } from "./hire-requests.service";
 import { CreateHireRequestDto } from "./dto/create-hire-request.dto";
 import { UpdateHireRequestStatusDto } from "./dto/update-hire-request-status.dto";
@@ -13,6 +14,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 export class HireRequestsController {
   constructor(private readonly hireRequestsService: HireRequestsService) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseGuards(OptionalCustomerGuard)
   @Post()
   create(@Body() dto: CreateHireRequestDto, @CurrentCustomerId() customerId?: string) {
