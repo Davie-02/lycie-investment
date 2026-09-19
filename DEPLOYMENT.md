@@ -215,7 +215,10 @@ Notes:
    | Key | Value |
    | --- | --- |
    | `VITE_API_BASE_URL` | Your Render API URL + `/api`, e.g. `https://lycie-investment-api.onrender.com/api` |
-5. Deploy. Vercel gives you a URL like `https://lycie-investment.vercel.app`
+5. `vercel.json` (already in the repo) makes every page route (e.g. `/faq`,
+   `/admin/login`) load the app when opened directly or refreshed — without it
+   Vercel returns 404 for anything except the homepage.
+6. Deploy. Vercel gives you a URL like `https://lycie-investment.vercel.app`
    (or connect a custom domain under Project Settings → Domains).
 
 ---
