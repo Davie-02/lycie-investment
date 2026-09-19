@@ -1,0 +1,319 @@
+/* Chart colors: the blue<->red diverging pair (with a gray midpoint) for
+   sentiment polarity, and one blue ramp step for magnitude. Text never
+   wears a series color — labels stay in ink, the mark carries identity. */
+.insights {
+  --viz-pos: #2a78d6;
+  --viz-neg: #e34948;
+  --viz-neutral: #b9b8b1;
+  --viz-magnitude: #2a78d6;
+  --viz-surface: var(--color-surface);
+  --status-action: #d03b3b;
+  --status-opportunity: #0ca30c;
+  --status-info: #667085;
+}
+
+.insights-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.insights-filter {
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.insights-filter--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.sentiment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sentiment-badge > span:first-child {
+  font-size: 0.7em;
+}
+
+.sentiment-badge--positive > span:first-child { color: #2a78d6; }
+.sentiment-badge--negative > span:first-child { color: #e34948; }
+.sentiment-badge--neutral > span:first-child { color: #8d8c85; }
+
+.review-cell {
+  max-width: 420px;
+}
+
+.review-cell p {
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* ---- Insights dashboard ------------------------------------------------ */
+
+.insights-updated {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.insights-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 760px) {
+  .insights-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.insights-kpi {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.insights-kpi__label {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.insights-kpi__value {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.1;
+  margin-top: var(--space-1);
+}
+
+.insights-kpi__note {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-1);
+}
+
+.insights-section {
+  margin-bottom: var(--space-7);
+}
+
+.insights-section > h2 {
+  margin-bottom: var(--space-4);
+}
+
+.insights-recs {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.insights-rec {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--status-info);
+  border-radius: var(--radius-sm);
+}
+
+.insights-rec--action { border-left-color: var(--status-action); }
+.insights-rec--opportunity { border-left-color: var(--status-opportunity); }
+
+.insights-rec a {
+  display: inline-block;
+  margin-top: var(--space-1);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-accent-dark);
+}
+
+.insights-rec__tag {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.insights-rec h3 {
+  font-size: var(--fs-md);
+  margin: var(--space-1) 0;
+}
+
+.insights-charts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+@media (min-width: 900px) {
+  .insights-charts {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.insights-card {
+  padding: var(--space-5);
+  background: var(--viz-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.insights-card h3 {
+  font-size: var(--fs-md);
+  margin-bottom: var(--space-1);
+}
+
+.insights-card__sub {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  margin-bottom: var(--space-4);
+}
+
+.insights-empty {
+  font-size: var(--fs-sm);
+  color: var(--color-muted);
+}
+
+/* Stacked sentiment bar: segments separated by a 2px surface gap. */
+.sbar {
+  display: flex;
+  height: 14px;
+  gap: 2px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--viz-surface);
+}
+
+.sbar__seg {
+  min-width: 2px;
+}
+
+.sbar__seg--positive { background: var(--viz-pos); }
+.sbar__seg--neutral { background: var(--viz-neutral); }
+.sbar__seg--negative { background: var(--viz-neg); }
+
+.sbar--thin {
+  height: 8px;
+}
+
+.sbar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--color-text);
+}
+
+.sbar-legend b {
+  font-weight: 700;
+}
+
+.sbar-rows {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sbar-rows__label {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+/* Horizontal bars for rating distribution. */
+.hbars {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.hbars__row {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 2rem;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+}
+
+.hbars__track {
+  height: 12px;
+}
+
+.hbars__fill {
+  height: 100%;
+  min-width: 0;
+  background: var(--viz-magnitude);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Weekly columns. */
+.vbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 130px;
+}
+
+.vbars__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  font-size: var(--fs-xs);
+  gap: 2px;
+}
+
+.vbars__bar {
+  width: 100%;
+  background: var(--viz-magnitude);
+  border-radius: 4px 4px 0 0;
+  min-height: 0;
+}
+
+.vbars__axis {
+  display: flex;
+  gap: 6px;
+  margin-top: var(--space-1);
+  font-size: 0.65rem;
+  color: var(--color-muted);
+}
+
+.vbars__axis span {
+  flex: 1;
+  text-align: center;
+}
+
+.insights-table-note {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  margin-top: var(--space-4);
+  max-width: 70ch;
+}
+
+.insights .admin-table td.num,
+.insights .admin-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

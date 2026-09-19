@@ -22,6 +22,8 @@ import { FinancialModule } from "./financial/financial.module";
 import { TestimonialsModule } from "./testimonials/testimonials.module";
 import { FaqModule } from "./faq/faq.module";
 import { BlogPostsModule } from "./blog-posts/blog-posts.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { InsightsModule } from "./insights/insights.module";
 
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { BlogPostsModule } from "./blog-posts/blog-posts.module";
     TestimonialsModule,
     FaqModule,
     BlogPostsModule,
+    ReviewsModule,
+    InsightsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -37,6 +37,18 @@ const NOTICES_CARD = {
   description: "Manage site-wide banners, warnings, and special-offer popups.",
 };
 
+const INSIGHTS_CARD = {
+  to: "/admin/insights",
+  title: "Insights",
+  description: "Customer sentiment, vehicle demand, and recommendations on what to do next.",
+};
+
+const REVIEWS_CARD = {
+  to: "/admin/reviews",
+  title: "Reviews",
+  description: "Approve or reject customer reviews before they appear on the site.",
+};
+
 const OWNER_CARD = {
   to: "/admin/users",
   title: "Admin Users",
@@ -49,7 +61,7 @@ export default function AdminDashboard() {
 
   const cards = [
     ...BASE_CARDS,
-    ...(canEditContent ? [SITE_CONTENT_CARD, NOTICES_CARD] : []),
+    ...(canEditContent ? [INSIGHTS_CARD, REVIEWS_CARD, SITE_CONTENT_CARD, NOTICES_CARD] : []),
     ...(currentUser?.role === "OWNER" ? [OWNER_CARD] : []),
   ];
 

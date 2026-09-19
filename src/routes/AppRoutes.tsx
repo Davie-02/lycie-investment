@@ -16,6 +16,7 @@ const Clearing = lazy(() => import("@/pages/Clearing/Clearing"));
 const Hire = lazy(() => import("@/pages/Hire/Hire"));
 const Contact = lazy(() => import("@/pages/Contact/Contact"));
 const Faq = lazy(() => import("@/pages/Faq/Faq"));
+const Reviews = lazy(() => import("@/pages/Reviews/Reviews"));
 const BlogList = lazy(() => import("@/pages/Blog/BlogList"));
 const BlogPost = lazy(() => import("@/pages/Blog/BlogPost"));
 const CustomerLogin = lazy(() => import("@/pages/Customer/CustomerLogin"));
@@ -40,6 +41,8 @@ const AdminPayments = lazy(() => import("@/admin/pages/AdminPayments"));
 const AdminTestimonials = lazy(() => import("@/admin/pages/AdminTestimonials"));
 const AdminFaq = lazy(() => import("@/admin/pages/AdminFaq"));
 const AdminBlogPosts = lazy(() => import("@/admin/pages/AdminBlogPosts"));
+const AdminReviews = lazy(() => import("@/admin/pages/AdminReviews"));
+const AdminInsights = lazy(() => import("@/admin/pages/AdminInsights"));
 
 function CustomerAccountRoute() {
   const { isAuthenticated } = useCustomerAuth();
@@ -60,6 +63,7 @@ export default function AppRoutes() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/faq" element={<Faq />} />
+        <Route path="/reviews" element={<Reviews />} />
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
         <Route path="/account/login" element={<CustomerLogin />} />
@@ -94,6 +98,8 @@ export default function AppRoutes() {
                     <Route path="testimonials" element={<AdminTestimonials />} />
                     <Route path="faq" element={<AdminFaq />} />
                     <Route path="blog" element={<AdminBlogPosts />} />
+                    <Route path="reviews" element={<AdminReviews />} />
+                    <Route path="insights" element={<AdminInsights />} />
                   </Route>
                   <Route element={<RequireRole roles={["OWNER"]} />}>
                     <Route path="users" element={<AdminUsers />} />

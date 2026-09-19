@@ -1,0 +1,137 @@
+.reviews {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.reviews__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.reviews__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reviews__stars {
+  color: var(--color-accent-dark);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.reviews__stars-empty {
+  color: var(--color-border);
+}
+
+.reviews__list {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.reviews__item {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.reviews__item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.reviews__item p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reviews__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.reviews__form {
+  max-width: 640px;
+}
+
+.reviews__form h3 {
+  margin-bottom: var(--space-4);
+}
+
+.reviews__rating {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.reviews__rating legend {
+  padding: 0;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.reviews__rating-options {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.reviews__star {
+  position: relative;
+  font-size: 1.9rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-border);
+  transition: color var(--transition), transform var(--transition);
+}
+
+.reviews__star:hover {
+  transform: scale(1.12);
+}
+
+.reviews__star--on {
+  color: var(--color-accent-dark);
+}
+
+/* The real radio stays in the DOM (keyboard + screen-reader operable) but
+   is visually replaced by the star glyph. */
+.reviews__star input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+}
+
+.reviews__star:focus-within {
+  outline: 2px solid var(--color-accent-dark);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.reviews__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviews__star {
+    transition: none;
+  }
+  .reviews__star:hover {
+    transform: none;
+  }
+}

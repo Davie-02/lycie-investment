@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import VehicleGallery from "@/components/vehicles/VehicleGallery";
@@ -5,6 +6,8 @@ import VehicleSpecifications from "@/components/vehicles/VehicleSpecifications";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import InquiryForm from "@/components/forms/InquiryForm";
 import Reveal from "@/components/common/Reveal";
+import ReviewsSection from "@/components/reviews/ReviewsSection";
+import { recordVehicleView } from "@/services/reviews.service";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicleBySlug } from "@/services/vehicles.service";
 import { formatCurrency, formatMileage } from "@/utils/format";
@@ -16,6 +19,11 @@ export default function VehicleDetails() {
     () => getVehicleBySlug(slug ?? ""),
     [slug]
   );
+
+  const vehicleId = vehicle?.id;
+  useEffect(() => {
+    if (vehicleId) recordVehicleView(vehicleId);
+  }, [vehicleId]);
 
   if (isLoading) {
     return (
@@ -100,6 +108,12 @@ export default function VehicleDetails() {
             <div className="vehicle-details__description">
               <h2>Specifications</h2>
               <VehicleSpecifications vehicle={vehicle} />
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div className="vehicle-details__description">
+              <ReviewsSection vehicleId={vehicle.id} heading="Reviews of this vehicle" />
             </div>
           </Reveal>
         </div>

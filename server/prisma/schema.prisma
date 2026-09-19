@@ -65,6 +65,7 @@ model CustomerUser {
   contactMessages     ContactMessage[]
   passwordResetTokens PasswordResetToken[]
   savedVehicles       SavedVehicle[]
+  reviews             Review[]
 }
 
 /// A password-reset link is only ever useful to the customer it was issued
@@ -252,6 +253,8 @@ model Vehicle {
   inquiries     Inquiry[]
   customerCases CustomerCase[]
   savedBy       SavedVehicle[]
+  reviews       Review[]
+  viewStats     VehicleViewStat[]
 }
 
 /// A customer's shortlist while browsing — bookmark now, compare/decide
@@ -466,4 +469,48 @@ model BlogPost {
   publishedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+/// A visitor's or customer's rating + comment, either about a specific
+/// vehicle or (vehicleId null) about the company. Nothing is shown publicly
+/// until an admin approves it. Sentiment is computed once at submission
+/// (see src/insights/sentiment.util.ts — an offline lexicon, no external
+/// API) so the admin can spot unhappy customers at a glance without
+/// re-analysing text on every page load.
+model Review {
+  id             String        @id @default(cuid())
+  authorName     String
+  rating         Int
+  comment        String
+  vehicleId      String?
+  vehicle        Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// Set automatically for logged-in customers (never user-supplied).
+  customerId     String?       @db.Uuid
+  customer       CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  /// "pending" | "approved" | "rejected"
+  status         String        @default("pending")
+  /// "positive" | "neutral" | "negative"
+  sentiment      String
+  /// -1 (very negative) .. 1 (very positive), blending rating and text.
+  sentimentScore Float
+  keywords       String[]
+  createdAt      DateTime      @default(now())
+
+  @@index([status, createdAt])
+  @@index([vehicleId, status])
+}
+
+/// Anonymous, aggregated-per-day page-view counter for a vehicle. Stores no
+/// IP, cookie or user identifier — only "vehicle X was viewed N times on
+/// day D" — which is all the demand insights need and keeps this
+/// privacy-light by construction.
+model VehicleViewStat {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  views     Int      @default(0)
+
+  @@unique([vehicleId, day])
+  @@index([day])
 }
