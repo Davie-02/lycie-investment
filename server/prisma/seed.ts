@@ -85,6 +85,102 @@ async function seedSiteContent() {
         facebookAppId: null,
       },
     },
+    {
+      key: "hero",
+      value: {
+        eyebrow: "Source · Import · Clear · Deliver",
+        heading: "From order to your driveway, one company handles the whole journey.",
+        body:
+          "Lycie Investments sources, imports, sells, hires and clears vehicles for customers who want one point of contact from request to delivery — not four separate agents to chase.",
+        primaryCtaLabel: "Browse Vehicles",
+        secondaryCtaLabel: "Request a Vehicle",
+        highlights: [
+          {
+            label: "Sourcing completed",
+            title: "Toyota Hilux, 2022",
+            detail: "Matched to a customer's work and travel requirements.",
+            origin: "Japan",
+            destination: "Lilongwe, Malawi",
+          },
+          {
+            label: "Import coordinated",
+            title: "Honda Fit, 2020",
+            detail: "Sourcing, shipping documentation, and arrival coordination handled by one team.",
+            origin: "Japan",
+            destination: "Blantyre, Malawi",
+          },
+          {
+            label: "Hire delivered",
+            title: "Toyota Corolla",
+            detail: "A dependable vehicle prepared and delivered for a business trip.",
+            origin: "Lycie fleet",
+            destination: "Lilongwe, Malawi",
+          },
+        ],
+      },
+    },
+    {
+      key: "services",
+      value: {
+        eyebrow: "What we do",
+        heading: "Four services, one company to deal with",
+        body: "Handle sourcing, importing, clearing and hire without coordinating separate providers.",
+        items: [
+          {
+            title: "Vehicle Importing",
+            description: "We source and import vehicles from abroad to match what you need.",
+          },
+          {
+            title: "Vehicle Dealership",
+            description:
+              "Browse quality vehicles ready for sale, inspected and listed with real specifications.",
+          },
+          {
+            title: "Vehicle Hire",
+            description: "Short-term and long-term hire for individuals and businesses.",
+          },
+          {
+            title: "Vehicle Clearing",
+            description: "Support with clearing, documentation and logistics once your vehicle arrives.",
+          },
+        ],
+      },
+    },
+    {
+      key: "journey",
+      value: {
+        eyebrow: "How it works",
+        heading: "From request to delivery",
+        body: "The same process runs behind every import — visible to you at each stage.",
+        steps: [
+          { title: "Tell us what you need", detail: "Share make, model, budget and timeline." },
+          { title: "We source the vehicle", detail: "We find a match against your requirements." },
+          { title: "We arrange the import", detail: "Shipping and paperwork are coordinated for you." },
+          { title: "Vehicle arrives", detail: "Your vehicle reaches the port or border." },
+          { title: "Clearing & documentation", detail: "We assist with clearance and required documents." },
+          { title: "Vehicle delivered", detail: "Your vehicle is delivered and ready to drive." },
+        ],
+      },
+    },
+    {
+      key: "whyChooseUs",
+      value: {
+        eyebrow: "Why Lycie Investments",
+        heading: "What working with us looks like",
+        items: [
+          { title: "One point of contact", detail: "Sourcing, import, clearing and delivery under one company." },
+          {
+            title: "Clear communication",
+            detail: "Updates at each stage, not silence between order and delivery.",
+          },
+          { title: "Flexible vehicle hire", detail: "Short-term and long-term hire alongside dealership sales." },
+          {
+            title: "Documentation support",
+            detail: "Help preparing and coordinating the paperwork your vehicle needs.",
+          },
+        ],
+      },
+    },
   ];
 
   for (const section of defaults) {

@@ -17,6 +17,10 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
     social: { ...DEFAULT_SITE_CONTENT.social, ...(partial.social as object) },
     about: { ...DEFAULT_SITE_CONTENT.about, ...(partial.about as object) },
     seo: { ...DEFAULT_SITE_CONTENT.seo, ...(partial.seo as object) },
+    hero: { ...DEFAULT_SITE_CONTENT.hero, ...(partial.hero as object) },
+    services: { ...DEFAULT_SITE_CONTENT.services, ...(partial.services as object) },
+    journey: { ...DEFAULT_SITE_CONTENT.journey, ...(partial.journey as object) },
+    whyChooseUs: { ...DEFAULT_SITE_CONTENT.whyChooseUs, ...(partial.whyChooseUs as object) },
   };
 }
 

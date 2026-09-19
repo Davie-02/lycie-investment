@@ -1,19 +1,17 @@
-const POINTS = [
-  { title: "One point of contact", detail: "Sourcing, import, clearing and delivery under one company." },
-  { title: "Clear communication", detail: "Updates at each stage, not silence between order and delivery." },
-  { title: "Flexible vehicle hire", detail: "Short-term and long-term hire alongside dealership sales." },
-  { title: "Documentation support", detail: "Help preparing and coordinating the paperwork your vehicle needs." },
-];
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function WhyChooseUs() {
+  const { content } = useSiteContent();
+  const { eyebrow, heading, items } = content.whyChooseUs;
+
   return (
     <section className="section container why-choose-us">
       <div className="section-heading">
-        <span className="eyebrow">Why Lycie Investments</span>
-        <h2>What working with us looks like</h2>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{heading}</h2>
       </div>
       <div className="why-choose-us__grid">
-        {POINTS.map((point) => (
+        {items.map((point) => (
           <div className="why-choose-us__item" key={point.title}>
             <h3>{point.title}</h3>
             <p className="text-muted">{point.detail}</p>

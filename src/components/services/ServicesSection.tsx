@@ -1,4 +1,5 @@
 import ServiceCard from "./ServiceCard";
+import { useSiteContent } from "@/context/SiteContentContext";
 import "./ServicesSection.css";
 
 const ICONS = {
@@ -24,45 +25,33 @@ const ICONS = {
   ),
 };
 
-const SERVICES = [
-  {
-    icon: ICONS.import,
-    title: "Vehicle Importing",
-    description: "We source and import vehicles from abroad to match what you need.",
-    href: "/import",
-  },
-  {
-    icon: ICONS.dealership,
-    title: "Vehicle Dealership",
-    description: "Browse quality vehicles ready for sale, inspected and listed with real specifications.",
-    href: "/vehicles",
-  },
-  {
-    icon: ICONS.hire,
-    title: "Vehicle Hire",
-    description: "Short-term and long-term hire for individuals and businesses.",
-    href: "/hire",
-  },
-  {
-    icon: ICONS.clearing,
-    title: "Vehicle Clearing",
-    description: "Support with clearing, documentation and logistics once your vehicle arrives.",
-    href: "/clearing",
-  },
+// Icon and link target for each of the 4 fixed service slots — these
+// don't change, so they stay in code. Only the title/description text
+// (content.services.items, same order) is CMS-edited.
+const SERVICE_SLOTS = [
+  { icon: ICONS.import, href: "/import" },
+  { icon: ICONS.dealership, href: "/vehicles" },
+  { icon: ICONS.hire, href: "/hire" },
+  { icon: ICONS.clearing, href: "/clearing" },
 ];
 
 export default function ServicesSection() {
+  const { content } = useSiteContent();
+  const { eyebrow, heading, body, items } = content.services;
+
   return (
     <section className="section container">
       <div className="section-heading">
-        <span className="eyebrow">What we do</span>
-        <h2>Four services, one company to deal with</h2>
-        <p>Handle sourcing, importing, clearing and hire without coordinating separate providers.</p>
+        <span className="eyebrow">{eyebrow}</span>
+        <h2>{heading}</h2>
+        <p>{body}</p>
       </div>
       <div className="services-grid">
-        {SERVICES.map((service) => (
-          <ServiceCard key={service.title} {...service} />
-        ))}
+        {SERVICE_SLOTS.map((slot, index) => {
+          const item = items[index];
+          if (!item) return null;
+          return <ServiceCard key={item.title} {...slot} title={item.title} description={item.description} />;
+        })}
       </div>
     </section>
   );

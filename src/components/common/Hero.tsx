@@ -1,72 +1,51 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useSiteContent } from "@/context/SiteContentContext";
 import "./Hero.css";
 
-const JOURNEY_HIGHLIGHTS = [
-  {
-    label: "Sourcing completed",
-    title: "Toyota Hilux, 2022",
-    detail: "Matched to a customer's work and travel requirements.",
-    origin: "Japan",
-    destination: "Lilongwe, Malawi",
-  },
-  {
-    label: "Import coordinated",
-    title: "Honda Fit, 2020",
-    detail: "Sourcing, shipping documentation, and arrival coordination handled by one team.",
-    origin: "Japan",
-    destination: "Blantyre, Malawi",
-  },
-  {
-    label: "Hire delivered",
-    title: "Toyota Corolla",
-    detail: "A dependable vehicle prepared and delivered for a business trip.",
-    origin: "Lycie fleet",
-    destination: "Lilongwe, Malawi",
-  },
-] as const;
-
 export default function Hero() {
+  const { content } = useSiteContent();
+  const { eyebrow, heading, body, primaryCtaLabel, secondaryCtaLabel, highlights } = content.hero;
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const highlight = JOURNEY_HIGHLIGHTS[activeIndex];
+  // Guards against a moment where the CMS has been saved with zero
+  // highlights — falls back to an empty-safe placeholder rather than
+  // crashing on highlights[0] being undefined.
+  const highlight = highlights[activeIndex] ?? highlights[0];
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion || isPaused) return;
+    if (reduceMotion || isPaused || highlights.length <= 1) return;
 
     const intervalId = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % JOURNEY_HIGHLIGHTS.length);
+      setActiveIndex((current) => (current + 1) % highlights.length);
     }, 6000);
 
     return () => window.clearInterval(intervalId);
-  }, [isPaused]);
+  }, [isPaused, highlights.length]);
 
   function showHighlight(index: number) {
-    setActiveIndex((index + JOURNEY_HIGHLIGHTS.length) % JOURNEY_HIGHLIGHTS.length);
+    setActiveIndex((index + highlights.length) % highlights.length);
   }
 
   return (
     <section className="hero">
       <div className="container hero__grid">
         <div>
-          <span className="hero__eyebrow">Source · Import · Clear · Deliver</span>
-          <h1>From order to your driveway, one company handles the whole journey.</h1>
-          <p>
-            Lycie Investments sources, imports, sells, hires and clears vehicles for
-            customers who want one point of contact from request to delivery — not
-            four separate agents to chase.
-          </p>
+          <span className="hero__eyebrow">{eyebrow}</span>
+          <h1>{heading}</h1>
+          <p>{body}</p>
           <div className="hero__actions">
             <Link to="/vehicles" className="btn btn-primary">
-              Browse Vehicles
+              {primaryCtaLabel}
             </Link>
             <Link to="/import" className="btn btn-secondary">
-              Request a Vehicle
+              {secondaryCtaLabel}
             </Link>
           </div>
         </div>
 
+        {highlight && (
         <div
           className="hero__panel"
           aria-live="polite"
@@ -79,7 +58,7 @@ export default function Hero() {
         >
           <div className="hero__panel-heading">
             <span className="hero__panel-label">Customer journey highlights</span>
-            <span className="hero__panel-count">{activeIndex + 1} / {JOURNEY_HIGHLIGHTS.length}</span>
+            <span className="hero__panel-count">{activeIndex + 1} / {highlights.length}</span>
           </div>
           <div className="hero__panel-row">
             <span className="hero__panel-label">Milestone</span>
@@ -103,7 +82,7 @@ export default function Hero() {
               Previous
             </button>
             <div className="hero__panel-dots" aria-label="Journey highlights">
-              {JOURNEY_HIGHLIGHTS.map((item, index) => (
+              {highlights.map((item, index) => (
                 <button
                   key={item.title}
                   type="button"
@@ -119,6 +98,7 @@ export default function Hero() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </section>
   );
