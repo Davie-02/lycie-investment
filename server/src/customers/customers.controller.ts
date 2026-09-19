@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { JwtService } from "@nestjs/jwt";
@@ -85,6 +85,27 @@ export class CustomersController {
   @Roles("CUSTOMER")
   changePassword(@CurrentUser() user: { sub: string }, @Body() dto: ChangeCustomerPasswordDto) {
     return this.customers.changePassword(user.sub, dto);
+  }
+
+  @Get("me/saved-vehicles")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
+  savedVehicles(@CurrentUser() user: { sub: string }) {
+    return this.customers.findSavedVehicles(user.sub);
+  }
+
+  @Post("me/saved-vehicles/:vehicleId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
+  saveVehicle(@CurrentUser() user: { sub: string }, @Param("vehicleId") vehicleId: string) {
+    return this.customers.saveVehicle(user.sub, vehicleId);
+  }
+
+  @Delete("me/saved-vehicles/:vehicleId")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
+  unsaveVehicle(@CurrentUser() user: { sub: string }, @Param("vehicleId") vehicleId: string) {
+    return this.customers.unsaveVehicle(user.sub, vehicleId);
   }
 
   private async createSession(user: { id: string; name: string; email: string }, response: Response) {

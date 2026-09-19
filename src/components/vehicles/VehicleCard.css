@@ -51,6 +51,12 @@
   color: var(--color-muted);
 }
 
+.vehicle-card__save {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}
+
 .vehicle-card__body {
   padding: var(--space-5);
   display: flex;

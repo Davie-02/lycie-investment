@@ -1,3 +1,4 @@
+import type { Vehicle } from "@/types/vehicle";
 import { ApiError } from "./http";
 import { clearCsrfToken, getCsrfToken } from "./csrf";
 
@@ -198,6 +199,29 @@ export function resetPassword(token: string, newPassword: string) {
   return customerFetch<{ reset: boolean }>("/customers/reset-password", {
     method: "POST",
     body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+export interface SavedVehicle {
+  id: string;
+  vehicleId: string;
+  createdAt: string;
+  vehicle: Vehicle;
+}
+
+export function getSavedVehicles() {
+  return customerFetch<SavedVehicle[]>("/customers/me/saved-vehicles");
+}
+
+export function saveVehicle(vehicleId: string) {
+  return customerFetch<SavedVehicle>(`/customers/me/saved-vehicles/${vehicleId}`, {
+    method: "POST",
+  });
+}
+
+export function unsaveVehicle(vehicleId: string) {
+  return customerFetch<{ deleted: boolean }>(`/customers/me/saved-vehicles/${vehicleId}`, {
+    method: "DELETE",
   });
 }
 

@@ -2,9 +2,11 @@ import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import VehicleGallery from "@/components/vehicles/VehicleGallery";
 import VehicleSpecifications from "@/components/vehicles/VehicleSpecifications";
+import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import InquiryForm from "@/components/forms/InquiryForm";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicleBySlug } from "@/services/vehicles.service";
+import { formatCurrency, formatMileage } from "@/utils/format";
 import "./VehicleDetails.css";
 
 export default function VehicleDetails() {
@@ -57,6 +59,19 @@ export default function VehicleDetails() {
 
       <section className="section container vehicle-details">
         <div>
+          <div className="vehicle-details__heading">
+            <div>
+              <h1>{vehicleLabel}</h1>
+              <p className="text-muted vehicle-details__heading-meta">
+                {vehicle.transmission} · {vehicle.fuelType} · {formatMileage(vehicle.mileageKm)}
+              </p>
+              <p className="mono vehicle-details__heading-price">
+                {formatCurrency(vehicle.price, vehicle.currency)}
+              </p>
+            </div>
+            <SaveVehicleButton vehicleId={vehicle.id} className="vehicle-details__save" />
+          </div>
+
           <VehicleGallery
             images={vehicle.images}
             altBase={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}

@@ -46,6 +46,7 @@ model CustomerUser {
   hireRequests        HireRequest[]
   contactMessages     ContactMessage[]
   passwordResetTokens PasswordResetToken[]
+  savedVehicles       SavedVehicle[]
 }
 
 /// A password-reset link is only ever useful to the customer it was issued
@@ -232,6 +233,24 @@ model Vehicle {
 
   inquiries     Inquiry[]
   customerCases CustomerCase[]
+  savedBy       SavedVehicle[]
+}
+
+/// A customer's shortlist while browsing — bookmark now, compare/decide
+/// later. Cascade on delete in both directions: unlike CustomerCase (an
+/// audit-worthy staff record), this is just a convenience list, so nothing
+/// should be blocked from being deleted because someone saved it.
+model SavedVehicle {
+  id         String   @id @default(uuid()) @db.Uuid
+  customerId String   @db.Uuid
+  vehicleId  String
+  createdAt  DateTime @default(now())
+
+  customer CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, vehicleId])
+  @@index([customerId, createdAt])
 }
 
 model HireVehicle {

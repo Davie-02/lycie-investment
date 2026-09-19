@@ -5,6 +5,33 @@
   align-items: start;
 }
 
+.vehicle-details__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.vehicle-details__heading h1 {
+  margin-bottom: var(--space-2);
+}
+
+.vehicle-details__heading-meta {
+  font-size: var(--fs-sm);
+}
+
+.vehicle-details__heading-price {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-top: var(--space-2);
+}
+
+.vehicle-details__save {
+  flex-shrink: 0;
+}
+
 .vehicle-details__description {
   margin-top: var(--space-7);
 }

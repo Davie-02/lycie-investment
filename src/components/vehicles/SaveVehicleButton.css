@@ -1,0 +1,66 @@
+.save-vehicle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--transition), border-color var(--transition), background-color var(--transition);
+}
+
+.save-vehicle-btn:hover {
+  border-color: var(--color-accent-dark);
+  transform: scale(1.08);
+}
+
+.save-vehicle-btn:active {
+  transform: scale(0.94);
+}
+
+.save-vehicle-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.save-vehicle-btn__icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--color-muted);
+  stroke-width: 1.8;
+  transition: fill var(--transition), stroke var(--transition);
+}
+
+.save-vehicle-btn--saved {
+  border-color: var(--color-accent-dark);
+  animation: save-vehicle-pop 320ms ease;
+}
+
+.save-vehicle-btn--saved .save-vehicle-btn__icon {
+  fill: var(--color-accent-dark);
+  stroke: var(--color-accent-dark);
+}
+
+@keyframes save-vehicle-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-vehicle-btn,
+  .save-vehicle-btn__icon {
+    transition: none;
+    animation: none;
+  }
+}

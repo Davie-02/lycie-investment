@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { useSavedVehicles } from "@/context/SavedVehiclesContext";
 import {
   getCustomerAccount,
   getCustomerCases,
@@ -16,7 +17,9 @@ import {
   type CustomerRequestSummary,
 } from "@/services/customer.service";
 import { ApiError } from "@/services/http";
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, formatMileage } from "@/utils/format";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import "./customer.css";
 
 const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
@@ -79,6 +82,7 @@ function validatePaymentForm(values: PaymentFormValues, proof: File | null) {
 
 export default function CustomerAccount() {
   const { currentUser, logout, updateCurrentUser } = useCustomerAuth();
+  const { savedVehicles } = useSavedVehicles();
   const navigate = useNavigate();
   const [account, setAccount] = useState<Account | null>(null);
   const [cases, setCases] = useState<CustomerCase[]>([]);
@@ -339,6 +343,44 @@ export default function CustomerAccount() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+
+            <div className="customer-account__history">
+              <h2>Saved vehicles</h2>
+              {savedVehicles.length === 0 ? (
+                <p className="text-muted">
+                  Nothing saved yet. Tap the heart icon on any vehicle to shortlist it here.
+                </p>
+              ) : (
+                <div className="customer-saved-vehicles">
+                  {savedVehicles.map(({ vehicle }) => (
+                    <article className="customer-saved-vehicle" key={vehicle.id}>
+                      <Link to={`/vehicles/${vehicle.slug}`} className="customer-saved-vehicle__image-link">
+                        <img
+                          src={resolveUploadUrl(vehicle.images[0])}
+                          alt={`${vehicle.make} ${vehicle.model}, ${vehicle.year}`}
+                          className="customer-saved-vehicle__image"
+                          loading="lazy"
+                        />
+                      </Link>
+                      <div className="customer-saved-vehicle__body">
+                        <Link to={`/vehicles/${vehicle.slug}`}>
+                          <h3>
+                            {vehicle.make} {vehicle.model}
+                          </h3>
+                        </Link>
+                        <p className="text-muted mono">
+                          {vehicle.year} · {formatMileage(vehicle.mileageKm)}
+                        </p>
+                        <p className="mono customer-saved-vehicle__price">
+                          {formatCurrency(vehicle.price, vehicle.currency)}
+                        </p>
+                      </div>
+                      <SaveVehicleButton vehicleId={vehicle.id} className="customer-saved-vehicle__save" />
+                    </article>
+                  ))}
                 </div>
               )}
             </div>

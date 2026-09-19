@@ -252,6 +252,34 @@ export class CustomersService {
     });
   }
 
+  findSavedVehicles(customerId: string) {
+    return this.prisma.savedVehicle.findMany({
+      where: { customerId },
+      orderBy: { createdAt: "desc" },
+      include: { vehicle: true },
+    });
+  }
+
+  async saveVehicle(customerId: string, vehicleId: string) {
+    const vehicle = await this.prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    if (!vehicle) {
+      throw new NotFoundException("Vehicle not found.");
+    }
+
+    // Upsert instead of create so saving something already-saved is a
+    // harmless no-op rather than a 409 the frontend would need to handle.
+    return this.prisma.savedVehicle.upsert({
+      where: { customerId_vehicleId: { customerId, vehicleId } },
+      update: {},
+      create: { customerId, vehicleId },
+    });
+  }
+
+  async unsaveVehicle(customerId: string, vehicleId: string) {
+    await this.prisma.savedVehicle.deleteMany({ where: { customerId, vehicleId } });
+    return { deleted: true };
+  }
+
   createCase(dto: CreateCustomerCaseDto) {
     return this.prisma.customerCase.create({
       data: {

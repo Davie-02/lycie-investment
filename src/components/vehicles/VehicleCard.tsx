@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { formatCurrency, formatMileage } from "@/utils/format";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import SaveVehicleButton from "./SaveVehicleButton";
 import "./VehicleCard.css";
 
 interface VehicleCardProps {
@@ -27,6 +28,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         <span className={`vehicle-card__status vehicle-card__status--${vehicle.status}`}>
           {STATUS_LABEL[vehicle.status]}
         </span>
+        <SaveVehicleButton vehicleId={vehicle.id} className="vehicle-card__save" />
       </div>
 
       <div className="vehicle-card__body">
