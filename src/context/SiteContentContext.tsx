@@ -16,6 +16,7 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
     contact: { ...DEFAULT_SITE_CONTENT.contact, ...(partial.contact as object) },
     social: { ...DEFAULT_SITE_CONTENT.social, ...(partial.social as object) },
     about: { ...DEFAULT_SITE_CONTENT.about, ...(partial.about as object) },
+    seo: { ...DEFAULT_SITE_CONTENT.seo, ...(partial.seo as object) },
   };
 }
 

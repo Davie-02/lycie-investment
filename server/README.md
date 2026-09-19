@@ -62,7 +62,8 @@ server at `http://localhost:5173`).
 ## Admin dashboard
 
 The site has an admin dashboard at `/admin` on the frontend (e.g.
-`http://localhost:5173/admin`) for managing vehicles, hire vehicles, and
+`http://localhost:5173/admin`) for managing vehicles, hire vehicles,
+bookings, payments, site content, notices, testimonials, FAQ, the blog, and
 viewing submitted form requests — without touching the database directly.
 
 ### Roles
@@ -215,11 +216,20 @@ wherever MinIO serves public reads from.
 | POST   | `/api/admin-users`        | Owner only         | Create an admin account                  |
 | PATCH  | `/api/admin-users/:id`    | Owner only         | Update role, active status, or password  |
 | DELETE | `/api/admin-users/:id`    | Owner only         | Delete an admin account                  |
-| GET    | `/api/cms/testimonials`   | Public             | List published testimonials (from Strapi) |
-| GET    | `/api/cms/faq`            | Public             | List published FAQ entries (from Strapi) |
-| GET    | `/api/cms/blog-posts`     | Public             | List published blog posts (from Strapi)  |
-| GET    | `/api/cms/blog-posts/:slug` | Public          | Get a single blog post (from Strapi)     |
-| GET    | `/api/cms/seo-settings`   | Public             | Sitewide SEO defaults (from Strapi)      |
+| GET    | `/api/testimonials`       | Public             | List testimonials                        |
+| POST   | `/api/testimonials`       | Owner/Manager      | Create a testimonial                     |
+| PATCH  | `/api/testimonials/:id`   | Owner/Manager      | Update a testimonial                     |
+| DELETE | `/api/testimonials/:id`   | Owner/Manager      | Delete a testimonial                     |
+| GET    | `/api/faq`                | Public             | List FAQ entries                         |
+| POST   | `/api/faq`                | Owner/Manager      | Create an FAQ entry                      |
+| PATCH  | `/api/faq/:id`            | Owner/Manager      | Update an FAQ entry                      |
+| DELETE | `/api/faq/:id`            | Owner/Manager      | Delete an FAQ entry                      |
+| GET    | `/api/blog-posts`         | Public             | List published blog posts                |
+| GET    | `/api/blog-posts/all`     | Owner/Manager      | List all blog posts, including drafts    |
+| GET    | `/api/blog-posts/:slug`   | Public             | Get a single published blog post         |
+| POST   | `/api/blog-posts`         | Owner/Manager      | Create a blog post (draft or published)  |
+| PATCH  | `/api/blog-posts/:id`     | Owner/Manager      | Update a blog post, including publish/unpublish |
+| DELETE | `/api/blog-posts/:id`     | Owner/Manager      | Delete a blog post                       |
 
 Payment review is available in the admin dashboard at `/admin/payments` for
 Owners and Managers. A customer submission remains pending until staff checks
@@ -245,45 +255,30 @@ read-only content is cacheable for one minute and can be served stale for up to
 five minutes while revalidating. Other API responses are marked `no-store`.
 Responses are compressed with gzip or deflate when the client supports it.
 
-## CMS content (Strapi)
+## Marketing content (testimonials, FAQ, blog)
 
-**Known blocker, confirmed by actually trying it: Strapi (5.52.3 and
-5.54.0, the latest as of writing) fails to boot at all under Node 20+**,
-including the Node 24 this project otherwise runs on — `strapi develop`
-and `strapi start` both crash immediately with
-`ERR_UNSUPPORTED_DIR_IMPORT` on a `lodash/fp` import inside Strapi's own
-compiled output. This is a known, open, unresolved upstream issue
-([strapi/strapi#25993](https://github.com/strapi/strapi/issues/25993)), not
-something wrong with this project's Strapi setup, and there's no confirmed
-safe workaround as of this writing. Before relying on this integration,
-confirm Strapi actually boots for you — it may work on an older Node LTS
-(the bug reports are inconsistent about exactly which versions are
-affected); if it doesn't, the whole `/cms/*` integration degrades
-gracefully to "no CMS content" rather than breaking the rest of the site
-(see below), so nothing else depends on this working.
+This was originally going to be a separate Strapi CMS so non-technical
+staff could publish marketing content without a deploy. That didn't pan
+out: Strapi 5 (checked at 5.52.3 and the latest 5.54.0) fails to boot at
+all under Node 20+, including the Node 24 this project runs on — it
+crashes immediately with `ERR_UNSUPPORTED_DIR_IMPORT` on a `lodash/fp`
+import inside Strapi's own compiled output. This is a known, open,
+unresolved upstream issue ([strapi/strapi#25993](https://github.com/strapi/strapi/issues/25993)),
+not something fixable from this project's side, and the pattern recurs
+across dozens of files in `@strapi/core`/`@strapi/utils` — not something
+safe to hand-patch either.
 
-Testimonials, FAQ, blog posts and SEO settings are edited in a separate
-Strapi CMS (`../strapi`), not in this API or its database. Everything else —
-vehicles, hire vehicles, notices, site content, auth, bookings, payments —
-stays here in Prisma; those four content types were simply never built
-anywhere in this app, so Strapi fills that gap without duplicating data that
-already has a working implementation.
-
-The frontend never talks to Strapi directly. `src/cms/` proxies reads
-server-side: `StrapiClientService` calls Strapi's REST API with a bearer
-`STRAPI_API_TOKEN` and caches each response for 60 seconds (content that
-changes a few times a week doesn't need a fresh fetch on every page load).
-If `STRAPI_URL`/`STRAPI_API_TOKEN` aren't set, the `/cms/*` endpoints return
-empty results instead of erroring — the homepage's testimonials/FAQ sections
-and the `/blog`, `/faq` pages just render nothing rather than breaking, so
-running this API without Strapi at all (e.g. in early development) is fine.
-
-To run Strapi locally: `cd strapi && npm install && cp .env.example .env`
-(point `DATABASE_URL` at its own Postgres database — not this one), then
-`npm run develop`, create an admin account at `http://localhost:1337/admin`,
-add and publish some content, and generate a **Read-only** API token under
-Settings → API Tokens. Put that token and `http://localhost:1337` into this
-service's `.env` as `STRAPI_API_TOKEN`/`STRAPI_URL`.
+So testimonials, FAQ, and the blog are managed the same way as
+notices and site content: real Prisma models (`Testimonial`, `Faq`,
+`BlogPost`), admin-only CRUD (`src/testimonials`, `src/faq`,
+`src/blog-posts`), public read endpoints, and dashboard pages at
+`/admin/testimonials`, `/admin/faq`, and `/admin/blog`. Blog posts have a
+draft/published state (`publishedAt: null` = draft, hidden from
+`GET /blog-posts` and `GET /blog-posts/:slug`, but visible to admins via
+`GET /blog-posts/all`). SEO defaults (site name, meta description,
+Facebook App ID) are just a fourth `SiteContent` key (`"seo"`, alongside
+`contact`/`social`/`about`), editable from the same "Site Content" admin
+page — see `src/types/siteContent.ts` on the frontend.
 
 ## Data model
 

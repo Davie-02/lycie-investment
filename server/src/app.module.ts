@@ -19,7 +19,9 @@ import { UploadsModule } from "./uploads/uploads.module";
 import { HealthController } from "./common/health.controller";
 import { CustomersModule } from "./customers/customers.module";
 import { FinancialModule } from "./financial/financial.module";
-import { CmsModule } from "./cms/cms.module";
+import { TestimonialsModule } from "./testimonials/testimonials.module";
+import { FaqModule } from "./faq/faq.module";
+import { BlogPostsModule } from "./blog-posts/blog-posts.module";
 
 @Module({
   imports: [
@@ -48,7 +50,9 @@ import { CmsModule } from "./cms/cms.module";
     UploadsModule,
     CustomersModule,
     FinancialModule,
-    CmsModule,
+    TestimonialsModule,
+    FaqModule,
+    BlogPostsModule,
   ],
   controllers: [HealthController],
   providers: [

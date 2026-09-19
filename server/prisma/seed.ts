@@ -76,6 +76,15 @@ async function seedSiteContent() {
           "Reliable sourcing, import assistance, clearing support and flexible hire — handled by one team who can answer questions across the whole process rather than pointing you elsewhere.",
       },
     },
+    {
+      key: "seo",
+      value: {
+        siteName: "Lycie Investment",
+        defaultDescription:
+          "Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi.",
+        facebookAppId: null,
+      },
+    },
   ];
 
   for (const section of defaults) {

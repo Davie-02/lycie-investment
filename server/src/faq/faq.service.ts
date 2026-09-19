@@ -1,0 +1,35 @@
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateFaqDto } from "./dto/create-faq.dto";
+import { UpdateFaqDto } from "./dto/update-faq.dto";
+
+@Injectable()
+export class FaqService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  findAll() {
+    return this.prisma.faq.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] });
+  }
+
+  create(dto: CreateFaqDto) {
+    return this.prisma.faq.create({ data: dto });
+  }
+
+  async update(id: string, dto: UpdateFaqDto) {
+    await this.ensureExists(id);
+    return this.prisma.faq.update({ where: { id }, data: dto });
+  }
+
+  async remove(id: string) {
+    await this.ensureExists(id);
+    await this.prisma.faq.delete({ where: { id } });
+    return { deleted: true };
+  }
+
+  private async ensureExists(id: string) {
+    const faq = await this.prisma.faq.findUnique({ where: { id } });
+    if (!faq) {
+      throw new NotFoundException(`No FAQ found with id "${id}".`);
+    }
+  }
+}

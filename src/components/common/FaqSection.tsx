@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getFaqs } from "@/services/cms.service";
+import { getFaqs } from "@/services/faq.service";
 
 const HOMEPAGE_LIMIT = 5;
 

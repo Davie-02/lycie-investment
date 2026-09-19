@@ -198,7 +198,7 @@ model AuditLog {
 /// the exact shape of each key.
 model SiteContent {
   id        String   @id @default(cuid())
-  key       String   @unique // "contact" | "social" | "about"
+  key       String   @unique // "contact" | "social" | "about" | "seo"
   value     Json
   updatedAt DateTime @updatedAt
 }
@@ -384,4 +384,49 @@ model Notice {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Marketing content — testimonials, FAQ, and the blog — managed the same
+// way as Notice/SiteContent (admin dashboard CRUD, public read endpoints).
+// These were originally scoped to a separate Strapi CMS, but Strapi 5
+// currently fails to boot under Node 20+ (see server/README.md's
+// "CMS content" section) — an unresolved upstream bug, not something wrong
+// with this app — so they live here instead, in the same database and admin
+// dashboard as everything else.
+model Testimonial {
+  id             String   @id @default(cuid())
+  quote          String
+  authorName     String
+  authorTitle    String?
+  authorPhotoUrl String?
+  rating         Int      @default(5) // 1-5
+  isFeatured     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  category  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlogPost {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  excerpt        String?
+  body           String
+  coverImageUrl  String?
+  coverAlt       String?
+  seoTitle       String?
+  seoDescription String?
+  /// Null = draft, not shown on the public /blog list or detail page.
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

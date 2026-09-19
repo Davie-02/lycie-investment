@@ -1,7 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getBlogPostBySlug } from "@/services/cms.service";
+import { getBlogPostBySlug } from "@/services/blog.service";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -57,7 +58,11 @@ export default function BlogPost() {
         )}
         <h1>{post.title}</h1>
         {post.coverImageUrl && (
-          <img src={post.coverImageUrl} alt={post.coverAlt ?? ""} className="blog-post__cover" />
+          <img
+            src={resolveUploadUrl(post.coverImageUrl)}
+            alt={post.coverAlt ?? ""}
+            className="blog-post__cover"
+          />
         )}
         <div className="blog-post__body">{post.body}</div>
       </article>

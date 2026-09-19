@@ -4,7 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { adminApi } from "../adminApi";
 import { useSiteContent } from "@/context/SiteContentContext";
 import { ApiError } from "@/services/http";
-import type { ContactContent, SocialContent, AboutContent } from "@/types/siteContent";
+import type { ContactContent, SocialContent, AboutContent, SeoContent } from "@/types/siteContent";
 import "../components/AdminLayout.css";
 
 export default function AdminSiteContent() {
@@ -25,6 +25,7 @@ export default function AdminSiteContent() {
           <ContactSection initial={content.contact} onSaved={refresh} />
           <SocialSection initial={content.social} onSaved={refresh} />
           <AboutSection initial={content.about} onSaved={refresh} />
+          <SeoSection initial={content.seo} onSaved={refresh} />
         </div>
       )}
     </div>
@@ -232,6 +233,66 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
           {status === "saving" ? "Saving…" : "Save About Page"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function SeoSection({ initial, onSaved }: { initial: SeoContent; onSaved: () => void }) {
+  const [values, setValues] = useState<SeoContent>(initial);
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setStatus("saving");
+    setError(null);
+    try {
+      await adminApi.patch("/site-content/seo", { value: values });
+      setStatus("success");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to save SEO settings.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <form className="form-card" onSubmit={handleSubmit} noValidate>
+      <h2>SEO</h2>
+      <p className="text-muted">Site-wide defaults used when a page doesn't set its own.</p>
+      {status === "success" && (
+        <FormStatusBanner status="success" successMessage="SEO settings updated." errorMessage={null} />
+      )}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+
+      <div className="form-grid form-grid--2col">
+        <FormField
+          id="seo-siteName"
+          label={'Site Name (shown after the page title, e.g. "Home | Site Name")'}
+          value={values.siteName}
+          onChange={(e) => setValues({ ...values, siteName: e.target.value })}
+        />
+        <FormField
+          id="seo-facebookAppId"
+          label="Facebook App ID (optional)"
+          value={values.facebookAppId ?? ""}
+          onChange={(e) => setValues({ ...values, facebookAppId: e.target.value || null })}
+        />
+        <FormField
+          id="seo-defaultDescription"
+          label="Default Meta Description"
+          as="textarea"
+          value={values.defaultDescription}
+          onChange={(e) => setValues({ ...values, defaultDescription: e.target.value })}
+          wrapperClassName="form-grid__full"
+        />
+      </div>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save SEO Settings"}
         </button>
       </div>
     </form>

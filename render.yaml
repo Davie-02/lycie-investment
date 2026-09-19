@@ -2,13 +2,6 @@ databases:
   - name: lycie-investment-db
     databaseName: lycie_investment
     plan: free
-  # Strapi's own database — deliberately separate from the main app's DB.
-  # Strapi owns marketing content (testimonials, FAQ, blog posts, SEO
-  # settings) only; everything transactional (vehicles, bookings, customers,
-  # payments) stays in lycie-investment-db.
-  - name: lycie-strapi-db
-    databaseName: lycie_strapi
-    plan: free
 
 services:
   - type: web
@@ -61,38 +54,3 @@ services:
         sync: false
       - key: ADMIN_NOTIFICATION_EMAIL
         sync: false
-      - key: STRAPI_URL
-        sync: false # e.g. https://lycie-strapi-cms.onrender.com — set once the Strapi service below exists
-      - key: STRAPI_API_TOKEN
-        sync: false # generate a "Read-only" API token in Strapi admin (Settings > API Tokens) after first deploy
-
-  - type: web
-    name: lycie-strapi-cms
-    runtime: node
-    plan: free
-    rootDir: strapi
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: lycie-strapi-db
-          property: connectionString
-      - key: HOST
-        value: 0.0.0.0
-      - key: PORT
-        value: 1337
-      - key: NODE_ENV
-        value: production
-      - key: STRAPI_URL
-        sync: false # this service's own public URL, e.g. https://lycie-strapi-cms.onrender.com
-      - key: APP_KEYS
-        generateValue: true
-      - key: ADMIN_AUTH_SECRET
-        generateValue: true
-      - key: API_TOKEN_SALT
-        generateValue: true
-      - key: TRANSFER_TOKEN_SALT
-        generateValue: true
-      - key: ADMIN_ENCRYPTION_KEY
-        generateValue: true

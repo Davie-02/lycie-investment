@@ -36,6 +36,12 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     whyChooseUs:
       "Reliable sourcing, import assistance, clearing support and flexible hire — handled by one team who can answer questions across the whole process rather than pointing you elsewhere.",
   },
+  seo: {
+    siteName: "Lycie Investment",
+    defaultDescription:
+      "Lycie Investment sources, imports, sells, hires and clears vehicles for customers in Malawi.",
+    facebookAppId: null,
+  },
 };
 
 // Not stored in the database — this is branding, not editable copy.

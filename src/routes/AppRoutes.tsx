@@ -35,6 +35,9 @@ const AdminSiteContent = lazy(() => import("@/admin/pages/AdminSiteContent"));
 const AdminNotices = lazy(() => import("@/admin/pages/AdminNotices"));
 const AdminUsers = lazy(() => import("@/admin/pages/AdminUsers"));
 const AdminPayments = lazy(() => import("@/admin/pages/AdminPayments"));
+const AdminTestimonials = lazy(() => import("@/admin/pages/AdminTestimonials"));
+const AdminFaq = lazy(() => import("@/admin/pages/AdminFaq"));
+const AdminBlogPosts = lazy(() => import("@/admin/pages/AdminBlogPosts"));
 
 function CustomerAccountRoute() {
   const { isAuthenticated } = useCustomerAuth();
@@ -84,6 +87,9 @@ export default function AppRoutes() {
                     <Route path="payments" element={<AdminPayments />} />
                     <Route path="site-content" element={<AdminSiteContent />} />
                     <Route path="notices" element={<AdminNotices />} />
+                    <Route path="testimonials" element={<AdminTestimonials />} />
+                    <Route path="faq" element={<AdminFaq />} />
+                    <Route path="blog" element={<AdminBlogPosts />} />
                   </Route>
                   <Route element={<RequireRole roles={["OWNER"]} />}>
                     <Route path="users" element={<AdminUsers />} />

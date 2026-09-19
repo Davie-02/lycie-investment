@@ -5,7 +5,3 @@ dist-ssr
 .env
 .DS_Store
 *.tsbuildinfo
-strapi/build
-strapi/.strapi
-strapi/.strapi-updater.json
-strapi/tsconfig.tsbuildinfo

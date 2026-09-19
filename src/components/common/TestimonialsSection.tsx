@@ -1,5 +1,6 @@
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getTestimonials } from "@/services/cms.service";
+import { getTestimonials } from "@/services/testimonials.service";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -11,9 +12,9 @@ function Stars({ rating }: { rating: number }) {
 }
 
 /**
- * Sourced from the CMS (see server/src/cms) — quietly doesn't render if
- * there's no content yet, same pattern as VehicleCarousel, so a site that
- * hasn't published testimonials yet doesn't show an empty/broken section.
+ * Managed via /admin — quietly doesn't render if there's no content yet,
+ * same pattern as VehicleCarousel, so a site that hasn't added testimonials
+ * yet doesn't show an empty/broken section.
  */
 export default function TestimonialsSection() {
   const { data: testimonials, isLoading, error } = useAsyncData(getTestimonials, []);
@@ -35,7 +36,7 @@ export default function TestimonialsSection() {
             <blockquote>&ldquo;{testimonial.quote}&rdquo;</blockquote>
             <figcaption>
               {testimonial.authorPhotoUrl && (
-                <img src={testimonial.authorPhotoUrl} alt="" aria-hidden="true" />
+                <img src={resolveUploadUrl(testimonial.authorPhotoUrl)} alt="" aria-hidden="true" />
               )}
               <div>
                 <span className="testimonials__author">{testimonial.authorName}</span>

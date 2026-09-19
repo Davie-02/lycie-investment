@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getBlogPosts } from "@/services/cms.service";
+import { getBlogPosts } from "@/services/blog.service";
+import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -39,7 +40,11 @@ export default function BlogList() {
               <article className="blog-card" key={post.id}>
                 {post.coverImageUrl && (
                   <Link to={`/blog/${post.slug}`}>
-                    <img src={post.coverImageUrl} alt={post.coverAlt ?? ""} className="blog-card__image" />
+                    <img
+                      src={resolveUploadUrl(post.coverImageUrl)}
+                      alt={post.coverAlt ?? ""}
+                      className="blog-card__image"
+                    />
                   </Link>
                 )}
                 <div className="blog-card__body">

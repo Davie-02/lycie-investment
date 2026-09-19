@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { getFaqs } from "@/services/cms.service";
+import { getFaqs } from "@/services/faq.service";
 
 export default function Faq() {
   const { data: faqs, isLoading, error } = useAsyncData(getFaqs, []);

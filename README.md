@@ -8,9 +8,6 @@ The repository contains two applications:
 ```
 lycie-investment/       Frontend (React + TypeScript + Vite)
 server/                 Backend API (NestJS + Prisma + PostgreSQL)
-strapi/                 CMS for marketing content — testimonials, FAQ, blog
-                         posts, SEO settings (optional, see server/README.md
-                         "CMS content (Strapi)")
 ```
 Phases 1–5 of the build plan are complete: the full UI, all forms, and a real
 backend with a database are in place. Vehicle/hire listings are served from
@@ -41,16 +38,13 @@ simulated.
   login endpoints, and Serializable-transaction-protected money/booking
   operations — see `server/README.md`'s Security section for the full list
 - Semantic HTML, keyboard-navigable, labeled forms, visible focus states
-- Per-page SEO (title, meta description), with sitewide defaults and social
-  metadata sourced from the CMS when it's configured
-- Testimonials, FAQ, and a blog, designed to be sourced from a separate
-  Strapi CMS (`strapi/`) so non-technical staff can publish marketing
-  content without a deploy — the integration code (schemas, NestJS proxy,
-  frontend pages) is in place and degrades gracefully when unconfigured,
-  but **Strapi itself currently fails to boot under Node 20+** due to an
-  unresolved upstream bug ([strapi/strapi#25993](https://github.com/strapi/strapi/issues/25993))
-  — see server/README.md's "CMS content (Strapi)" section before relying on
-  it
+- Per-page SEO (title, meta description), with sitewide defaults (site
+  name, description, Facebook App ID) editable via /admin
+- Testimonials, FAQ, and a blog, managed the same way as notices and site
+  content — admin dashboard CRUD, no separate CMS or deploy needed. (A
+  separate Strapi CMS was tried first; dropped after confirming Strapi 5
+  can't currently boot under Node 20+ due to an unresolved upstream bug —
+  see server/README.md's "Marketing content" section.)
 - Branding pulled from the actual Lycie Investment logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
@@ -58,7 +52,6 @@ simulated.
 
 **Frontend:** React 18, TypeScript, Vite, React Router
 **Backend:** NestJS, Prisma, PostgreSQL — see `server/README.md`
-**CMS (optional):** Strapi — marketing content only, see `server/README.md`'s "CMS content (Strapi)"
 
 ## Not yet built
 
@@ -172,10 +165,6 @@ npm run lint
 `VITE_API_BASE_URL` — base URL of the backend API. Defaults to
 `http://localhost:3001/api` if unset. See `.env.example`.
 
-The frontend has no separate CMS configuration — it always talks to the
-NestJS API, which proxies Strapi server-side when configured. See
-`server/.env.example` for `STRAPI_URL`/`STRAPI_API_TOKEN`.
-
 ## Project structure
 
 ```
@@ -197,7 +186,7 @@ src/
 ├── hooks/                useAsyncData, useFormSubmission
 ├── services/              API client (http.ts) and per-resource service
 │                           functions (vehicles.service.ts, inquiries.service.ts,
-│                           cms.service.ts for testimonials/FAQ/blog/SEO)
+│                           testimonials.service.ts, faq.service.ts, blog.service.ts)
 ├── types/                 Domain types (Vehicle, HireVehicle, request types)
 ├── utils/                  Formatting and filter helpers
 ├── styles/                 Design tokens, reset, global styles
