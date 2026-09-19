@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";
 import { CreateHireRequestDto } from "./dto/create-hire-request.dto";
@@ -168,6 +174,40 @@ export class HireRequestsService {
     }
     // Reverting to "pending" doesn't send an email — that's an internal
     // admin correction, not something the customer needs to hear about.
+
+    return updated;
+  }
+
+  async cancelByCustomer(id: string, customerId: string) {
+    const request = await this.prisma.hireRequest.findUnique({
+      where: { id },
+      include: { vehicle: true },
+    });
+    if (!request || request.customerId !== customerId) {
+      throw new NotFoundException("Hire request not found.");
+    }
+    if (request.status !== "pending") {
+      throw new ForbiddenException("Only a pending hire request can be cancelled.");
+    }
+
+    const updated = await this.prisma.hireRequest.update({
+      where: { id },
+      data: { status: "cancelled" },
+      include: { vehicle: true },
+    });
+
+    await this.emailService.send({
+      to: updated.email,
+      ...hireBookingCancelledEmail({
+        fullName: updated.fullName,
+        vehicleName: updated.vehicle.name,
+        pickupDate: updated.pickupDate,
+        returnDate: updated.returnDate,
+        days: updated.days,
+        totalCost: updated.totalCost,
+        currency: updated.currency,
+      }),
+    });
 
     return updated;
   }

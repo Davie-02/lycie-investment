@@ -174,6 +174,10 @@ export function getMyRequests() {
   return customerFetch<CustomerRequestSummary[]>("/customers/me/requests");
 }
 
+export function cancelHireRequest(id: string) {
+  return customerFetch<{ status: string }>(`/hire-requests/${id}/cancel`, { method: "PATCH" });
+}
+
 export function updateCustomerProfile(updates: { name?: string; email?: string }) {
   return customerFetch<CustomerUser>("/customers/me", {
     method: "PATCH",

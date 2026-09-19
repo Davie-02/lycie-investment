@@ -12,6 +12,7 @@ import {
   submitPayment,
   updateCustomerProfile,
   changeCustomerPassword,
+  cancelHireRequest,
   type CustomerAccount as Account,
   type CustomerCase,
   type CustomerRequestSummary,
@@ -96,6 +97,8 @@ export default function CustomerAccount() {
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const [profileValues, setProfileValues] = useState<ProfileFormValues>({
     name: currentUser?.name ?? "",
@@ -163,6 +166,19 @@ export default function CustomerAccount() {
   function handleLogout() {
     logout();
     navigate("/account/login");
+  }
+
+  async function handleCancelHireRequest(id: string) {
+    setCancelError(null);
+    setCancellingId(id);
+    try {
+      await cancelHireRequest(id);
+      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r)));
+    } catch (error) {
+      setCancelError(error instanceof ApiError ? error.message : "Unable to cancel this request.");
+    } finally {
+      setCancellingId(null);
+    }
   }
 
   function handleProfileChange(field: keyof ProfileFormValues) {
@@ -310,6 +326,9 @@ export default function CustomerAccount() {
                 </p>
               ) : (
                 <div className="customer-account__table-wrap">
+                  {cancelError && (
+                    <p className="text-muted" role="alert">{cancelError}</p>
+                  )}
                   <table>
                     <thead>
                       <tr>
@@ -317,6 +336,7 @@ export default function CustomerAccount() {
                         <th>Type</th>
                         <th>Details</th>
                         <th>Status</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -339,6 +359,18 @@ export default function CustomerAccount() {
                             )}
                           </td>
                           <td>{request.status.replace("_", " ")}</td>
+                          <td>
+                            {request.type === "hire" && request.status === "pending" && (
+                              <button
+                                type="button"
+                                className="btn-ghost"
+                                onClick={() => handleCancelHireRequest(request.id)}
+                                disabled={cancellingId === request.id}
+                              >
+                                {cancellingId === request.id ? "Cancelling…" : "Cancel"}
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
