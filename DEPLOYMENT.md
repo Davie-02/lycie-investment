@@ -60,7 +60,8 @@ That's the whole database step. No server to manage.
 1. Sign up at [render.com](https://render.com) and connect your GitHub account.
 2. Click **New → Blueprint**, and point it at your `lycie-investment` repo.
    Render will detect `render.yaml` at the repo root and read the service
-   definition from it.
+   definition from it. It asks you for `DATABASE_URL` — paste your Neon
+   string (the blueprint deliberately does not create a Render database).
 
    If you'd rather set it up manually instead of using the blueprint:
    **New → Web Service** → select the repo → set:
