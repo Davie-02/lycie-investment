@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import "./Navbar.css";
@@ -16,10 +16,20 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const { isAuthenticated } = useCustomerAuth();
 
+  useEffect(() => {
+    function onScroll() {
+      setIsScrolled(window.scrollY > 8);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="navbar">
+    <header className={isScrolled ? "navbar navbar--scrolled" : "navbar"}>
       <div className="container navbar__row">
         <NavLink to="/" className="navbar__brand" onClick={() => setIsOpen(false)}>
           <img src={logo} alt="Lycie Investments" className="navbar__logo" />

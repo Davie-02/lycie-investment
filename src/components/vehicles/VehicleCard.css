@@ -5,12 +5,13 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: box-shadow var(--transition), border-color var(--transition);
+  transition: box-shadow var(--transition), border-color var(--transition), transform var(--transition);
 }
 
 .vehicle-card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--color-border);
+  transform: translateY(-4px);
 }
 
 .vehicle-card__image-wrap {
@@ -31,6 +32,26 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 500ms ease;
+}
+
+.vehicle-card:hover .vehicle-card__image {
+  transform: scale(1.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vehicle-card,
+  .vehicle-card__image {
+    transition: none;
+  }
+
+  .vehicle-card:hover {
+    transform: none;
+  }
+
+  .vehicle-card:hover .vehicle-card__image {
+    transform: none;
+  }
 }
 
 .vehicle-card__status {

@@ -2,9 +2,13 @@ import { useState } from "react";
 import Seo from "@/components/common/Seo";
 import HireVehicleCard from "@/components/vehicles/HireVehicleCard";
 import HireRequestForm from "@/components/forms/HireRequestForm";
+import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getHireVehicles } from "@/services/vehicles.service";
 import type { HireVehicle } from "@/types/vehicle";
+
+const STAGGER_STEP_MS = 70;
+const STAGGER_CAP = 6;
 
 export default function Hire() {
   const { data: vehicles, isLoading, error } = useAsyncData(() => getHireVehicles(), []);
@@ -52,12 +56,10 @@ export default function Hire() {
             )}
             {vehicles && vehicles.length > 0 && (
               <div className="hire-grid">
-                {vehicles.map((vehicle) => (
-                  <HireVehicleCard
-                    key={vehicle.id}
-                    vehicle={vehicle}
-                    onRequestHire={setSelectedVehicle}
-                  />
+                {vehicles.map((vehicle, index) => (
+                  <Reveal key={vehicle.id} delayMs={Math.min(index, STAGGER_CAP) * STAGGER_STEP_MS}>
+                    <HireVehicleCard vehicle={vehicle} onRequestHire={setSelectedVehicle} />
+                  </Reveal>
                 ))}
               </div>
             )}

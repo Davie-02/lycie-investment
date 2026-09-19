@@ -2,9 +2,15 @@ import { useMemo, useState } from "react";
 import Seo from "@/components/common/Seo";
 import VehicleCard from "@/components/vehicles/VehicleCard";
 import VehicleFiltersPanel from "@/components/vehicles/VehicleFiltersPanel";
+import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicles } from "@/services/vehicles.service";
 import { applyFilters, EMPTY_FILTERS, type VehicleFilters } from "@/utils/vehicleFilters";
+
+// Caps the stagger at 6 cards' worth of delay so a long results grid
+// doesn't make the last few cards wait an oddly long time to appear.
+const STAGGER_STEP_MS = 60;
+const STAGGER_CAP = 6;
 
 export default function Vehicles() {
   const { data: vehicles, isLoading, error } = useAsyncData(() => getVehicles(), []);
@@ -53,8 +59,10 @@ export default function Vehicles() {
 
         {filteredVehicles.length > 0 && (
           <div className="vehicle-grid">
-            {filteredVehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} />
+            {filteredVehicles.map((vehicle, index) => (
+              <Reveal key={vehicle.id} delayMs={Math.min(index, STAGGER_CAP) * STAGGER_STEP_MS}>
+                <VehicleCard vehicle={vehicle} />
+              </Reveal>
             ))}
           </div>
         )}

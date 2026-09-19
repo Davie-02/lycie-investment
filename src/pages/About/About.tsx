@@ -1,5 +1,6 @@
 import Seo from "@/components/common/Seo";
 import CtaBand from "@/components/common/CtaBand";
+import Reveal from "@/components/common/Reveal";
 import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function About() {
@@ -21,28 +22,36 @@ export default function About() {
       </section>
 
       <section className="section container about-content">
-        <div>
-          <h2>What we do</h2>
-          <p className="text-muted">{whatWeDo}</p>
-        </div>
+        <Reveal>
+          <div>
+            <h2>What we do</h2>
+            <p className="text-muted">{whatWeDo}</p>
+          </div>
+        </Reveal>
 
-        <div>
-          <h2>How we work with customers</h2>
-          <p className="text-muted">{howWeWork}</p>
-        </div>
+        <Reveal delayMs={80}>
+          <div>
+            <h2>How we work with customers</h2>
+            <p className="text-muted">{howWeWork}</p>
+          </div>
+        </Reveal>
 
-        <div>
-          <h2>Why work with us</h2>
-          <p className="text-muted">{whyChooseUs}</p>
-        </div>
+        <Reveal delayMs={160}>
+          <div>
+            <h2>Why work with us</h2>
+            <p className="text-muted">{whyChooseUs}</p>
+          </div>
+        </Reveal>
       </section>
 
-      <CtaBand
-        heading="Have a question before you get started?"
-        body="Reach out and we'll walk you through how the process works."
-        primary={{ label: "Contact Us", to: "/contact" }}
-        secondary={{ label: "Browse Vehicles", to: "/vehicles" }}
-      />
+      <Reveal>
+        <CtaBand
+          heading="Have a question before you get started?"
+          body="Reach out and we'll walk you through how the process works."
+          primary={{ label: "Contact Us", to: "/contact" }}
+          secondary={{ label: "Browse Vehicles", to: "/vehicles" }}
+        />
+      </Reveal>
     </>
   );
 }

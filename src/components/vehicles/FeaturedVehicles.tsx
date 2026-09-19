@@ -2,7 +2,10 @@ import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFeaturedVehicles } from "@/services/vehicles.service";
 import VehicleCard from "./VehicleCard";
+import Reveal from "@/components/common/Reveal";
 import "./FeaturedVehicles.css";
+
+const STAGGER_STEP_MS = 80;
 
 export default function FeaturedVehicles() {
   const { data: vehicles, isLoading, error } = useAsyncData(() => getFeaturedVehicles(3), []);
@@ -34,8 +37,10 @@ export default function FeaturedVehicles() {
 
       {vehicles && vehicles.length > 0 && (
         <div className="vehicle-grid">
-          {vehicles.map((vehicle) => (
-            <VehicleCard key={vehicle.id} vehicle={vehicle} />
+          {vehicles.map((vehicle, index) => (
+            <Reveal key={vehicle.id} delayMs={index * STAGGER_STEP_MS}>
+              <VehicleCard vehicle={vehicle} />
+            </Reveal>
           ))}
         </div>
       )}

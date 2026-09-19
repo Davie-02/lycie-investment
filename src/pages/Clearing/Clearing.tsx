@@ -1,5 +1,6 @@
 import Seo from "@/components/common/Seo";
 import ClearingRequestForm from "@/components/forms/ClearingRequestForm";
+import Reveal from "@/components/common/Reveal";
 
 const AREAS = [
   "Customs clearance coordination",
@@ -35,26 +36,30 @@ export default function Clearing() {
         </div>
       </section>
 
-      <section className="section container">
-        <div className="section-heading">
-          <span className="eyebrow">What we help with</span>
-          <h2>Areas of support</h2>
-        </div>
-        <ul className="clearing-areas">
-          {AREAS.map((area) => (
-            <li key={area}>{area}</li>
-          ))}
-        </ul>
-      </section>
+      <Reveal>
+        <section className="section container">
+          <div className="section-heading">
+            <span className="eyebrow">What we help with</span>
+            <h2>Areas of support</h2>
+          </div>
+          <ul className="clearing-areas">
+            {AREAS.map((area) => (
+              <li key={area}>{area}</li>
+            ))}
+          </ul>
+        </section>
+      </Reveal>
 
-      <section className="section container">
-        <div className="section-heading">
-          <span className="eyebrow">Get started</span>
-          <h2>Submit a Clearing Request</h2>
-          <p>Share what you have — you can send remaining documents later if needed.</p>
-        </div>
-        <ClearingRequestForm />
-      </section>
+      <Reveal>
+        <section className="section container">
+          <div className="section-heading">
+            <span className="eyebrow">Get started</span>
+            <h2>Submit a Clearing Request</h2>
+            <p>Share what you have — you can send remaining documents later if needed.</p>
+          </div>
+          <ClearingRequestForm />
+        </section>
+      </Reveal>
     </>
   );
 }

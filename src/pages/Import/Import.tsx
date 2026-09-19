@@ -1,6 +1,7 @@
 import Seo from "@/components/common/Seo";
 import JourneySection from "@/components/common/JourneySection";
 import ImportRequestForm from "@/components/forms/ImportRequestForm";
+import Reveal from "@/components/common/Reveal";
 
 export default function Import() {
   return (
@@ -20,16 +21,20 @@ export default function Import() {
         </div>
       </section>
 
-      <JourneySection />
+      <Reveal>
+        <JourneySection />
+      </Reveal>
 
-      <section className="section container" id="request">
-        <div className="section-heading">
-          <span className="eyebrow">Get started</span>
-          <h2>Request an Imported Vehicle</h2>
-          <p>Share as much detail as you can — it helps us source the right match faster.</p>
-        </div>
-        <ImportRequestForm />
-      </section>
+      <Reveal>
+        <section className="section container" id="request">
+          <div className="section-heading">
+            <span className="eyebrow">Get started</span>
+            <h2>Request an Imported Vehicle</h2>
+            <p>Share as much detail as you can — it helps us source the right match faster.</p>
+          </div>
+          <ImportRequestForm />
+        </section>
+      </Reveal>
     </>
   );
 }
