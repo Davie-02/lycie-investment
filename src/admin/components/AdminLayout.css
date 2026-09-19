@@ -216,6 +216,15 @@
   margin-bottom: var(--space-5);
 }
 
+.admin-login__switch {
+  margin-top: var(--space-5);
+  text-align: center;
+}
+
+.admin-login__switch a {
+  color: var(--color-accent-dark);
+}
+
 .admin-image-list {
   display: flex;
   flex-wrap: wrap;

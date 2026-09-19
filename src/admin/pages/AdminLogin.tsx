@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
+import "../components/AdminLayout.css";
 
 const REASON_MESSAGES: Record<string, string> = {
   inactivity: "You were logged out after a period of inactivity. Please log in again.",
@@ -70,6 +71,10 @@ export default function AdminLogin() {
             {isLoggingIn ? "Signing in…" : "Sign In"}
           </button>
         </div>
+
+        <p className="text-muted admin-login__switch">
+          <Link to="/admin/forgot-password">Forgot your password?</Link>
+        </p>
       </form>
     </div>
   );

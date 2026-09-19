@@ -14,15 +14,33 @@ enum AdminRole {
 }
 
 model AdminUser {
-  id               String              @id @default(cuid())
-  name             String
-  email            String              @unique
-  passwordHash     String
-  role             AdminRole           @default(MANAGER)
-  isActive         Boolean             @default(true)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  reviewedPayments PaymentSubmission[]
+  id                  String                    @id @default(cuid())
+  name                String
+  email               String                    @unique
+  passwordHash        String
+  role                AdminRole                 @default(MANAGER)
+  isActive            Boolean                   @default(true)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  reviewedPayments    PaymentSubmission[]
+  passwordResetTokens AdminPasswordResetToken[]
+}
+
+/// Mirrors PasswordResetToken (customer side) for admin accounts — kept as
+/// a separate model rather than a shared/nullable-FK table since admin and
+/// customer auth are already fully separate stacks (own cookies, own
+/// guards, own controllers) throughout this codebase.
+model AdminPasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  adminId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
 }
 
 /// Customer identity is separate from staff administration. Names are

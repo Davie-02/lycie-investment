@@ -25,6 +25,8 @@ const ForgotPassword = lazy(() => import("@/pages/Customer/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/Customer/ResetPassword"));
 const AdminLayout = lazy(() => import("@/admin/components/AdminLayout"));
 const AdminLogin = lazy(() => import("@/admin/pages/AdminLogin"));
+const AdminForgotPassword = lazy(() => import("@/admin/pages/AdminForgotPassword"));
+const AdminResetPassword = lazy(() => import("@/admin/pages/AdminResetPassword"));
 const AdminDashboard = lazy(() => import("@/admin/pages/AdminDashboard"));
 const AdminVehicles = lazy(() => import("@/admin/pages/AdminVehicles"));
 const AdminHireVehicles = lazy(() => import("@/admin/pages/AdminHireVehicles"));
@@ -75,6 +77,8 @@ export default function AppRoutes() {
             <AdminAuthProvider>
               <Routes>
               <Route path="login" element={<AdminLogin />} />
+              <Route path="forgot-password" element={<AdminForgotPassword />} />
+              <Route path="reset-password" element={<AdminResetPassword />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />

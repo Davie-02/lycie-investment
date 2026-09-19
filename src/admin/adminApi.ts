@@ -109,4 +109,17 @@ export async function adminLogin(
   });
 }
 
+export function adminForgotPassword(email: string) {
+  return adminFetch<{ requested: boolean }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function adminResetPassword(token: string, newPassword: string) {
+  return adminFetch<{ reset: boolean }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
 
