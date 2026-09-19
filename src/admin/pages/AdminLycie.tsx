@@ -4,12 +4,21 @@ import { adminApi } from "../adminApi";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { ApiError } from "@/services/http";
+import LycieFaqSuggestions from "../components/LycieFaqSuggestions";
+import LycieVisitorMessages from "../components/LycieVisitorMessages";
 import type { KnowledgeCategory, KnowledgeEntry, KnowledgeList, LycieAnalytics, LycieLogEntry } from "@/types/lycie";
 import "../components/AdminLayout.css";
 import "../components/AdminInsights.css";
 import "./AdminLycie.css";
 
-type Tab = "knowledge" | "conversations";
+type Tab = "knowledge" | "conversations" | "faq" | "messages";
+
+const TAB_LABELS: Record<Tab, string> = {
+  knowledge: "Knowledge",
+  conversations: "Conversations & gaps",
+  faq: "FAQ suggestions",
+  messages: "Visitor messages",
+};
 
 const CATEGORIES: Array<{ value: KnowledgeCategory; label: string }> = [
   { value: "faq", label: "FAQ" },
@@ -52,7 +61,7 @@ export default function AdminLycie() {
       </p>
 
       <div className="insights-filters" role="tablist" aria-label="Lycie sections">
-        {(["knowledge", "conversations"] as const).map((value) => (
+        {(Object.keys(TAB_LABELS) as Tab[]).map((value) => (
           <button
             key={value}
             type="button"
@@ -61,14 +70,17 @@ export default function AdminLycie() {
             className={tab === value ? "insights-filter insights-filter--active" : "insights-filter"}
             onClick={() => setTab(value)}
           >
-            {value === "knowledge" ? "Knowledge" : "Conversations & gaps"}
+            {TAB_LABELS[value]}
           </button>
         ))}
       </div>
 
       {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
 
-      {tab === "knowledge" ? (
+      {tab === "faq" && <LycieFaqSuggestions />}
+      {tab === "messages" && <LycieVisitorMessages />}
+
+      {tab === "knowledge" && (
         <KnowledgeTab
           draft={draft}
           setDraft={setDraft}
@@ -76,7 +88,9 @@ export default function AdminLycie() {
           refresh={refresh}
           setActionError={setActionError}
         />
-      ) : (
+      )}
+
+      {tab === "conversations" && (
         <ConversationsTab
           refreshKey={refreshKey}
           onAddToKnowledge={(log) => {

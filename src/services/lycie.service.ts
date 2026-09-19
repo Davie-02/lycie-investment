@@ -12,3 +12,7 @@ export function sendLycieMessage(message: string, history: Array<{ role: "user" 
 export function sendLycieFeedback(logId: string, helpful: boolean) {
   return apiPost<{ recorded: boolean }>("/lycie/feedback", { logId, helpful });
 }
+
+export function submitVisitorMessage(kind: "question" | "comment", message: string) {
+  return apiPost<{ received: boolean }>("/lycie/submissions", { kind, message });
+}

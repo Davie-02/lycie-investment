@@ -166,8 +166,11 @@ export class LycieService {
   async purgeOldLogs(): Promise<number> {
     const days = numberFromEnv("LYCIE_LOG_RETENTION_DAYS", 90);
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60_000);
-    const result = await this.prisma.lycieChatLog.deleteMany({ where: { createdAt: { lt: cutoff } } });
-    return result.count;
+    const [logs, submissions] = await Promise.all([
+      this.prisma.lycieChatLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+      this.prisma.visitorSubmission.deleteMany({ where: { createdAt: { lt: cutoff } } }),
+    ]);
+    return logs.count + submissions.count;
   }
 
   // ---- internals ----

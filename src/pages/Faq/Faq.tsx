@@ -3,6 +3,7 @@ import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFaqs } from "@/services/faq.service";
+import AskUsForm from "@/components/faq/AskUsForm";
 
 export default function Faq() {
   const { data: faqs, isLoading, error } = useAsyncData(getFaqs, []);
@@ -59,6 +60,8 @@ export default function Faq() {
             </div>
           </Reveal>
         ))}
+
+        <AskUsForm />
       </section>
     </>
   );
