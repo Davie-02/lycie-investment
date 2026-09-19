@@ -25,6 +25,7 @@ export class FinancialController {
   constructor(private readonly financial: FinancialService) {}
 
   @Get("me")
+  @Roles("CUSTOMER")
   history(
     @CurrentUser() user: { sub: string },
     @Query("page") page?: string,

@@ -9,6 +9,8 @@ import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module";
 import { hasValidCsrfToken } from "./auth/csrf";
+import { readCookie } from "./auth/cookies";
+import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE } from "./auth/session-cookie";
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -53,7 +55,22 @@ async function bootstrap() {
   app.use(compression());
 
   app.use((request: Request, response: Response, next: NextFunction) => {
-    const publicRead = request.method === "GET" && isPublicReadPath(request.path);
+    // Vehicles, testimonials, FAQ, etc. are read through the *same* endpoint
+    // by anonymous visitors and by logged-in admins managing that content
+    // (both the admin dashboard's fetch and the public site's fetch send
+    // cookies, so there's no other signal to tell them apart at this point
+    // in the request). An admin who just created/edited/deleted something
+    // needs to see that reflected immediately — caching their own refetch
+    // for up to 60s made their own change look like it silently failed.
+    // So: public caching only applies to requests that don't identify as a
+    // logged-in admin or customer; any authenticated request always gets a
+    // fresh, uncached response regardless of which path it's hitting.
+    const isAuthenticated =
+      Boolean(readCookie(request.headers.cookie, ADMIN_SESSION_COOKIE)) ||
+      Boolean(readCookie(request.headers.cookie, CUSTOMER_SESSION_COOKIE)) ||
+      Boolean(request.headers.authorization?.startsWith("Bearer "));
+
+    const publicRead = request.method === "GET" && !isAuthenticated && isPublicReadPath(request.path);
 
     response.setHeader(
       "Cache-Control",
