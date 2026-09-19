@@ -25,10 +25,8 @@ emails, the daily 03:00 chat-log cleanup and Lycie's Monday 06:00 FAQ
 analysis (see `server/README.md`) — won't fire if nobody's visited the site
 around when they're scheduled to run. (The FAQ analysis can also be run any
 time from the admin's **Lycie AI → FAQ suggestions** tab, and the log cleanup
-just catches up on the next day it's awake.) If reminder emails matter to how you operate, either
-upgrade to Starter or set up a free external uptime monitor (e.g.
-UptimeRobot) pinging `/api/health` every few minutes to keep the service
-awake.
+just catches up on the next day it's awake.) To avoid the sleep (and the 30–60 s wake-up), follow "Keep the API awake"
+below — free — or upgrade to Starter.
 
 Verify current pricing/limits yourself before relying on this long-term —
 free tiers change. This guide was checked against each provider's docs
@@ -165,6 +163,40 @@ the anonymous "Ask us" form on `/faq`, is grouped by topic. Under **Lycie AI**:
   cover that topic — write the answer yourself. **Nothing is ever published
   without your approval.**
 - *Visitor messages* — the questions and comments sent through the form.
+
+---
+
+## 2c. Keep the API awake (free) — UptimeRobot
+
+Render's free plan sleeps after 15 minutes without traffic. A free monitor that
+requests the API every 5 minutes keeps it awake, so visitors never hit the
+cold start and the scheduled jobs (hire reminders, weekly FAQ analysis, log
+cleanup) run on time.
+
+1. Sign up at [uptimerobot.com](https://uptimerobot.com) (free plan).
+2. **Add New Monitor**
+   - **Monitor type:** HTTP(s)
+   - **Friendly name:** `Lycie API`
+   - **URL:** `https://<your-render-service>.onrender.com/api/health`
+   - **Monitoring interval:** 5 minutes (the free plan's minimum — well inside
+     Render's 15-minute limit)
+   - Add your email as an alert contact so you're told if the API goes down.
+3. Save. Within 5 minutes the monitor should show **Up**.
+
+Notes:
+
+- `/api/health` deliberately does **not** touch the database. Neon's free plan
+  has a monthly compute-hours allowance, and it pauses the database when idle;
+  pinging a database-backed URL would keep it awake around the clock and use up
+  that allowance. Don't point the monitor at a URL that queries the database.
+- Render's free plan includes enough instance-hours (750/month) to run one
+  service continuously, so this fits within the free tier — but verify the
+  current limits, and don't run more than one free service this way.
+- The first request after a fresh deploy can still be slow while the app
+  starts (about a minute); the monitor then keeps it warm.
+- The database may still take about a second to "wake" on the first
+  database-backed request after a quiet period. That is normal and short.
+- Upgrading to Render **Starter** (~$7/month) removes the need for the monitor.
 
 ---
 

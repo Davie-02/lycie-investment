@@ -9,6 +9,8 @@ services:
     runtime: node
     plan: free
     rootDir: server
+    # Render waits for this to answer before switching traffic to a new deploy.
+    healthCheckPath: /api/health
     # --include=dev: NODE_ENV=production (set below) makes plain `npm install` skip
     # devDependencies, but the Nest CLI, TypeScript and Prisma CLI needed to build
     # and migrate live there.
