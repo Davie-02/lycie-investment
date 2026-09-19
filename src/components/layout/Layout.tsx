@@ -3,6 +3,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import NoticeBanner from "@/components/common/NoticeBanner";
 import NoticePopup from "@/components/common/NoticePopup";
+import LycieChat from "@/components/lycie/LycieChat";
 
 export default function Layout() {
   return (
@@ -17,6 +18,7 @@ export default function Layout() {
       </main>
       <Footer />
       <NoticePopup />
+      <LycieChat />
     </div>
   );
 }

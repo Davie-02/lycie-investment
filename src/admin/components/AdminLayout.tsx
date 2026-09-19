@@ -51,6 +51,7 @@ export default function AdminLayout() {
           { to: "/admin/blog", label: "Blog" },
           { to: "/admin/reviews", label: "Reviews" },
           { to: "/admin/insights", label: "Insights" },
+          { to: "/admin/lycie", label: "Lycie AI" },
         ]
       : []),
     ...(currentUser?.role === "OWNER" ? [{ to: "/admin/users", label: "Admin Users" }] : []),

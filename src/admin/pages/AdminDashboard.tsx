@@ -43,6 +43,12 @@ const INSIGHTS_CARD = {
   description: "Customer sentiment, vehicle demand, and recommendations on what to do next.",
 };
 
+const LYCIE_CARD = {
+  to: "/admin/lycie",
+  title: "Lycie AI",
+  description: "Teach the customer assistant your policies and see the questions she couldn't answer.",
+};
+
 const REVIEWS_CARD = {
   to: "/admin/reviews",
   title: "Reviews",
@@ -61,7 +67,7 @@ export default function AdminDashboard() {
 
   const cards = [
     ...BASE_CARDS,
-    ...(canEditContent ? [INSIGHTS_CARD, REVIEWS_CARD, SITE_CONTENT_CARD, NOTICES_CARD] : []),
+    ...(canEditContent ? [INSIGHTS_CARD, LYCIE_CARD, REVIEWS_CARD, SITE_CONTENT_CARD, NOTICES_CARD] : []),
     ...(currentUser?.role === "OWNER" ? [OWNER_CARD] : []),
   ];
 

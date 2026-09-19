@@ -514,3 +514,44 @@ model VehicleViewStat {
   @@unique([vehicleId, day])
   @@index([day])
 }
+
+/// A piece of company knowledge an admin/manager has fed to the Lycie
+/// assistant — FAQs, policies, process notes, pricing guidance. Lycie
+/// answers from these (plus live inventory and site content) rather than
+/// guessing. Searched with Postgres full-text search (see the migration that
+/// adds the GIN index), so nothing is sent to an external service to index it.
+model KnowledgeEntry {
+  id        String   @id @default(cuid())
+  title     String
+  /// Free-form grouping for the admin list: faq | policy | process | pricing | other
+  category  String   @default("faq")
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, category])
+}
+
+/// One question/answer exchange with Lycie, kept so admins can see what
+/// customers actually ask and where Lycie fell short. Personal details are
+/// stripped BEFORE anything is stored (see lycie/pii.util.ts), no user or
+/// session identifier is recorded, and rows are purged after a retention
+/// period. Learning is deliberately human-in-the-loop: admins turn recurring
+/// gaps into knowledge entries; the model is never trained on raw chats.
+model LycieChatLog {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  /// Which model actually produced the answer (null if none could).
+  model     String?
+  /// "answered" | "no_info" (Lycie said it lacked the information) |
+  /// "unavailable" (every model failed / quota) | "blocked" (over a limit)
+  outcome   String
+  /// Customer's thumbs up/down, if they gave one.
+  helpful   Boolean?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([outcome, createdAt])
+}

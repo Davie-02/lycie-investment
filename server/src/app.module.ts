@@ -23,6 +23,7 @@ import { TestimonialsModule } from "./testimonials/testimonials.module";
 import { FaqModule } from "./faq/faq.module";
 import { BlogPostsModule } from "./blog-posts/blog-posts.module";
 import { ReviewsModule } from "./reviews/reviews.module";
+import { LycieModule } from "./lycie/lycie.module";
 import { InsightsModule } from "./insights/insights.module";
 
 @Module({
@@ -56,6 +57,7 @@ import { InsightsModule } from "./insights/insights.module";
     FaqModule,
     BlogPostsModule,
     ReviewsModule,
+    LycieModule,
     InsightsModule,
   ],
   controllers: [HealthController],

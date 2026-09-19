@@ -20,6 +20,16 @@ async function bootstrap() {
     throw new Error("FRONTEND_URL must be configured in production.");
   }
 
+  // Behind a host's reverse proxy every request appears to come from the
+  // proxy's IP, which would make per-IP rate limits (login, forms, Lycie chat)
+  // apply to ALL visitors at once. Set TRUST_PROXY to the number of proxy hops
+  // in front of the app (usually 1). Leave unset when exposed directly —
+  // trusting it there would let clients spoof their IP via X-Forwarded-For.
+  const trustProxy = Number(process.env.TRUST_PROXY);
+  if (Number.isInteger(trustProxy) && trustProxy > 0) {
+    app.set("trust proxy", trustProxy);
+  }
+
   app.enableCors({
     origin: frontendUrl,
     credentials: true,
