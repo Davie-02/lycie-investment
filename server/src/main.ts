@@ -74,8 +74,12 @@ async function bootstrap() {
   });
 
   function isPublicReadPath(path: string): boolean {
+    // blog-posts/all is admin-only (lists drafts too) — must never be cached
+    // as a public response, same reasoning as notices/all below.
+    if (path === "/api/blog-posts/all") return false;
+
     return (
-      /^\/api\/(vehicles|hire-vehicles|site-content)(\/|$)/.test(path) ||
+      /^\/api\/(vehicles|hire-vehicles|site-content|testimonials|faq|blog-posts)(\/|$)/.test(path) ||
       path === "/api/notices"
     );
   }
