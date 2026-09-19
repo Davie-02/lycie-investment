@@ -51,7 +51,7 @@ export default function Navbar() {
         </NavLink>
 
         <button
-          className="navbar__toggle"
+          className={isOpen ? "navbar__toggle navbar__toggle--open" : "navbar__toggle"}
           aria-expanded={isOpen}
           aria-controls="mobile-nav"
           aria-label={isOpen ? "Close menu" : "Open menu"}
@@ -63,8 +63,13 @@ export default function Navbar() {
         </button>
       </div>
 
-      {isOpen && (
-        <nav id="mobile-nav" className="navbar__mobile" aria-label="Mobile">
+      <nav
+        id="mobile-nav"
+        className={isOpen ? "navbar__mobile navbar__mobile--open" : "navbar__mobile"}
+        aria-label="Mobile"
+        aria-hidden={!isOpen}
+      >
+        <div className="navbar__mobile-inner">
           {NAV_LINKS.map((link) => (
             <NavLink
               key={link.to}
@@ -90,8 +95,8 @@ export default function Navbar() {
           >
             {isAuthenticated ? "My account" : "Sign in"}
           </NavLink>
-        </nav>
-      )}
+        </div>
+      </nav>
     </header>
   );
 }
