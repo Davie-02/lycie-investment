@@ -1,8 +1,12 @@
 import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
+import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPosts } from "@/services/blog.service";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+
+const STAGGER_STEP_MS = 60;
+const STAGGER_CAP = 6;
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -36,30 +40,32 @@ export default function BlogList() {
 
         {posts && posts.length > 0 && (
           <div className="blog-list">
-            {posts.map((post) => (
-              <article className="blog-card" key={post.id}>
-                {post.coverImageUrl && (
-                  <Link to={`/blog/${post.slug}`}>
-                    <img
-                      src={resolveUploadUrl(post.coverImageUrl)}
-                      alt={post.coverAlt ?? ""}
-                      className="blog-card__image"
-                    />
-                  </Link>
-                )}
-                <div className="blog-card__body">
-                  {post.publishedAt && (
-                    <span className="text-muted mono blog-card__date">{formatDate(post.publishedAt)}</span>
+            {posts.map((post, index) => (
+              <Reveal key={post.id} delayMs={Math.min(index, STAGGER_CAP) * STAGGER_STEP_MS}>
+                <article className="blog-card">
+                  {post.coverImageUrl && (
+                    <Link to={`/blog/${post.slug}`}>
+                      <img
+                        src={resolveUploadUrl(post.coverImageUrl)}
+                        alt={post.coverAlt ?? ""}
+                        className="blog-card__image"
+                      />
+                    </Link>
                   )}
-                  <h2>
-                    <Link to={`/blog/${post.slug}`}>{post.title}</Link>
-                  </h2>
-                  {post.excerpt && <p className="text-muted">{post.excerpt}</p>}
-                  <Link to={`/blog/${post.slug}`} className="blog-card__link">
-                    Read more →
-                  </Link>
-                </div>
-              </article>
+                  <div className="blog-card__body">
+                    {post.publishedAt && (
+                      <span className="text-muted mono blog-card__date">{formatDate(post.publishedAt)}</span>
+                    )}
+                    <h2>
+                      <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+                    </h2>
+                    {post.excerpt && <p className="text-muted">{post.excerpt}</p>}
+                    <Link to={`/blog/${post.slug}`} className="blog-card__link">
+                      Read more →
+                    </Link>
+                  </div>
+                </article>
+              </Reveal>
             ))}
           </div>
         )}
