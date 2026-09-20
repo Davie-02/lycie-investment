@@ -1,9 +1,11 @@
+import { lazy, Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import NoticeBanner from "@/components/common/NoticeBanner";
 import NoticePopup from "@/components/common/NoticePopup";
-import LycieChat from "@/components/lycie/LycieChat";
+// Loaded after the page itself: the chat is never needed for the first paint.
+const LycieChat = lazy(() => import("@/components/lycie/LycieChat"));
 
 export default function Layout() {
   return (
@@ -18,7 +20,9 @@ export default function Layout() {
       </main>
       <Footer />
       <NoticePopup />
-      <LycieChat />
+      <Suspense fallback={null}>
+        <LycieChat />
+      </Suspense>
     </div>
   );
 }

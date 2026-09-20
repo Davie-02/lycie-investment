@@ -34,6 +34,9 @@ function controller(overrides: Partial<UploadsService> = {}) {
 describe("MEDIA_FILENAME", () => {
   it("accepts generated names only", () => {
     expect(MEDIA_FILENAME.test(GOOD)).toBe(true);
+    expect(MEDIA_FILENAME.test(GOOD.replace(".webp", "-w480.webp"))).toBe(true);
+    expect(MEDIA_FILENAME.test(GOOD.replace(".webp", "-w960.webp"))).toBe(true);
+    expect(MEDIA_FILENAME.test(GOOD.replace(".webp", "-w123.webp"))).toBe(false);
     for (const bad of ["../secret.webp", "a.webp", `${GOOD}/x`, "3f2b8c1e-9a4d-4e6f-8b1a-2c3d4e5f6a7b.png", "%2e%2e/x.webp"]) {
       expect(MEDIA_FILENAME.test(bad)).toBe(false);
     }

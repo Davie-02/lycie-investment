@@ -3,6 +3,7 @@ import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { getReviews, submitReview } from "@/services/reviews.service";
+import { subscribeLive } from "@/services/liveContent";
 import { ApiError } from "@/services/http";
 import type { PublicReviewList } from "@/types/review";
 import "./ReviewsSection.css";
@@ -38,11 +39,14 @@ export default function ReviewsSection({ vehicleId, heading = "Customer reviews"
   useEffect(() => {
     let cancelled = false;
     setLoadError(false);
-    getReviews(vehicleId, page)
-      .then((data) => !cancelled && setList(data))
-      .catch(() => !cancelled && setLoadError(true));
+    const load = () =>
+      getReviews(vehicleId, page).then((data) => !cancelled && setList(data));
+    load().catch(() => !cancelled && setLoadError(true));
+    // An approved (or removed) review appears without a page reload.
+    const unsubscribe = subscribeLive(["reviews"], () => void load().catch(() => undefined));
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [vehicleId, page]);
 

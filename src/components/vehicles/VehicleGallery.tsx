@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 import "./VehicleGallery.css";
 
 interface VehicleGalleryProps {
@@ -13,7 +13,12 @@ export default function VehicleGallery({ images, altBase }: VehicleGalleryProps)
   return (
     <div className="vehicle-gallery">
       <div className="vehicle-gallery__main">
-        <img src={resolveUploadUrl(images[activeIndex])} alt={`${altBase} — photo ${activeIndex + 1}`} />
+        <Img
+          src={images[activeIndex]}
+          alt={`${altBase} — photo ${activeIndex + 1}`}
+          sizes="(min-width: 1000px) 720px, 100vw"
+          priority
+        />
       </div>
 
       {images.length > 1 && (
@@ -31,7 +36,7 @@ export default function VehicleGallery({ images, altBase }: VehicleGalleryProps)
               }
               onClick={() => setActiveIndex(index)}
             >
-              <img src={resolveUploadUrl(image)} alt={`${altBase} thumbnail ${index + 1}`} loading="lazy" />
+              <Img src={image} alt={`${altBase} thumbnail ${index + 1}`} sizes="120px" />
             </button>
           ))}
         </div>

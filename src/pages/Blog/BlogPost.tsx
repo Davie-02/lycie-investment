@@ -2,7 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPostBySlug } from "@/services/blog.service";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -11,7 +11,7 @@ function formatDate(iso: string | null): string | null {
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: post, isLoading, error } = useAsyncData(() => getBlogPostBySlug(slug ?? ""), [slug]);
+  const { data: post, isLoading, error } = useAsyncData(() => getBlogPostBySlug(slug ?? ""), [slug], ["blog-posts"]);
 
   if (isLoading) {
     return (
@@ -58,9 +58,11 @@ export default function BlogPost() {
         )}
         <h1>{post.title}</h1>
         {post.coverImageUrl && (
-          <img
-            src={resolveUploadUrl(post.coverImageUrl)}
+          <Img
+            src={post.coverImageUrl}
             alt={post.coverAlt ?? ""}
+            sizes="(min-width: 900px) 760px, 100vw"
+            priority
             className="blog-post__cover"
           />
         )}

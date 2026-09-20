@@ -17,7 +17,8 @@ export default function VehicleDetails() {
   const { slug } = useParams<{ slug: string }>();
   const { data: vehicle, isLoading, error } = useAsyncData(
     () => getVehicleBySlug(slug ?? ""),
-    [slug]
+    [slug],
+    ["vehicles"]
   );
 
   const vehicleId = vehicle?.id;

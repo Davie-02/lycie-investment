@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { getSiteContent } from "@/services/siteContent.service";
+import { subscribeLive } from "@/services/liveContent";
 import { DEFAULT_SITE_CONTENT } from "@/config/siteConfig";
 import type { SiteContent } from "@/types/siteContent";
 
@@ -34,7 +35,8 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
+    // Only the first load shows a loading state; live refreshes swap content silently.
+    if (refreshKey === 0) setIsLoading(true);
 
     getSiteContent()
       .then((data) => {
@@ -53,6 +55,9 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [refreshKey]);
+
+  // Text edited in the admin (contact details, hero, about…) updates every open page.
+  useEffect(() => subscribeLive(["site-content"], () => setRefreshKey((k) => k + 1)), []);
 
   return (
     <SiteContentContext.Provider

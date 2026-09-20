@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { getLycieStatus, sendLycieFeedback, sendLycieMessage } from "@/services/lycie.service";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 import { formatCurrency } from "@/utils/format";
 import type { LycieVehicleCard } from "@/types/lycie";
 import "./LycieChat.css";
@@ -220,7 +220,7 @@ export default function LycieChat() {
                     {message.vehicles.map((vehicle) => (
                       <li key={vehicle.slug}>
                         <Link to={`/vehicles/${vehicle.slug}`} className="lycie-card" onClick={() => setOpen(false)}>
-                          {vehicle.image && <img src={resolveUploadUrl(vehicle.image)} alt="" loading="lazy" />}
+                          {vehicle.image && <Img src={vehicle.image} alt="" sizes="76px" />}
                           <span className="lycie-card__body">
                             <strong>{vehicle.label}</strong>
                             <span className="mono">{formatCurrency(vehicle.price, vehicle.currency)}</span>

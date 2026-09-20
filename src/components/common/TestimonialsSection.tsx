@@ -17,7 +17,7 @@ function Stars({ rating }: { rating: number }) {
  * yet doesn't show an empty/broken section.
  */
 export default function TestimonialsSection() {
-  const { data: testimonials, isLoading, error } = useAsyncData(getTestimonials, []);
+  const { data: testimonials, isLoading, error } = useAsyncData(getTestimonials, [], ["testimonials"]);
 
   if (isLoading || error || !testimonials || testimonials.length === 0) {
     return null;

@@ -13,7 +13,7 @@ const STAGGER_CAP = 6;
 
 export default function Hire() {
   const { content } = useSiteContent();
-  const { data: vehicles, isLoading, error } = useAsyncData(() => getHireVehicles(), []);
+  const { data: vehicles, isLoading, error } = useAsyncData(() => getHireVehicles(), [], ["hire-vehicles"]);
   const [selectedVehicle, setSelectedVehicle] = useState<HireVehicle | null>(null);
 
   return (

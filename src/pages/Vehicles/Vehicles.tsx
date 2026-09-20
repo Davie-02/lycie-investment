@@ -13,7 +13,7 @@ const STAGGER_STEP_MS = 60;
 const STAGGER_CAP = 6;
 
 export default function Vehicles() {
-  const { data: vehicles, isLoading, error } = useAsyncData(() => getVehicles(), []);
+  const { data: vehicles, isLoading, error } = useAsyncData(() => getVehicles(), [], ["vehicles"]);
   const [filters, setFilters] = useState<VehicleFilters>(EMPTY_FILTERS);
 
   const filteredVehicles = useMemo(() => {

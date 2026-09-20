@@ -3,7 +3,7 @@ import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPosts } from "@/services/blog.service";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 
 const STAGGER_STEP_MS = 60;
 const STAGGER_CAP = 6;
@@ -14,7 +14,7 @@ function formatDate(iso: string | null): string | null {
 }
 
 export default function BlogList() {
-  const { data: posts, isLoading, error } = useAsyncData(getBlogPosts, []);
+  const { data: posts, isLoading, error } = useAsyncData(getBlogPosts, [], ["blog-posts"]);
 
   return (
     <>
@@ -45,9 +45,10 @@ export default function BlogList() {
                 <article className="blog-card">
                   {post.coverImageUrl && (
                     <Link to={`/blog/${post.slug}`}>
-                      <img
-                        src={resolveUploadUrl(post.coverImageUrl)}
+                      <Img
+                        src={post.coverImageUrl}
                         alt={post.coverAlt ?? ""}
+                        sizes="(min-width: 900px) 380px, 100vw"
                         className="blog-card__image"
                       />
                     </Link>

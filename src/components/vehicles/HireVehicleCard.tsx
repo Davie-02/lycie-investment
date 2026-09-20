@@ -1,6 +1,6 @@
 import type { HireVehicle } from "@/types/vehicle";
 import { formatCurrency } from "@/utils/format";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 import "@/components/vehicles/VehicleCard.css";
 
 interface HireVehicleCardProps {
@@ -12,10 +12,10 @@ export default function HireVehicleCard({ vehicle, onRequestHire }: HireVehicleC
   return (
     <article className="vehicle-card">
       <div className="vehicle-card__image-wrap">
-        <img
-          src={resolveUploadUrl(vehicle.image)}
+        <Img
+          src={vehicle.image}
           alt={vehicle.name}
-          loading="lazy"
+          sizes="(min-width: 1000px) 380px, (min-width: 640px) 45vw, 100vw"
           className="vehicle-card__image"
         />
         <span

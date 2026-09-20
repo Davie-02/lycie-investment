@@ -4,38 +4,66 @@
 
 .vehicle-carousel__slide {
   position: relative;
+  aspect-ratio: 16 / 9;
   min-height: 420px;
+  max-height: 82vh;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
 }
 
-/* Crossfade between slides: CSS can't tween between two background-image
-   URLs directly (transitioning that property is a no-op in every browser),
-   so every vehicle's image is stacked and only opacity animates between
-   them. The active layer also gets a slow, subtle zoom (Ken Burns) for a
-   more premium, "alive" feel while it's showing. */
+/* The photo is shown WHOLE (object-fit: contain — nothing cropped), on top of a
+   blurred, dimmed copy of itself that fills any leftover space. Slides are
+   stacked and only opacity crossfades between them (CSS can't tween between
+   two image URLs). The active photo then drifts slowly toward the viewer — a
+   gentle zoom that starts from the full picture. */
+.vehicle-carousel__stage {
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary-dark);
+}
+
 .vehicle-carousel__bg {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-position: center;
   opacity: 0;
-  transform: scale(1.04);
   transition: opacity 900ms ease;
 }
 
 .vehicle-carousel__bg--active {
   opacity: 1;
-  animation: vehicle-carousel-kenburns 7s ease-out forwards;
 }
 
-@keyframes vehicle-carousel-kenburns {
+.vehicle-carousel__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(26px) brightness(0.55) saturate(1.1);
+  transform: scale(1.12); /* hides the blur's soft edges */
+}
+
+.vehicle-carousel__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scale(1);
+  transform-origin: center;
+}
+
+.vehicle-carousel__bg--active .vehicle-carousel__photo {
+  animation: vehicle-carousel-zoom 8s ease-out forwards;
+}
+
+@keyframes vehicle-carousel-zoom {
   from {
-    transform: scale(1.04);
+    transform: scale(1);
   }
   to {
-    transform: scale(1.12);
+    transform: scale(1.09);
   }
 }
 
@@ -44,7 +72,7 @@
 .vehicle-carousel__scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(13, 22, 34, 0.15) 0%, rgba(13, 22, 34, 0.85) 100%);
+  background: linear-gradient(180deg, rgba(13, 22, 34, 0) 0%, rgba(13, 22, 34, 0) 40%, rgba(13, 22, 34, 0.88) 100%);
 }
 
 .vehicle-carousel__content {
@@ -173,6 +201,40 @@
   transform: scale(1.2);
 }
 
+/* Phones: photo on top at 4:3 with the details below it, so the text never
+   covers the vehicle. */
+@media (max-width: 700px) {
+  .vehicle-carousel__slide {
+    display: block;
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+    background: var(--color-primary-dark);
+  }
+
+  .vehicle-carousel__stage {
+    position: relative;
+    inset: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .vehicle-carousel__scrim {
+    display: none;
+  }
+
+  .vehicle-carousel__content {
+    padding-block: var(--space-5);
+  }
+
+  .vehicle-carousel__content h2 {
+    font-size: var(--fs-xl);
+  }
+
+  .vehicle-carousel__arrow {
+    top: calc(100vw * 0.375);
+  }
+}
+
 @media (min-width: 900px) {
   .vehicle-carousel__slide {
     min-height: 520px;
@@ -188,10 +250,11 @@
     animation: none;
   }
 
-  .vehicle-carousel__bg,
-  .vehicle-carousel__bg--active {
-    animation: none;
-    transform: none;
+  .vehicle-carousel__bg {
     transition: opacity 300ms ease;
+  }
+
+  .vehicle-carousel__bg--active .vehicle-carousel__photo {
+    animation: none;
   }
 }

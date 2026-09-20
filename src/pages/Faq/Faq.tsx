@@ -6,7 +6,7 @@ import { getFaqs } from "@/services/faq.service";
 import AskUsForm from "@/components/faq/AskUsForm";
 
 export default function Faq() {
-  const { data: faqs, isLoading, error } = useAsyncData(getFaqs, []);
+  const { data: faqs, isLoading, error } = useAsyncData(getFaqs, [], ["faq"]);
 
   const groups = useMemo(() => {
     if (!faqs) return [];

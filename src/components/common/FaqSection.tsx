@@ -9,7 +9,7 @@ const HOMEPAGE_LIMIT = 5;
  * accordion for free — no custom ARIA state management needed.
  */
 export default function FaqSection() {
-  const { data: faqs, isLoading, error } = useAsyncData(getFaqs, []);
+  const { data: faqs, isLoading, error } = useAsyncData(getFaqs, [], ["faq"]);
 
   if (isLoading || error || !faqs || faqs.length === 0) {
     return null;

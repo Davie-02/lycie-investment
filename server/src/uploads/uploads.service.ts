@@ -24,6 +24,9 @@ import sharp from "sharp";
  * Either way, callers just get back a URL — nothing else in the app needs
  * to know or care which strategy is active.
  */
+/** Extra widths generated for every upload (the original is kept at up to 2000px). */
+export const IMAGE_VARIANT_WIDTHS = [480, 960];
+
 @Injectable()
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
@@ -105,27 +108,37 @@ export class UploadsService {
       .webp({ quality: 82 })
       .toBuffer();
 
+    // Smaller copies for phones and list pages (…-w480.webp, …-w960.webp). The browser
+    // picks the smallest that fits (srcset), so a vehicle grid downloads a fraction of the bytes.
+    const variants = await Promise.all(
+      IMAGE_VARIANT_WIDTHS.map(async (width) => ({
+        name: `${filename.replace(/\.webp$/, "")}-w${width}.webp`,
+        body: await sharp(optimizedImage).resize({ width, withoutEnlargement: true }).webp({ quality: 78 }).toBuffer(),
+      }))
+    );
+
+    await this.store(filename, optimizedImage);
+    await Promise.all(variants.map((variant) => this.store(variant.name, variant.body)));
+
     if (this.s3Client && this.bucket) {
-      const put = await this.s3Client.send(
-        new PutObjectCommand({
-          Bucket: this.bucket,
-          Key: filename,
-          Body: optimizedImage,
-          ContentType: "image/webp",
-        })
-      );
-      this.logger.log(
-        `Stored ${filename} in bucket "${this.bucket}" (HTTP ${put.$metadata.httpStatusCode}, ${optimizedImage.length} bytes).`
-      );
+      this.logger.log(`Stored ${filename} (+${variants.length} sizes) in bucket "${this.bucket}" (${optimizedImage.length} bytes).`);
       // Private bucket: the browser can't fetch it directly, so hand out the API path.
       // (The frontend resolves this against the API's origin.)
       return { url: this.privateBucket ? `/api/media/${filename}` : this.buildPublicUrl(filename) };
     }
+    return { url: `/uploads/${filename}` };
+  }
 
+  private async store(name: string, body: Buffer): Promise<void> {
+    if (this.s3Client && this.bucket) {
+      await this.s3Client.send(
+        new PutObjectCommand({ Bucket: this.bucket, Key: name, Body: body, ContentType: "image/webp" })
+      );
+      return;
+    }
     const uploadsDir = join(process.cwd(), "uploads");
     await fs.mkdir(uploadsDir, { recursive: true });
-    await fs.writeFile(join(uploadsDir, filename), optimizedImage);
-    return { url: `/uploads/${filename}` };
+    await fs.writeFile(join(uploadsDir, name), body);
   }
 
   private buildPublicUrl(filename: string): string {

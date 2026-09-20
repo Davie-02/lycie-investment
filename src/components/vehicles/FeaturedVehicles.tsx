@@ -8,7 +8,7 @@ import "./FeaturedVehicles.css";
 const STAGGER_STEP_MS = 80;
 
 export default function FeaturedVehicles() {
-  const { data: vehicles, isLoading, error } = useAsyncData(() => getFeaturedVehicles(3), []);
+  const { data: vehicles, isLoading, error } = useAsyncData(() => getFeaturedVehicles(3), [], ["vehicles"]);
 
   return (
     <section className="section container">

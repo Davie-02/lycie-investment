@@ -4,7 +4,7 @@ import type { Response } from "express";
 import { UploadsService } from "./uploads.service";
 
 /** Only the names this app generates (uuid + .webp) — never an arbitrary bucket key. */
-export const MEDIA_FILENAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/;
+export const MEDIA_FILENAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-w(480|960))?\.webp$/;
 
 /**
  * Serves uploaded images from a PRIVATE bucket (S3_PRIVATE_BUCKET=true).

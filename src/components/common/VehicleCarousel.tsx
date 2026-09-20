@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFeaturedVehicles } from "@/services/vehicles.service";
 import { formatCurrency } from "@/utils/format";
-import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
+import Img from "@/components/common/Img";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import "./VehicleCarousel.css";
 
@@ -20,7 +20,7 @@ const SWIPE_THRESHOLD_PX = 50;
  *     the automatic motion never removes the ability to browse
  */
 export default function VehicleCarousel() {
-  const { data: vehicles, isLoading, error } = useAsyncData(() => getFeaturedVehicles(6), []);
+  const { data: vehicles, isLoading, error } = useAsyncData(() => getFeaturedVehicles(6), [], ["vehicles"]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const prefersReducedMotion = useRef(
@@ -84,18 +84,36 @@ export default function VehicleCarousel() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {vehicles.map((v, index) => (
-          <div
-            key={v.id}
-            className={
-              index === activeIndex
-                ? "vehicle-carousel__bg vehicle-carousel__bg--active"
-                : "vehicle-carousel__bg"
-            }
-            style={{ backgroundImage: `url(${resolveUploadUrl(v.images[0])})` }}
-            aria-hidden={index !== activeIndex}
-          />
-        ))}
+        <div className="vehicle-carousel__stage">
+          {vehicles.map((v, index) => {
+            // Only the current photo and its neighbours are in the page, so the
+            // browser isn't downloading every slide before it's needed.
+            const distance = Math.abs(index - activeIndex);
+            const isNear = distance <= 1 || distance === count - 1;
+            const isActive = index === activeIndex;
+            return (
+              <div
+                key={v.id}
+                className={isActive ? "vehicle-carousel__bg vehicle-carousel__bg--active" : "vehicle-carousel__bg"}
+                aria-hidden={!isActive}
+              >
+                {isNear && v.images[0] && (
+                  <>
+                    {/* Blurred copy fills any empty space, so the real photo can be shown WHOLE. */}
+                    <Img src={v.images[0]} alt="" sizes="100vw" className="vehicle-carousel__backdrop" />
+                    <Img
+                      src={v.images[0]}
+                      alt={isActive ? `${v.make} ${v.model}` : ""}
+                      sizes="(min-width: 1200px) 1200px, 100vw"
+                      priority={isActive && index === 0}
+                      className="vehicle-carousel__photo"
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
         <div className="vehicle-carousel__scrim" />
         <SaveVehicleButton vehicleId={vehicle.id} className="vehicle-carousel__save" />
         <div className="container vehicle-carousel__content" key={vehicle.id}>

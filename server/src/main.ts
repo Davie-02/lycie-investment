@@ -62,7 +62,19 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix("api");
-  app.use(compression());
+  // Live-update stream must not be compressed/buffered, or events arrive in
+  // delayed batches instead of instantly.
+  app.use(
+    compression({
+      filter: (req, res) => (req.path === "/api/events" ? false : compression.filter(req, res)),
+    })
+  );
+
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    // Stops reverse proxies (nginx-style, Render) from buffering the live-update stream.
+    if (request.path === "/api/events") response.setHeader("X-Accel-Buffering", "no");
+    next();
+  });
 
   app.use((request: Request, response: Response, next: NextFunction) => {
     // Vehicles, testimonials, FAQ, etc. are read through the *same* endpoint
@@ -82,10 +94,11 @@ async function bootstrap() {
 
     const publicRead = request.method === "GET" && !isAuthenticated && isPublicReadPath(request.path);
 
-    response.setHeader(
-      "Cache-Control",
-      publicRead ? "public, max-age=60, stale-while-revalidate=300" : "no-store"
-    );
+    // Public reads: cacheable but ALWAYS revalidated ("no-cache" + the ETag Express adds),
+    // so a change published in the admin is visible on the very next request while unchanged
+    // data still costs only a tiny 304. Everything else — including every logged-in
+    // request, which may contain customer details — is never stored.
+    response.setHeader("Cache-Control", publicRead ? "public, no-cache" : "no-store");
     next();
   });
 
