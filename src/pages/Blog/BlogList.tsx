@@ -5,6 +5,7 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPosts } from "@/services/blog.service";
 import Img from "@/components/common/Img";
 import LikeButton from "@/components/common/LikeButton";
+import "./Blog.css";
 
 const STAGGER_STEP_MS = 60;
 const STAGGER_CAP = 6;

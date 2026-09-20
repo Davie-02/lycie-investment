@@ -4,6 +4,7 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPostBySlug } from "@/services/blog.service";
 import Img from "@/components/common/Img";
 import LikeButton from "@/components/common/LikeButton";
+import "./Blog.css";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
