@@ -49,3 +49,32 @@ describe("SiteContentService.applyCompanyProfile", () => {
     expect(contact.whatsappNumber).toBe("+265111"); // kept
   });
 });
+
+describe("SiteContentService.seedMissingProfileSections", () => {
+  it("adds only the sections that have no saved row and leaves saved ones alone", async () => {
+    let created: Array<{ key: string }> = [];
+    const prisma = {
+      siteContent: {
+        findMany: async () => [{ key: "about" }, { key: "contact" }, { key: "hero" }, { key: "services" }, { key: "seo" }],
+        createMany: async (args: { data: Array<{ key: string }> }) => ((created = args.data), { count: args.data.length }),
+      },
+    };
+    const service = new SiteContentService(prisma as never);
+    const added = await service.seedMissingProfileSections();
+
+    expect(added.sort()).toEqual(["clients", "company", "fleet", "team"]);
+    expect(created.map((row) => row.key).sort()).toEqual(["clients", "company", "fleet", "team"]);
+  });
+
+  it("does nothing once every section exists", async () => {
+    const prisma = {
+      siteContent: {
+        findMany: async () => Object.keys(COMPANY_PROFILE).map((key) => ({ key })),
+        createMany: async () => {
+          throw new Error("should not write");
+        },
+      },
+    };
+    expect(await new SiteContentService(prisma as never).seedMissingProfileSections()).toEqual([]);
+  });
+});

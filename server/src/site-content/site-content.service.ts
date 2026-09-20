@@ -1,12 +1,41 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSiteContentDto } from "./dto/update-site-content.dto";
 import { COMPANY_PROFILE } from "./company-profile";
 
 @Injectable()
-export class SiteContentService {
+export class SiteContentService implements OnModuleInit {
+  private readonly logger = new Logger(SiteContentService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Makes sure every company-profile section (team, fleet, clients, vision…) exists
+   * as ordinary stored content, so a fresh or older database shows the same pages
+   * as everywhere else. Only sections with no saved row are added — anything already
+   * saved, including edits made in the admin, is never touched.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const created = await this.seedMissingProfileSections();
+      if (created.length > 0) this.logger.log(`Added missing site content sections: ${created.join(", ")}`);
+    } catch (error) {
+      // Never block startup over seed content — the admin can still load it manually.
+      this.logger.warn(`Could not add default site content: ${(error as Error).message}`);
+    }
+  }
+
+  async seedMissingProfileSections(): Promise<string[]> {
+    const existing = new Set((await this.prisma.siteContent.findMany({ select: { key: true } })).map((row) => row.key));
+    const missing = Object.keys(COMPANY_PROFILE).filter((key) => !existing.has(key));
+    if (missing.length === 0) return [];
+    await this.prisma.siteContent.createMany({
+      data: missing.map((key) => ({ key, value: COMPANY_PROFILE[key] as Prisma.InputJsonValue })),
+      skipDuplicates: true,
+    });
+    return missing;
+  }
 
   /**
    * Returns every section merged into a single { [key]: value } object,
