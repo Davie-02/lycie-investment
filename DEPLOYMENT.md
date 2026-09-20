@@ -292,3 +292,24 @@ Prisma migrations run automatically on each backend deploy via
 `schema.prisma` locally, run `npx prisma migrate dev --name <description>`
 to generate the migration file, commit it, and push; Render applies it on
 the next deploy.
+
+---
+
+## Image storage without a card (private bucket via Backblaze B2)
+
+Public buckets on some providers need a payment card. A **private** bucket is
+free, and the API can serve the images itself:
+
+1. In Backblaze B2, create a bucket with **Files in Bucket: Private**, note its
+   endpoint (`s3.<region>.backblazeb2.com`), and create an Application Key
+   restricted to that bucket with Read and Write access.
+2. In Render → Environment set: `S3_BUCKET` (bucket name), `S3_REGION` (the
+   region in the endpoint, e.g. `us-west-004`), `S3_ENDPOINT`
+   (`https://s3.<region>.backblazeb2.com`), `S3_ACCESS_KEY_ID` (keyID),
+   `S3_SECRET_ACCESS_KEY` (applicationKey), `S3_FORCE_PATH_STYLE=true`, and
+   **`S3_PRIVATE_BUCKET=true`**. Leave `S3_PUBLIC_URL_BASE` empty.
+3. Upload a photo in `/admin`; its address will look like
+   `https://<your-api>/api/media/<id>.webp`.
+
+Images then travel bucket → API → visitor, cached by browsers for a year.
+Keep the API awake (section 2c) so photos don't wait for a cold start.

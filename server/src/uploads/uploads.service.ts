@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import type { Readable } from "stream";
 import { randomUUID } from "crypto";
 import { join } from "path";
 import { promises as fs } from "fs";
@@ -15,6 +16,11 @@ import sharp from "sharp";
  * - Local disk (server/uploads/) otherwise, so development doesn't require
  *   real cloud credentials just to try the admin dashboard.
  *
+ * A bucket can also be PRIVATE (S3_PRIVATE_BUCKET=true): some providers only
+ * offer free public buckets with a card on file, while private ones are free.
+ * In that mode files are stored privately and served through the API at
+ * /api/media/:filename (see media.controller.ts), so no public bucket is needed.
+ *
  * Either way, callers just get back a URL — nothing else in the app needs
  * to know or care which strategy is active.
  */
@@ -23,8 +29,10 @@ export class UploadsService {
   private readonly s3Client: S3Client | null;
   private readonly bucket: string | undefined;
   private readonly publicUrlBase: string | undefined;
+  private readonly privateBucket: boolean;
 
   constructor() {
+    this.privateBucket = process.env.S3_PRIVATE_BUCKET === "true";
     this.bucket = process.env.S3_BUCKET;
     this.publicUrlBase = process.env.S3_PUBLIC_URL_BASE;
 
@@ -50,6 +58,31 @@ export class UploadsService {
     return this.s3Client !== null;
   }
 
+  /** True when files live in a private bucket and are streamed through the API. */
+  get isProxyingPrivateBucket(): boolean {
+    return this.s3Client !== null && this.privateBucket;
+  }
+
+  /** Reads one uploaded file from the private bucket. Returns null if it doesn't exist. */
+  async readPrivateObject(
+    filename: string
+  ): Promise<{ body: Readable; contentType: string; contentLength?: number } | null> {
+    if (!this.s3Client || !this.bucket) return null;
+    try {
+      const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: filename }));
+      if (!result.Body) return null;
+      return {
+        body: result.Body as Readable,
+        contentType: result.ContentType ?? "image/webp",
+        contentLength: result.ContentLength,
+      };
+    } catch (error) {
+      const name = (error as { name?: string }).name;
+      if (name === "NoSuchKey" || name === "NotFound") return null;
+      throw error;
+    }
+  }
+
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
     const filename = `${randomUUID()}.webp`;
     // Caps decoded pixel count before resize runs — sharp's own default
@@ -71,7 +104,9 @@ export class UploadsService {
           ContentType: "image/webp",
         })
       );
-      return { url: this.buildPublicUrl(filename) };
+      // Private bucket: the browser can't fetch it directly, so hand out the API path.
+      // (The frontend resolves this against the API's origin.)
+      return { url: this.privateBucket ? `/api/media/${filename}` : this.buildPublicUrl(filename) };
     }
 
     const uploadsDir = join(process.cwd(), "uploads");

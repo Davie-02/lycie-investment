@@ -57,7 +57,12 @@ services:
       - key: S3_FORCE_PATH_STYLE
         value: "true"
       - key: S3_PUBLIC_URL_BASE
-        sync: false
+        sync: false # leave blank when using a private bucket
+      # "true" = files stored in a PRIVATE bucket and served through the API
+      # (/api/media/...). Lets you use free private buckets (e.g. Backblaze B2)
+      # that need no card, instead of a public bucket.
+      - key: S3_PRIVATE_BUCKET
+        value: "false"
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM

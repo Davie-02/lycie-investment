@@ -144,6 +144,15 @@ configured, and the frontend just displays whatever URL comes back.
    S3_PUBLIC_URL_BASE="https://<your-public-bucket-url>"
    ```
 
+**Private bucket (no public access needed):** some providers charge or ask for
+a card only for *public* buckets (Backblaze B2, for example). Set
+`S3_PRIVATE_BUCKET="true"`, keep the bucket private, and leave
+`S3_PUBLIC_URL_BASE` unset. Uploads are then stored privately and served by the
+API at `/api/media/<uuid>.webp` (`src/uploads/media.controller.ts`): only names
+the app generated are served, responses are cached by browsers for a year, and
+the route is exempt from rate limiting. Trade-off: image bytes flow through the
+API server instead of directly from the storage provider.
+
 **Alternative: real AWS S3** — create a bucket, an IAM user with
 `s3:PutObject` on it, and set `S3_BUCKET`, `S3_REGION` (e.g. `us-east-1`),
 `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`. Leave `S3_ENDPOINT` and
