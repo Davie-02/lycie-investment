@@ -4,6 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
 import { NOTICE_TYPE_LABELS, type Notice, type NoticeType, type NoticeDisplayMode } from "@/types/notice";
+import AiWriteButton from "./AiWriteButton";
 
 interface NoticeFormProps {
   notice: Notice | null;
@@ -103,6 +104,7 @@ export default function NoticeForm({ notice, onSaved, onCancel }: NoticeFormProp
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           wrapperClassName="form-grid__full"
+          footer={<AiWriteButton kind="notice" current={message} maxChars={200} onApply={setMessage} />}
         />
       </div>
 

@@ -5,6 +5,7 @@ import ImageUploader from "./ImageUploader";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
 import type { BlogPost } from "@/types/blogPost";
+import AiWriteButton from "./AiWriteButton";
 
 interface BlogPostFormProps {
   post: BlogPost | null;
@@ -101,6 +102,15 @@ export default function BlogPostForm({ post, onSaved, onCancel }: BlogPostFormPr
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
           wrapperClassName="form-grid__full"
+          footer={
+            <AiWriteButton
+              kind="blog-excerpt"
+              current={excerpt}
+              facts={() => `Post title: ${title}\nPost text: ${body.slice(0, 1500)}`}
+              onApply={setExcerpt}
+              maxChars={220}
+            />
+          }
         />
         <FormField
           id="blog-body"
@@ -110,6 +120,16 @@ export default function BlogPostForm({ post, onSaved, onCancel }: BlogPostFormPr
           value={body}
           onChange={(e) => setBody(e.target.value)}
           wrapperClassName="form-grid__full"
+          footer={
+            <AiWriteButton
+              kind="blog-body"
+              current={body}
+              hint={title ? `Write a post titled “${title}”` : ""}
+              facts={() => (title ? `Post title: ${title}` : "")}
+              defaultTone="professional"
+              onApply={setBody}
+            />
+          }
         />
 
         <div className="form-field form-grid__full">

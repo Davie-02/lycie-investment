@@ -53,6 +53,13 @@ export interface ChatTurn {
   image?: { mimeType: string; data: string };
 }
 
+/** Per-call overrides (defaults are tuned for short chat replies). */
+export interface GenerateOptions {
+  maxOutputTokens?: number;
+  temperature?: number;
+  timeoutMs?: number;
+}
+
 export interface GeminiResult {
   text: string;
   model: string;
@@ -111,7 +118,7 @@ export class GeminiClient {
     return Boolean(this.config.apiKey);
   }
 
-  async generate(system: string, turns: ChatTurn[]): Promise<GeminiResult> {
+  async generate(system: string, turns: ChatTurn[], options?: GenerateOptions): Promise<GeminiResult> {
     if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
 
     const startedAt = this.now();
@@ -122,7 +129,7 @@ export class GeminiClient {
       if (remaining < 2_000) break;
 
       try {
-        const text = await this.callModel(model, system, turns, Math.min(this.config.perAttemptTimeoutMs, remaining));
+        const text = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
         return { text, model };
       } catch (error) {
         if (error instanceof GeminiBlockedError) throw error;
@@ -140,7 +147,7 @@ export class GeminiClient {
     throw new GeminiUnavailableError(lastError);
   }
 
-  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number): Promise<string> {
+  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -150,7 +157,7 @@ export class GeminiClient {
       response = await this.fetchFn(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey as string },
-        body: this.buildBody(system, turns),
+        body: this.buildBody(system, turns, options),
         signal: controller.signal,
       });
     } catch (error) {
@@ -181,7 +188,7 @@ export class GeminiClient {
     return text;
   }
 
-  private buildBody(system: string, turns: ChatTurn[]): string {
+  private buildBody(system: string, turns: ChatTurn[], options?: GenerateOptions): string {
     return JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: turns.map((turn) => ({
@@ -192,8 +199,8 @@ export class GeminiClient {
         ],
       })),
       generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: this.config.maxOutputTokens,
+        temperature: options?.temperature ?? 0.4,
+        maxOutputTokens: options?.maxOutputTokens ?? this.config.maxOutputTokens,
         thinkingConfig: { thinkingBudget: this.config.thinkingBudget },
       },
     });

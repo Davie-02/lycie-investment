@@ -17,6 +17,7 @@ import type {
   ClearingPageContent,
 } from "@/types/siteContent";
 import "../components/AdminLayout.css";
+import AiWriteButton from "../components/AiWriteButton";
 
 const SECTION_LINKS = [
   { id: "site-content-hero", label: "Hero" },
@@ -137,6 +138,15 @@ function HeroSection({ initial, onSaved }: { initial: HeroContent; onSaved: () =
           as="textarea"
           value={values.body}
           onChange={(e) => setValues({ ...values, body: e.target.value })}
+          footer={
+            <AiWriteButton
+              kind="site-text"
+              hint="Homepage introduction paragraph"
+              defaultTone="professional"
+              current={values.body}
+              onApply={(text) => setValues({ ...values, body: text })}
+            />
+          }
         />
         <div className="form-grid form-grid--2col form-grid__full">
           <FormField
@@ -626,6 +636,15 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
           as="textarea"
           value={values.intro}
           onChange={(e) => setValues({ ...values, intro: e.target.value })}
+          footer={
+            <AiWriteButton
+              kind="site-text"
+              hint="Short introduction for the About page"
+              defaultTone="professional"
+              current={values.intro}
+              onApply={(text) => setValues({ ...values, intro: text })}
+            />
+          }
         />
         <FormField
           id="about-whatWeDo"
@@ -633,6 +652,15 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
           as="textarea"
           value={values.whatWeDo}
           onChange={(e) => setValues({ ...values, whatWeDo: e.target.value })}
+          footer={
+            <AiWriteButton
+              kind="site-text"
+              hint="What Lycie Investments does, across sourcing, importing, sales, hire and clearing"
+              defaultTone="professional"
+              current={values.whatWeDo}
+              onApply={(text) => setValues({ ...values, whatWeDo: text })}
+            />
+          }
         />
         <FormField
           id="about-howWeWork"
@@ -640,6 +668,15 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
           as="textarea"
           value={values.howWeWork}
           onChange={(e) => setValues({ ...values, howWeWork: e.target.value })}
+          footer={
+            <AiWriteButton
+              kind="site-text"
+              hint="How we work with customers from first request to delivery"
+              defaultTone="professional"
+              current={values.howWeWork}
+              onApply={(text) => setValues({ ...values, howWeWork: text })}
+            />
+          }
         />
         <FormField
           id="about-whyChooseUs"
@@ -647,6 +684,15 @@ function AboutSection({ initial, onSaved }: { initial: AboutContent; onSaved: ()
           as="textarea"
           value={values.whyChooseUs}
           onChange={(e) => setValues({ ...values, whyChooseUs: e.target.value })}
+          footer={
+            <AiWriteButton
+              kind="site-text"
+              hint="Why customers should choose Lycie Investments"
+              defaultTone="professional"
+              current={values.whyChooseUs}
+              onApply={(text) => setValues({ ...values, whyChooseUs: text })}
+            />
+          }
         />
       </div>
 

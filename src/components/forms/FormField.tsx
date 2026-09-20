@@ -7,6 +7,8 @@ interface BaseFieldProps {
   error?: string;
   required?: boolean;
   wrapperClassName?: string;
+  /** Optional content shown under the control (e.g. an AI-writing button). */
+  footer?: ReactNode;
 }
 
 type InputFieldProps = BaseFieldProps &
@@ -21,7 +23,7 @@ type SelectFieldProps = BaseFieldProps &
 type FormFieldProps = InputFieldProps | TextareaFieldProps | SelectFieldProps;
 
 export default function FormField(props: FormFieldProps) {
-  const { id, label, error, required, wrapperClassName, as = "input", ...rest } = props;
+  const { id, label, error, required, wrapperClassName, footer, as = "input", ...rest } = props;
   const describedBy = error ? `${id}-error` : undefined;
 
   return (
@@ -68,6 +70,7 @@ export default function FormField(props: FormFieldProps) {
           {error}
         </p>
       )}
+      {footer}
     </div>
   );
 }

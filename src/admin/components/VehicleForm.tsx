@@ -5,6 +5,7 @@ import ImageUploader from "./ImageUploader";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
 import type { Vehicle } from "@/types/vehicle";
+import AiWriteButton from "./AiWriteButton";
 
 interface VehicleFormProps {
   vehicle: Vehicle | null;
@@ -181,6 +182,34 @@ export default function VehicleForm({ vehicle, onSaved, onCancel }: VehicleFormP
           value={values.description}
           onChange={handleChange("description")}
           wrapperClassName="form-grid__full"
+          footer={
+            <AiWriteButton
+              kind="vehicle-description"
+              current={values.description}
+              defaultTone="persuasive"
+              facts={() =>
+                [
+                  ["Make", values.make],
+                  ["Model", values.model],
+                  ["Year", values.year],
+                  ["Price (MWK)", values.price],
+                  ["Mileage (km)", values.mileageKm],
+                  ["Fuel", values.fuelType],
+                  ["Transmission", values.transmission],
+                  ["Body type", values.bodyType],
+                  ["Engine", values.engine],
+                  ["Drive", values.driveType],
+                  ["Condition", values.condition],
+                  ["Location", values.location],
+                  ["Features", values.featuresText.split("\n").filter(Boolean).join(", ")],
+                ]
+                  .filter(([, v]) => String(v ?? "").trim())
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join("\n")
+              }
+              onApply={(text) => setValues((prev) => ({ ...prev, description: text }))}
+            />
+          }
         />
 
         <FormField

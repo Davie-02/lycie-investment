@@ -4,6 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
 import type { Faq } from "@/types/faq";
+import AiWriteButton from "./AiWriteButton";
 
 interface FaqFormProps {
   faq: Faq | null;
@@ -87,6 +88,17 @@ export default function FaqForm({ faq, onSaved, onCancel }: FaqFormProps) {
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           wrapperClassName="form-grid__full"
+          footer={
+            <AiWriteButton
+              kind="faq-answer"
+              current={answer}
+              hint={question ? `Answer this: ${question}` : ""}
+              facts={() => (question ? `Question: ${question}` : "")}
+              defaultTone="professional"
+              maxChars={700}
+              onApply={setAnswer}
+            />
+          }
         />
       </div>
 
