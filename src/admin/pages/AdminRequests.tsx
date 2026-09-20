@@ -4,6 +4,7 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { ApiError } from "@/services/http";
+import ContactCell from "../components/ContactCell";
 import "../components/AdminLayout.css";
 
 type TabKey = "inquiries" | "import" | "clearing" | "hire" | "contact";
@@ -29,6 +30,8 @@ const STATUS_CYCLE_LABEL: Record<RequestStatus, string> = {
 
 interface Inquiry {
   id: string;
+  customerId?: string | null;
+  preferredContact?: string | null;
   fullName: string;
   phone: string;
   email: string;
@@ -40,6 +43,8 @@ interface Inquiry {
 
 interface ImportRequestRecord {
   id: string;
+  customerId?: string | null;
+  preferredContact?: string | null;
   fullName: string;
   phone: string;
   email: string;
@@ -52,6 +57,8 @@ interface ImportRequestRecord {
 
 interface ClearingRequestRecord {
   id: string;
+  customerId?: string | null;
+  preferredContact?: string | null;
   fullName: string;
   phone: string;
   email: string;
@@ -64,6 +71,8 @@ interface ClearingRequestRecord {
 
 interface HireRequestRecord {
   id: string;
+  customerId?: string | null;
+  preferredContact?: string | null;
   fullName: string;
   phone: string;
   email: string;
@@ -79,8 +88,11 @@ interface HireRequestRecord {
 
 interface ContactMessageRecord {
   id: string;
+  customerId?: string | null;
+  preferredContact?: string | null;
   fullName: string;
   email: string;
+  phone?: string | null;
   subject: string;
   message: string;
   status: RequestStatus;
@@ -214,7 +226,9 @@ function InquiriesTable() {
               <tr key={row.id}>
                 <td>{formatDate(row.createdAt)}</td>
                 <td>{row.fullName}</td>
-                <td>{row.phone} · {row.email}</td>
+                <td>
+                  <ContactCell kind="inquiry" row={row} topic={row.vehicle ? `the ${row.vehicle.make} ${row.vehicle.model} (${row.vehicle.year})` : "your vehicle inquiry"} onContacted={refresh} />
+                </td>
                 <td>{row.vehicle ? `${row.vehicle.make} ${row.vehicle.model} (${row.vehicle.year})` : "—"}</td>
                 <td>{row.message || "—"}</td>
                 <td>
@@ -285,7 +299,9 @@ function ImportRequestsTable() {
               <tr key={row.id}>
                 <td>{formatDate(row.createdAt)}</td>
                 <td>{row.fullName}</td>
-                <td>{row.phone} · {row.email}</td>
+                <td>
+                  <ContactCell kind="import" row={row} topic={`a ${row.preferredMake} ${row.preferredModel ?? ""}`.trim()} onContacted={refresh} />
+                </td>
                 <td>{row.preferredMake} {row.preferredModel ?? ""}</td>
                 <td className="mono">{row.budget ? row.budget.toLocaleString() : "—"}</td>
                 <td>
@@ -357,7 +373,9 @@ function ClearingRequestsTable() {
               <tr key={row.id}>
                 <td>{formatDate(row.createdAt)}</td>
                 <td>{row.fullName}</td>
-                <td>{row.phone} · {row.email}</td>
+                <td>
+                  <ContactCell kind="clearing" row={row} topic={`your ${row.vehicleMake} (VIN ${row.vin})`} onContacted={refresh} />
+                </td>
                 <td>{row.vehicleMake}</td>
                 <td className="mono">{row.vin}</td>
                 <td>{row.currentLocation}</td>
@@ -379,9 +397,11 @@ function ClearingRequestsTable() {
 }
 
 function HireRequestsTable() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
   const { data, isLoading, error } = useAsyncData(
     () => adminApi.get<HireRequestRecord[]>("/hire-requests"),
-    []
+    [refreshKey]
   );
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (error) return <p className="text-muted" role="alert">Unable to load hire requests.</p>;
@@ -409,7 +429,9 @@ function HireRequestsTable() {
             <tr key={row.id}>
               <td>{formatDate(row.createdAt)}</td>
               <td>{row.fullName}</td>
-              <td>{row.phone} · {row.email}</td>
+              <td>
+                  <ContactCell kind="hire" row={row} topic={row.vehicle ? `the ${row.vehicle.name}` : "your hire request"} onContacted={refresh} />
+                </td>
               <td>{row.vehicle?.name ?? "—"}</td>
               <td>{new Date(row.pickupDate).toLocaleDateString()}</td>
               <td>{new Date(row.returnDate).toLocaleDateString()}</td>
@@ -492,7 +514,9 @@ function ContactMessagesTable() {
               <tr key={row.id}>
                 <td>{formatDate(row.createdAt)}</td>
                 <td>{row.fullName}</td>
-                <td>{row.email}</td>
+                <td>
+                  <ContactCell kind="contact" row={row} topic={row.subject} onContacted={refresh} />
+                </td>
                 <td>{row.subject}</td>
                 <td>{row.message}</td>
                 <td>

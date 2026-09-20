@@ -7,6 +7,7 @@ import { useCountdown } from "../hooks/useCountdown";
 import { formatCurrency } from "@/utils/format";
 import { getBookingPhase, type Booking } from "@/types/booking";
 import { ApiError } from "@/services/http";
+import ContactCell from "../components/ContactCell";
 import "../components/AdminLayout.css";
 
 function CountdownDisplay({ target, label, countingUp }: { target: Date; label: string; countingUp?: boolean }) {
@@ -118,6 +119,12 @@ export default function AdminBookingDetail() {
             <div className="vehicle-specs__row"><dt>Email</dt><dd className="mono">{booking.email}</dd></div>
             <div className="vehicle-specs__row"><dt>Pickup Location</dt><dd>{booking.pickupLocation}</dd></div>
           </dl>
+          <h3 className="booking-detail__respond">Respond to the customer</h3>
+          <ContactCell
+            kind="hire"
+            row={booking}
+            topic={`your booking of the ${booking.vehicle.name} (${new Date(booking.pickupDate).toLocaleDateString()} – ${new Date(booking.returnDate).toLocaleDateString()})`}
+          />
         </div>
 
         <div className="form-card">

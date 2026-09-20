@@ -4,6 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitInquiry } from "@/services/inquiries.service";
 import type { InquiryRequest } from "@/types/requests";
+import PreferredContactSelect, { type PreferredContact } from "./PreferredContactSelect";
 
 interface InquiryFormProps {
   vehicleId: string;
@@ -47,6 +48,8 @@ export default function InquiryForm({ vehicleId, vehicleLabel }: InquiryFormProp
     };
   }
 
+  const [preferredContact, setPreferredContact] = useState<PreferredContact | "">("");
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const validationErrors = validate(values);
@@ -54,6 +57,7 @@ export default function InquiryForm({ vehicleId, vehicleLabel }: InquiryFormProp
     if (Object.keys(validationErrors).length > 0) return;
 
     await submit({
+      preferredContact: preferredContact || undefined,
       fullName: values.fullName,
       phone: values.phone,
       email: values.email,
@@ -97,6 +101,8 @@ export default function InquiryForm({ vehicleId, vehicleLabel }: InquiryFormProp
           placeholder="Any questions about this vehicle?"
         />
       </div>
+
+      <PreferredContactSelect value={preferredContact} onChange={setPreferredContact} />
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "submitting"}>

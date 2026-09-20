@@ -4,6 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitContactMessage } from "@/services/inquiries.service";
 import type { ContactMessage } from "@/types/requests";
+import PreferredContactSelect, { type PreferredContact } from "./PreferredContactSelect";
 
 type FormValues = {
   fullName: string;
@@ -45,6 +46,8 @@ export default function ContactForm() {
     };
   }
 
+  const [preferredContact, setPreferredContact] = useState<PreferredContact | "">("");
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const validationErrors = validate(values);
@@ -52,6 +55,7 @@ export default function ContactForm() {
     if (Object.keys(validationErrors).length > 0) return;
 
     await submit({
+      preferredContact: preferredContact || undefined,
       fullName: values.fullName,
       email: values.email,
       phone: values.phone || undefined,
@@ -94,6 +98,8 @@ export default function ContactForm() {
           wrapperClassName="form-grid__full"
         />
       </div>
+
+      <PreferredContactSelect value={preferredContact} onChange={setPreferredContact} />
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "submitting"}>

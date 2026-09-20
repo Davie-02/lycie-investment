@@ -1,4 +1,5 @@
 export interface InquiryRequest {
+  preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;
   phone: string;
   email: string;
@@ -7,6 +8,7 @@ export interface InquiryRequest {
 }
 
 export interface ImportRequest {
+  preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;
   phone: string;
   email: string;
@@ -22,6 +24,7 @@ export interface ImportRequest {
 }
 
 export interface ClearingRequest {
+  preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;
   phone: string;
   email: string;
@@ -37,6 +40,7 @@ export interface ClearingRequest {
 }
 
 export interface HireRequest {
+  preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;
   phone: string;
   email: string;
@@ -48,6 +52,7 @@ export interface HireRequest {
 }
 
 export interface ContactMessage {
+  preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;
   email: string;
   phone?: string;

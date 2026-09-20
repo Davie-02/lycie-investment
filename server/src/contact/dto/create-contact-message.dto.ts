@@ -1,4 +1,5 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateContactMessageDto {
   @IsString()
@@ -19,4 +20,7 @@ export class CreateContactMessageDto {
   @IsString()
   @IsNotEmpty()
   message!: string;
+
+  @PreferredContactField()
+  preferredContact?: PreferredContact;
 }

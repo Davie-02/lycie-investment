@@ -66,6 +66,7 @@ model CustomerUser {
   passwordResetTokens PasswordResetToken[]
   savedVehicles       SavedVehicle[]
   reviews             Review[]
+  messages            CustomerMessage[]
 }
 
 /// A password-reset link is only ever useful to the customer it was issued
@@ -302,22 +303,24 @@ model HireVehicle {
 }
 
 model Inquiry {
-  id         String        @id @default(cuid())
-  fullName   String
-  phone      String
-  email      String
-  vehicleId  String?
-  vehicle    Vehicle?      @relation(fields: [vehicleId], references: [id])
-  message    String?
+  id               String        @id @default(cuid())
+  fullName         String
+  phone            String
+  email            String
+  vehicleId        String?
+  vehicle          Vehicle?      @relation(fields: [vehicleId], references: [id])
+  message          String?
   /// "new" | "contacted" | "closed" — lets an admin mark that a submission
   /// has been followed up on, so nothing quietly falls through the cracks.
-  status     String        @default("new")
+  status           String        @default("new")
   /// Set automatically when submitted by a logged-in customer (never
   /// user-supplied) so it shows up in their account portal — null for
   /// anonymous/visitor submissions, which remain fully supported.
-  customerId String?       @db.Uuid
-  customer   CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  createdAt  DateTime      @default(now())
+  customerId       String?       @db.Uuid
+  customer         CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  /// How the customer asked to be reached: whatsapp | call | email | message (their Lycie profile).
+  preferredContact String?
 
   @@index([customerId, createdAt])
 }
@@ -340,6 +343,8 @@ model ImportRequest {
   customerId             String?       @db.Uuid
   customer               CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdAt              DateTime      @default(now())
+  /// How the customer asked to be reached: whatsapp | call | email | message (their Lycie profile).
+  preferredContact       String?
 
   @@index([customerId, createdAt])
 }
@@ -362,6 +367,8 @@ model ClearingRequest {
   customerId            String?       @db.Uuid
   customer              CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdAt             DateTime      @default(now())
+  /// How the customer asked to be reached: whatsapp | call | email | message (their Lycie profile).
+  preferredContact      String?
 
   @@index([customerId, createdAt])
 }
@@ -399,21 +406,25 @@ model HireRequest {
   customerId             String?       @db.Uuid
   customer               CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdAt              DateTime      @default(now())
+  /// How the customer asked to be reached: whatsapp | call | email | message (their Lycie profile).
+  preferredContact       String?
 
   @@index([customerId, createdAt])
 }
 
 model ContactMessage {
-  id         String        @id @default(cuid())
-  fullName   String
-  email      String
-  phone      String?
-  subject    String
-  message    String
-  status     String        @default("new")
-  customerId String?       @db.Uuid
-  customer   CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  createdAt  DateTime      @default(now())
+  id               String        @id @default(cuid())
+  fullName         String
+  email            String
+  phone            String?
+  subject          String
+  message          String
+  status           String        @default("new")
+  customerId       String?       @db.Uuid
+  customer         CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  /// How the customer asked to be reached: whatsapp | call | email | message (their Lycie profile).
+  preferredContact String?
 
   @@index([customerId, createdAt])
 }
@@ -639,4 +650,35 @@ model ContentLike {
 
   @@unique([kind, targetId, visitorId])
   @@index([kind, targetId])
+}
+
+/// A record that staff got in touch about a request (or tried to), so the whole
+/// team can see who contacted the customer, how, and when.
+model ContactLog {
+  id          String   @id @default(cuid())
+  requestType String // inquiry | import | clearing | hire | contact
+  requestId   String
+  method      String // whatsapp | call | email | message
+  note        String?
+  adminName   String
+  createdAt   DateTime @default(now())
+
+  @@index([requestType, requestId])
+}
+
+/// A message from staff to a customer, shown inside their Lycie profile
+/// (account page). Only customers who submitted while signed in can receive one.
+model CustomerMessage {
+  id          String       @id @default(cuid())
+  customerId  String       @db.Uuid
+  customer    CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subject     String
+  body        String
+  requestType String?
+  requestId   String?
+  sentByName  String
+  readAt      DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([customerId, createdAt])
 }

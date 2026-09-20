@@ -6,67 +6,130 @@ interface SendEmailInput {
   html: string;
 }
 
+export type EmailProvider = "resend" | "brevo" | "none";
+
+export interface SendResult {
+  ok: boolean;
+  /** Human-readable reason when it didn't go through. */
+  error?: string;
+}
+
+function parseAddress(from: string): { name?: string; email: string } {
+  const match = from.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
+  return match ? { name: match[1].trim() || undefined, email: match[2].trim() } : { email: from.trim() };
+}
+
 /**
- * Wraps Resend's REST API directly via fetch rather than adding their SDK
- * as a dependency — this project sends a handful of simple transactional
- * emails, not enough to justify the extra package.
+ * Sends transactional email through Resend or Brevo (both plain HTTPS APIs —
+ * important, because free hosting like Render blocks the normal SMTP ports).
+ * Chosen by EMAIL_PROVIDER, or automatically from whichever API key is set.
  *
- * If RESEND_API_KEY isn't set, every send() call logs a warning and returns
- * without sending — the same "graceful no-op when unconfigured" pattern
- * used for S3 image storage, so local development doesn't require a real
- * email account just to run the app.
+ * - Resend: needs a verified domain to email real customers (its sandbox only
+ *   delivers to the account owner).
+ * - Brevo: can send from a single verified sender address (e.g. a Gmail), no
+ *   domain needed — fine to start, though a domain gives better inbox delivery.
+ *
+ * Unconfigured = every send logs a warning and returns { ok: false }, so local
+ * development never needs an email account.
  */
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  private get apiKey(): string | undefined {
-    return process.env.RESEND_API_KEY;
+  get provider(): EmailProvider {
+    const choice = (process.env.EMAIL_PROVIDER ?? "").toLowerCase();
+    if (choice === "brevo" && process.env.BREVO_API_KEY) return "brevo";
+    if (choice === "resend" && process.env.RESEND_API_KEY) return "resend";
+    if (!choice) {
+      if (process.env.BREVO_API_KEY) return "brevo";
+      if (process.env.RESEND_API_KEY) return "resend";
+    }
+    return "none";
   }
 
-  private get fromAddress(): string {
+  get isConfigured(): boolean {
+    return this.provider !== "none";
+  }
+
+  get fromAddress(): string {
     return process.env.EMAIL_FROM || "Lycie Investments <onboarding@resend.dev>";
+  }
+
+  /** Replies go here (e.g. the company inbox) even if the sending address is a no-reply. */
+  get replyTo(): string | undefined {
+    return process.env.EMAIL_REPLY_TO || undefined;
   }
 
   get adminNotificationEmail(): string | undefined {
     return process.env.ADMIN_NOTIFICATION_EMAIL;
   }
 
-  async send({ to, subject, html }: SendEmailInput): Promise<void> {
-    if (!this.apiKey) {
-      this.logger.warn(
-        `RESEND_API_KEY not set — skipping email "${subject}" to ${to}. Set it in .env to enable real sending.`
-      );
-      return;
+  /** Fire-and-forget style: never throws, never blocks the request that triggered it. */
+  async send(input: SendEmailInput): Promise<void> {
+    await this.sendChecked(input);
+  }
+
+  /** Like send(), but tells the caller whether it worked (used for admin-initiated emails and the test button). */
+  async sendChecked({ to, subject, html }: SendEmailInput): Promise<SendResult> {
+    const provider = this.provider;
+    if (provider === "none") {
+      this.logger.warn(`No email provider configured — skipping email "${subject}" to ${to}. Set RESEND_API_KEY or BREVO_API_KEY.`);
+      return { ok: false, error: "Email isn't set up yet (no RESEND_API_KEY or BREVO_API_KEY)." };
     }
 
     try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ from: this.fromAddress, to, subject, html }),
-      });
-
+      const response =
+        provider === "brevo" ? await this.sendBrevo(to, subject, html) : await this.sendResend(to, subject, html);
       if (!response.ok) {
         const body = await response.text();
-        this.logger.error(`Resend API error (${response.status}) sending "${subject}" to ${to}: ${body}`);
+        this.logger.error(`${provider} API error (${response.status}) sending "${subject}" to ${to}: ${body}`);
+        return { ok: false, error: this.explain(provider, response.status, body) };
       }
+      return { ok: true };
     } catch (err) {
-      // Email failures should never break the actual request (form
-      // submission, status update, etc.) that triggered them — log and
-      // move on rather than throwing.
+      // Email failures must never break the request that triggered them.
       this.logger.error(`Failed to send email "${subject}" to ${to}`, err);
+      return { ok: false, error: "Couldn't reach the email service." };
     }
+  }
+
+  private sendResend(to: string, subject: string, html: string) {
+    return fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: this.fromAddress, to, subject, html, ...(this.replyTo ? { reply_to: this.replyTo } : {}) }),
+    });
+  }
+
+  private sendBrevo(to: string, subject: string, html: string) {
+    const sender = parseAddress(this.fromAddress);
+    return fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "api-key": process.env.BREVO_API_KEY as string, "Content-Type": "application/json", accept: "application/json" },
+      body: JSON.stringify({
+        sender,
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+        ...(this.replyTo ? { replyTo: { email: this.replyTo } } : {}),
+      }),
+    });
+  }
+
+  private explain(provider: EmailProvider, status: number, body: string): string {
+    if (status === 401 || status === 403) return `The ${provider} API key was rejected. Check it in the hosting settings.`;
+    if (provider === "resend" && /verify|domain|own email/i.test(body)) {
+      return "Resend only delivers to your own address until a domain is verified. Verify your domain in Resend, or switch to Brevo.";
+    }
+    if (provider === "brevo" && /sender|not valid|unauthorized/i.test(body)) {
+      return "Brevo doesn't recognise the sending address. Add and verify EMAIL_FROM as a sender in Brevo.";
+    }
+    return `The email service refused the message (HTTP ${status}).`;
   }
 
   async notifyAdmin(subject: string, html: string): Promise<void> {
     if (!this.adminNotificationEmail) {
-      this.logger.warn(
-        `ADMIN_NOTIFICATION_EMAIL not set — skipping admin notification "${subject}".`
-      );
+      this.logger.warn(`ADMIN_NOTIFICATION_EMAIL not set — skipping admin notification "${subject}".`);
       return;
     }
     await this.send({ to: this.adminNotificationEmail, subject, html });

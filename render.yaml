@@ -68,6 +68,12 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: EMAIL_PROVIDER
+        sync: false # resend or brevo (optional — inferred from whichever key is set)
+      - key: EMAIL_REPLY_TO
+        sync: false
       - key: EMAIL_FROM
         sync: false
       - key: ADMIN_NOTIFICATION_EMAIL

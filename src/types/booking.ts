@@ -17,6 +17,8 @@ export interface Booking {
   totalCost: number;
   currency: string;
   status: HireRequestStatus;
+  customerId?: string | null;
+  preferredContact?: string | null;
   createdAt: string;
 }
 

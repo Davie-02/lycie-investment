@@ -7,6 +7,7 @@ import { calculateHireCost } from "@/utils/hirePricing";
 import { formatCurrency } from "@/utils/format";
 import type { HireRequest } from "@/types/requests";
 import type { HireVehicle } from "@/types/vehicle";
+import PreferredContactSelect, { type PreferredContact } from "./PreferredContactSelect";
 
 type FormValues = {
   fullName: string;
@@ -70,6 +71,8 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
     };
   }
 
+  const [preferredContact, setPreferredContact] = useState<PreferredContact | "">("");
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const validationErrors = validate(values);
@@ -77,6 +80,7 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
     if (Object.keys(validationErrors).length > 0) return;
 
     await submit({
+      preferredContact: preferredContact || undefined,
       fullName: values.fullName,
       phone: values.phone,
       email: values.email,
@@ -139,6 +143,8 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
       <p className="text-muted hire-form__estimate-note">
         Estimated total — final pricing is confirmed when we get in touch.
       </p>
+
+      <PreferredContactSelect value={preferredContact} onChange={setPreferredContact} />
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "submitting"}>

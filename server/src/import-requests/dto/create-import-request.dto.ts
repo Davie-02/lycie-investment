@@ -1,5 +1,6 @@
 import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
+import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateImportRequestDto {
   @IsString()
@@ -51,4 +52,7 @@ export class CreateImportRequestDto {
   @IsString()
   @IsOptional()
   additionalRequirements?: string;
+
+  @PreferredContactField()
+  preferredContact?: PreferredContact;
 }

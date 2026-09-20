@@ -53,6 +53,7 @@ export class HireRequestsService {
         phone: dto.phone,
         email: dto.email,
         vehicleId: dto.vehicleId,
+        preferredContact: dto.preferredContact,
         pickupDate,
         returnDate,
         pickupLocation: dto.pickupLocation,

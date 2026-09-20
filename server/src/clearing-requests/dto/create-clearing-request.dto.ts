@@ -1,5 +1,6 @@
 import { IsDateString, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { Type } from "class-transformer";
+import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateClearingRequestDto {
   @IsString()
@@ -49,4 +50,7 @@ export class CreateClearingRequestDto {
   @IsString()
   @IsOptional()
   additionalInformation?: string;
+
+  @PreferredContactField()
+  preferredContact?: PreferredContact;
 }

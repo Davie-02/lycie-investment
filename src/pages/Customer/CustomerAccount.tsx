@@ -21,6 +21,7 @@ import { ApiError } from "@/services/http";
 import { formatCurrency, formatMileage } from "@/utils/format";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
+import MyMessages from "@/components/customer/MyMessages";
 import "./customer.css";
 
 const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
@@ -318,6 +319,8 @@ export default function CustomerAccount() {
                 </button>
               </div>
             </form>
+
+            <MyMessages />
 
             <div className="customer-account__history">
               <h2>My requests</h2>

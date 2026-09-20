@@ -149,3 +149,31 @@ export function adminNewSubmissionEmail(formType: string, summaryLines: string[]
     `),
   };
 }
+
+/** A message a staff member wrote to a customer (rendered safely: the text is escaped, line breaks kept). */
+export function staffMessageEmail(input: { customerName: string; subject: string; body: string; signOff: string }) {
+  const paragraphs = input.body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin: 0 0 14px; line-height: 1.55;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  return {
+    subject: input.subject,
+    html: wrapper(`
+      <p style="margin: 0 0 14px;">Hello ${escapeHtml(input.customerName)},</p>
+      ${paragraphs}
+      <p style="margin: 18px 0 0; color: #667085;">${escapeHtml(input.signOff)}<br>Lycie Investments</p>
+    `),
+  };
+}
+
+/** Tells a customer there is a new message waiting in their Lycie profile (the message itself stays in the app). */
+export function profileMessageNotificationEmail(input: { customerName: string; subject: string; accountUrl: string }) {
+  return {
+    subject: "You have a new message from Lycie Investments",
+    html: wrapper(`
+      <p style="margin: 0 0 14px;">Hello ${escapeHtml(input.customerName)},</p>
+      <p style="margin: 0 0 14px; line-height: 1.55;">We've sent you a message: <strong>${escapeHtml(input.subject)}</strong></p>
+      <p style="margin: 0 0 14px;"><a href="${escapeHtml(input.accountUrl)}" style="display: inline-block; background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 4px;">Read it in your account</a></p>
+    `),
+  };
+}

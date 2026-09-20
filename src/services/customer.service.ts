@@ -229,3 +229,20 @@ export function submitPayment(amount: number, proof: File, note?: string) {
     body,
   });
 }
+
+export interface CustomerMessage {
+  id: string;
+  subject: string;
+  body: string;
+  sentByName: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export function getMyMessages() {
+  return customerFetch<{ items: CustomerMessage[]; unread: number }>("/customers/me/messages");
+}
+
+export function markMessagesRead() {
+  return customerFetch<{ marked: number }>("/customers/me/messages/read", { method: "POST", body: JSON.stringify({}) });
+}

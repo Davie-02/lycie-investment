@@ -4,6 +4,7 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitImportRequest } from "@/services/inquiries.service";
 import type { ImportRequest } from "@/types/requests";
+import PreferredContactSelect, { type PreferredContact } from "./PreferredContactSelect";
 
 type FormValues = {
   fullName: string;
@@ -59,6 +60,8 @@ export default function ImportRequestForm() {
     };
   }
 
+  const [preferredContact, setPreferredContact] = useState<PreferredContact | "">("");
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const validationErrors = validate(values);
@@ -66,6 +69,7 @@ export default function ImportRequestForm() {
     if (Object.keys(validationErrors).length > 0) return;
 
     await submit({
+      preferredContact: preferredContact || undefined,
       fullName: values.fullName,
       phone: values.phone,
       email: values.email,
@@ -199,6 +203,8 @@ export default function ImportRequestForm() {
           wrapperClassName="form-grid__full"
         />
       </div>
+
+      <PreferredContactSelect value={preferredContact} onChange={setPreferredContact} />
 
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "submitting"}>

@@ -1,4 +1,5 @@
 import { IsDateString, IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateHireRequestDto {
   @IsString()
@@ -29,4 +30,7 @@ export class CreateHireRequestDto {
   @IsString()
   @IsOptional()
   additionalRequirements?: string;
+
+  @PreferredContactField()
+  preferredContact?: PreferredContact;
 }
