@@ -174,7 +174,16 @@ export class InsightsService {
       return { weekStart: weekStart.toISOString().slice(0, 10), count: inWeek.length, averageScore };
     });
 
-    const savesByVehicle = new Map(savedCounts.map((s) => [s.vehicleId, s._count._all]));
+    // "Saves" = customers who saved it to their account + anonymous likes from any visitor.
+    const likeCounts = await this.prisma.contentLike.groupBy({
+      by: ["targetId"],
+      where: { kind: "vehicle" },
+      _count: { _all: true },
+    });
+    const savesByVehicle = new Map<string, number>(savedCounts.map((s) => [s.vehicleId, s._count._all]));
+    for (const like of likeCounts) {
+      savesByVehicle.set(like.targetId, (savesByVehicle.get(like.targetId) ?? 0) + like._count._all);
+    }
     const viewsByVehicle = new Map(viewSums.map((v) => [v.vehicleId, v._sum.views ?? 0]));
     const inquiriesByVehicle = new Map(inquiryCounts.map((i) => [i.vehicleId as string, i._count._all]));
 
@@ -230,7 +239,9 @@ export class InsightsService {
         pendingReviews,
         averageRating,
         feedbackCount: allFeedback.length,
-        saves: savedCounts.reduce((sum, s) => sum + s._count._all, 0),
+        saves:
+          savedCounts.reduce((sum, s) => sum + s._count._all, 0) +
+          likeCounts.reduce((sum, l) => sum + l._count._all, 0),
         views30d: viewSums.reduce((sum, v) => sum + (v._sum.views ?? 0), 0),
         inquiries90d: inquiryCounts.reduce((sum, i) => sum + i._count._all, 0),
       },

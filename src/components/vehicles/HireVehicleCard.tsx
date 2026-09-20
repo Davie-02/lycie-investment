@@ -1,6 +1,7 @@
 import type { HireVehicle } from "@/types/vehicle";
 import { formatCurrency } from "@/utils/format";
 import Img from "@/components/common/Img";
+import LikeButton from "@/components/common/LikeButton";
 import "@/components/vehicles/VehicleCard.css";
 
 interface HireVehicleCardProps {
@@ -18,6 +19,7 @@ export default function HireVehicleCard({ vehicle, onRequestHire }: HireVehicleC
           sizes="(min-width: 1000px) 380px, (min-width: 640px) 45vw, 100vw"
           className="vehicle-card__image"
         />
+        <LikeButton kind="hire" targetId={vehicle.id} noun="vehicle" className="vehicle-card__save" />
         <span
           className={
             vehicle.available

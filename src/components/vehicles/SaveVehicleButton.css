@@ -2,13 +2,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  gap: 0.35rem;
+  min-width: 36px;
   height: 36px;
+  padding-inline: 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   cursor: pointer;
-  padding: 0;
   transition: transform var(--transition), border-color var(--transition), background-color var(--transition);
 }
 
@@ -63,4 +64,15 @@
     transition: none;
     animation: none;
   }
+}
+
+.save-vehicle-btn__count {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.save-vehicle-btn--saved .save-vehicle-btn__count {
+  color: var(--color-accent-dark);
 }

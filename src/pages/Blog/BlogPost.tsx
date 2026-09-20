@@ -3,6 +3,7 @@ import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPostBySlug } from "@/services/blog.service";
 import Img from "@/components/common/Img";
+import LikeButton from "@/components/common/LikeButton";
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -57,6 +58,9 @@ export default function BlogPost() {
           <span className="text-muted mono blog-post__date">{formatDate(post.publishedAt)}</span>
         )}
         <h1>{post.title}</h1>
+        <div className="blog-post__actions">
+          <LikeButton kind="blog" targetId={post.id} noun="post" />
+        </div>
         {post.coverImageUrl && (
           <Img
             src={post.coverImageUrl}

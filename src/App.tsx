@@ -3,6 +3,7 @@ import { SiteContentProvider } from "@/context/SiteContentContext";
 import { NoticesProvider } from "@/context/NoticesContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SavedVehiclesProvider } from "@/context/SavedVehiclesContext";
+import { LikesProvider } from "@/context/LikesContext";
 import AppRoutes from "@/routes/AppRoutes";
 
 export default function App() {
@@ -12,7 +13,9 @@ export default function App() {
         <NoticesProvider>
           <CustomerAuthProvider>
             <SavedVehiclesProvider>
-              <AppRoutes />
+              <LikesProvider>
+                <AppRoutes />
+              </LikesProvider>
             </SavedVehiclesProvider>
           </CustomerAuthProvider>
         </NoticesProvider>

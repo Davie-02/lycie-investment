@@ -26,6 +26,7 @@ import { ReviewsModule } from "./reviews/reviews.module";
 import { LycieModule } from "./lycie/lycie.module";
 import { ContentAdminModule } from "./content-admin/content-admin.module";
 import { EventsModule } from "./events/events.module";
+import { LikesModule } from "./likes/likes.module";
 import { InsightsModule } from "./insights/insights.module";
 
 @Module({
@@ -62,6 +63,7 @@ import { InsightsModule } from "./insights/insights.module";
     LycieModule,
     ContentAdminModule,
     EventsModule,
+    LikesModule,
     InsightsModule,
   ],
   controllers: [HealthController],

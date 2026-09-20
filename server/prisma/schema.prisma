@@ -605,3 +605,19 @@ model FaqSuggestion {
 
   @@index([status, askCount])
 }
+
+/// A visitor's "like" on a vehicle, hire vehicle or blog post — no account
+/// needed. `visitorId` is a random id the visitor's own browser generated and
+/// keeps in localStorage: it lets one browser like something once and undo it,
+/// and identifies no one. (It is not a security control — someone determined
+/// could mint many ids — so counts are a popularity signal, not a vote.)
+model ContentLike {
+  id        String   @id @default(cuid())
+  kind      String // vehicle | hire | blog
+  targetId  String
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, targetId, visitorId])
+  @@index([kind, targetId])
+}

@@ -4,6 +4,7 @@ import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPosts } from "@/services/blog.service";
 import Img from "@/components/common/Img";
+import LikeButton from "@/components/common/LikeButton";
 
 const STAGGER_STEP_MS = 60;
 const STAGGER_CAP = 6;
@@ -61,9 +62,12 @@ export default function BlogList() {
                       <Link to={`/blog/${post.slug}`}>{post.title}</Link>
                     </h2>
                     {post.excerpt && <p className="text-muted">{post.excerpt}</p>}
-                    <Link to={`/blog/${post.slug}`} className="blog-card__link">
-                      Read more →
-                    </Link>
+                    <div className="blog-card__footer">
+                      <Link to={`/blog/${post.slug}`} className="blog-card__link">
+                        Read more →
+                      </Link>
+                      <LikeButton kind="blog" targetId={post.id} noun="post" />
+                    </div>
                   </div>
                 </article>
               </Reveal>
