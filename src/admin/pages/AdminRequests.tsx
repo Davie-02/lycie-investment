@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { adminApi } from "../adminApi";
+import { adminApi, downloadExport } from "../adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { ApiError } from "@/services/http";
 import ContactCell from "../components/ContactCell";
@@ -139,8 +139,50 @@ function StatusCell({
   );
 }
 
+const EXPORT_FOR_TAB: Record<TabKey, string> = {
+  inquiries: "inquiries",
+  import: "import-requests",
+  clearing: "clearing-requests",
+  hire: "hire-requests",
+  contact: "contact-messages",
+};
+
+/** Downloads everything in the current list as a spreadsheet-ready CSV file. */
+function ExportButton({ type }: { type: string }) {
+  const { currentUser } = useAdminAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (currentUser?.role !== "OWNER" && currentUser?.role !== "MANAGER") return null;
+
+  return (
+    <div className="requests-export">
+      <button
+        type="button"
+        className="btn btn-secondary"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await downloadExport(type);
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : "Export failed.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy ? "Preparing…" : "Export to spreadsheet (CSV)"}
+      </button>
+      {error && <span className="admin-error-text" role="alert">{error}</span>}
+    </div>
+  );
+}
+
 export default function AdminRequests() {
-  const [activeTab, setActiveTab] = useState<TabKey>("inquiries");
+  const [searchParams] = useSearchParams();
+  const requested = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabKey>(TABS.some((t) => t.key === requested) ? (requested as TabKey) : "inquiries");
 
   return (
     <div>
@@ -148,6 +190,8 @@ export default function AdminRequests() {
       <p className="admin-page-intro">
         Mark a submission Contacted once you've followed up, and Closed once it's resolved.
       </p>
+
+      <ExportButton type={EXPORT_FOR_TAB[activeTab]} />
 
       <div className="admin-nav admin-tabs" role="tablist" aria-label="Request type">
         {TABS.map((tab) => (

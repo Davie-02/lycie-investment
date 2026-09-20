@@ -13,6 +13,7 @@ import { DocumentsController } from "./documents.controller";
 import { DocumentsService } from "./documents.service";
 import { WriterController } from "./writer.controller";
 import { WriterService } from "./writer.service";
+import { TestimonialIdeasService } from "./testimonial-ideas.service";
 
 @Module({
   imports: [AuthModule],
@@ -27,6 +28,7 @@ import { WriterService } from "./writer.service";
     LycieSuggestionsCron,
     DocumentsService,
     WriterService,
+    TestimonialIdeasService,
   ],
 })
 export class LycieModule {}

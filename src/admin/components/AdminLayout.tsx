@@ -4,6 +4,7 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import { useIdleTimeout } from "../hooks/useIdleTimeout";
 import { SESSION_EXPIRED_EVENT } from "../adminApi";
 import "./AdminLayout.css";
+import AdminSearch from "./AdminSearch";
 
 // 5 minutes of no mouse/keyboard/scroll activity auto-logs-out the admin
 // dashboard — separate from the JWT's own (longer) expiry, since a valid
@@ -54,7 +55,12 @@ export default function AdminLayout() {
           { to: "/admin/lycie", label: "Lycie AI" },
         ]
       : []),
-    ...(currentUser?.role === "OWNER" ? [{ to: "/admin/users", label: "Admin Users" }] : []),
+    ...(currentUser?.role === "OWNER"
+      ? [
+          { to: "/admin/users", label: "Admin Users" },
+          { to: "/admin/activity", label: "Activity" },
+        ]
+      : []),
   ];
 
   return (
@@ -77,6 +83,7 @@ export default function AdminLayout() {
             ))}
           </nav>
           <div className="admin-header__user">
+            {(currentUser?.role === "OWNER" || currentUser?.role === "MANAGER") && <AdminSearch />}
             {currentUser && (
               <span className="admin-header__user-info">
                 {currentUser.name} <span className="admin-header__role">{currentUser.role}</span>

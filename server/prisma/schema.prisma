@@ -682,3 +682,39 @@ model CustomerMessage {
 
   @@index([customerId, createdAt])
 }
+
+/// A positive customer comment or review that Lycie spotted and proposes as a
+/// homepage testimonial. Quotes are always the customer's own words — never
+/// rewritten — and nothing is published until an admin approves it.
+model TestimonialIdea {
+  id         String   @id @default(cuid())
+  source     String // review | comment
+  sourceId   String
+  quote      String
+  authorName String
+  rating     Int?
+  /// 0-1: how positive and substantial it is (used to rank ideas).
+  score      Float
+  status     String   @default("pending") // pending | published | dismissed
+  createdAt  DateTime @default(now())
+
+  @@unique([source, sourceId])
+  @@index([status, score])
+}
+
+/// Who changed what in the admin, and when — for accountability when several
+/// people manage the site. Records the action and target, never the content
+/// that was submitted (which may hold customers' personal details).
+model AdminActivity {
+  id        String   @id @default(cuid())
+  adminId   String
+  adminName String
+  role      String
+  action    String // human-readable, e.g. "Archived 3 vehicles"
+  route     String // e.g. "POST /content-admin/:type/bulk"
+  targetId  String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
+}

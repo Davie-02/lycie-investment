@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import "../components/AdminLayout.css";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import AttentionPanel from "../components/AttentionPanel";
 
 const BASE_CARDS = [
   {
@@ -75,6 +76,8 @@ export default function AdminDashboard() {
     <div>
       <h1>Dashboard</h1>
       <p className="admin-page-intro">Manage what's shown on the public site from here.</p>
+
+      {canEditContent && <AttentionPanel />}
 
       <div className="admin-dashboard-grid">
         {cards.map((card) => (

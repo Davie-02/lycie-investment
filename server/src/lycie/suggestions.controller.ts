@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Use
 import { Throttle } from "@nestjs/throttler";
 import { SubmissionsService } from "./submissions.service";
 import { SuggestionsService } from "./suggestions.service";
+import { PublishIdeaDto, TestimonialIdeasService } from "./testimonial-ideas.service";
 import {
   CreateSubmissionDto,
   EditSuggestionDto,
@@ -19,7 +20,8 @@ const STATUSES = ["pending", "published", "rejected"] as const;
 export class SuggestionsController {
   constructor(
     private readonly submissions: SubmissionsService,
-    private readonly suggestions: SuggestionsService
+    private readonly suggestions: SuggestionsService,
+    private readonly ideas: TestimonialIdeasService
   ) {}
 
   // ---- public: "Ask us" form on the FAQ page ----
@@ -105,5 +107,38 @@ export class SuggestionsController {
   @Post("suggestions/:id/reject")
   rejectSuggestion(@Param("id") id: string) {
     return this.suggestions.reject(id);
+  }
+
+  // ---- admin: testimonial ideas (positive reviews/comments Lycie spotted) ----
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
+  @Get("testimonial-ideas")
+  listIdeas(@Query("status") status?: string) {
+    return this.ideas.list(status === "published" || status === "dismissed" ? status : "pending");
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
+  @HttpCode(200)
+  @Post("testimonial-ideas/scan")
+  scanIdeas() {
+    return this.ideas.scan();
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
+  @HttpCode(200)
+  @Post("testimonial-ideas/:id/publish")
+  publishIdea(@Param("id") id: string, @Body() dto: PublishIdeaDto) {
+    return this.ideas.publish(id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
+  @HttpCode(200)
+  @Post("testimonial-ideas/:id/dismiss")
+  dismissIdea(@Param("id") id: string) {
+    return this.ideas.dismiss(id);
   }
 }

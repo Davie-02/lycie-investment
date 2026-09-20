@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
 import { adminApi } from "../adminApi";
 import AdminPagination from "./AdminPagination";
 import { ApiError } from "@/services/http";
@@ -75,8 +76,10 @@ export default function ContentManager<T extends { id: string }>(props: ContentM
 
   const [view, setView] = useState<{ mode: "list" } | { mode: "form"; item: T | null }>({ mode: "list" });
   const [state, setState] = useState<StateFilter>("all");
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Arriving from the global search (…?q=Hilux) starts with that search applied.
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState((searchParams.get("q") ?? "").trim());
   const [page, setPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const [result, setResult] = useState<ListResult<T> | null>(null);

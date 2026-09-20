@@ -7,17 +7,19 @@ import { ApiError } from "@/services/http";
 import LycieDocuments from "../components/LycieDocuments";
 import LycieFaqSuggestions from "../components/LycieFaqSuggestions";
 import LycieVisitorMessages from "../components/LycieVisitorMessages";
+import LycieTestimonialIdeas from "../components/LycieTestimonialIdeas";
 import type { KnowledgeCategory, KnowledgeEntry, KnowledgeList, LycieAnalytics, LycieLogEntry } from "@/types/lycie";
 import "../components/AdminLayout.css";
 import "../components/AdminInsights.css";
 import "./AdminLycie.css";
 
-type Tab = "knowledge" | "conversations" | "faq" | "messages";
+type Tab = "knowledge" | "conversations" | "faq" | "testimonials" | "messages";
 
 const TAB_LABELS: Record<Tab, string> = {
   knowledge: "Knowledge",
   conversations: "Conversations & gaps",
   faq: "FAQ suggestions",
+  testimonials: "Testimonial ideas",
   messages: "Visitor messages",
 };
 
@@ -79,6 +81,7 @@ export default function AdminLycie() {
       {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
 
       {tab === "faq" && <LycieFaqSuggestions />}
+      {tab === "testimonials" && <LycieTestimonialIdeas />}
       {tab === "messages" && <LycieVisitorMessages />}
 
       {tab === "knowledge" && (

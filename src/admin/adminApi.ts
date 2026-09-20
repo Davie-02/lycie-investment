@@ -123,3 +123,29 @@ export function adminResetPassword(token: string, newPassword: string) {
   });
 }
 
+
+/** Downloads a CSV export (spreadsheet) of requests or reviews. */
+export async function downloadExport(type: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/admin-tools/export/${encodeURIComponent(type)}`, { credentials: "include" });
+  } catch {
+    throw new ApiError("Unable to reach the server. Please check your connection and try again.");
+  }
+  if (response.status === 401) {
+    clearStoredUser();
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    throw new ApiError("Your session has expired. Please log in again.", 401);
+  }
+  if (!response.ok) throw new ApiError(await parseErrorMessage(response), response.status);
+
+  const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? `${type}.csv`;
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}

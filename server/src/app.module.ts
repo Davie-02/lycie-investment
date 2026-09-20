@@ -28,6 +28,7 @@ import { ContentAdminModule } from "./content-admin/content-admin.module";
 import { EventsModule } from "./events/events.module";
 import { LikesModule } from "./likes/likes.module";
 import { ContactAdminModule } from "./contact-admin/contact-admin.module";
+import { AdminToolsModule } from "./admin-tools/admin-tools.module";
 import { InsightsModule } from "./insights/insights.module";
 
 @Module({
@@ -66,6 +67,7 @@ import { InsightsModule } from "./insights/insights.module";
     EventsModule,
     LikesModule,
     ContactAdminModule,
+    AdminToolsModule,
     InsightsModule,
   ],
   controllers: [HealthController],

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { adminApi } from "../adminApi";
+import { adminApi, downloadExport } from "../adminApi";
 import AdminPagination from "../components/AdminPagination";
 import SentimentBadge from "../components/SentimentBadge";
 import { ApiError } from "@/services/http";
@@ -64,9 +64,14 @@ export default function AdminReviews() {
     <div>
       <div className="admin-toolbar">
         <h1>Reviews</h1>
-        <Link to="/admin/insights" className="btn btn-secondary">
-          View insights
-        </Link>
+        <div className="admin-toolbar__buttons">
+          <button type="button" className="btn btn-secondary" onClick={() => void downloadExport("reviews").catch(() => setActionError("Export failed."))}>
+            Export CSV
+          </button>
+          <Link to="/admin/insights" className="btn btn-secondary">
+            View insights
+          </Link>
+        </div>
       </div>
       <p className="admin-page-intro">
         Customer reviews stay hidden until you approve them. Sentiment is worked out automatically

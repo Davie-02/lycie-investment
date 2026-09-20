@@ -112,3 +112,15 @@ export interface KnowledgeDocument {
 export interface KnowledgeDocumentDetail extends KnowledgeDocument {
   entries: Array<{ id: string; title: string; content: string }>;
 }
+
+export interface TestimonialIdea {
+  id: string;
+  source: "review" | "comment";
+  sourceId: string;
+  quote: string;
+  authorName: string;
+  rating: number | null;
+  score: number;
+  status: "pending" | "published" | "dismissed";
+  createdAt: string;
+}
