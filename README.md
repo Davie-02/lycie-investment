@@ -61,6 +61,17 @@ simulated.
   questions are grouped by topic; Lycie drafts answers for popular topics
   **strictly from company data**, and an admin approves, edits or rejects each
   draft — nothing is published automatically
+- Content control: every kind of content (vehicles, hire vehicles, testimonials,
+  FAQ, blog, notices) can be published, unpublished, archived, restored,
+  duplicated as a draft (to relist new stock of the same kind), searched and
+  changed in bulk; changes reach visitors' open pages in real time
+- Anyone can like vehicles, hire vehicles and blog posts without signing in
+- Respond to customers from the admin the way they asked to be reached:
+  WhatsApp, call, email (sent from the CMS) or a message in their Lycie profile,
+  with a contact history; customers get a Messages inbox in their account
+- Admin extras: "needs your attention" dashboard, global search (Ctrl/⌘ K), CSV
+  export of requests/reviews, activity log, AI writing assistant, files Lycie can
+  learn from, and testimonial ideas Lycie spots in positive reviews
 - Branding pulled from the actual Lycie Investments logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 
@@ -164,7 +175,9 @@ npm run preview
 ## Testing
 
 Backend unit tests (Jest — auth guards, hire-pricing math, email escaping,
-review sentiment, and the Lycie assistant's safety/fallback logic):
+review sentiment, content states, CSV safety, and the Lycie assistant's
+safety/streaming/fallback logic) and frontend utility tests (Vitest —
+reply formatting, contact links). Run `cd server && npm test` and `npm test`:
 
 ```bash
 cd server

@@ -587,6 +587,20 @@ until an admin writes the answer. Runs weekly (Mon 06:00) and on demand.
 Rejected topics are never re-suggested. Chat logs and visitor messages are
 purged after `LYCIE_LOG_RETENTION_DAYS` (daily 03:00 job).
 
+## Content control, live updates, likes, contact tools, admin tools
+
+| Area | Endpoints (all admin routes are Owner/Manager unless noted) |
+| --- | --- |
+| Content states | `GET /api/content-admin/:type` (`state`, `q`, `page`) · `POST /api/content-admin/:type/bulk` (`publish\|unpublish\|archive\|restore\|delete`) · `POST /api/content-admin/:type/:id/duplicate`. Types: vehicles, hire-vehicles, testimonials, faq, blog-posts, notices. Public reads only ever return live items (`src/content-admin/content-state.ts` is the single source of truth). |
+| Live updates | `GET /api/events` (public SSE, topic names only). Every successful write is mapped to topics by `src/events/topics.ts`. Public reads use `Cache-Control: public, no-cache` + ETag so changes show on the next request. |
+| Likes | `POST /api/likes` (public, 60/min) · `GET /api/likes/counts?kind=&ids=`. Keyed by a browser-generated visitor id — a popularity signal, not a vote. |
+| Contact | `GET/POST /api/contact-admin/:type/:id[/log\|/email\|/message]`, `GET /api/contact-admin/email-status`, `POST /api/contact-admin/test-email` (Owner). Recipient addresses always come from the stored request. Customer inbox: `GET /api/customers/me/messages`, `POST …/read`. |
+| Admin tools | `GET /api/admin-tools/overview` · `…/search?q=` · `…/export/:type` (CSV) · `…/activity` (Owner). Every admin write is recorded (action + target only) by `ActivityInterceptor`. |
+| Lycie extras | `POST /api/lycie/chat/stream` (NDJSON stream) · `POST /api/lycie/documents` (file learning) · `POST /api/lycie/write` (AI writer) · `…/testimonial-ideas[/scan\|/:id/publish\|/:id/dismiss]`. |
+
+Images are stored at up to 2000px plus 480px and 960px copies (`…-w480.webp`,
+`…-w960.webp`) so pages load only the pixels they need.
+
 ## Rate limiting
 
 See the Security section above. Behind a reverse proxy (Render, Nginx…) set

@@ -109,6 +109,15 @@ That's the whole database step. No server to manage.
 
 ---
 
+## 2a. Live updates
+
+When you save or publish something in the admin, visitors' open pages update within
+a moment (a lightweight Server-Sent Events stream at `/api/events` carries only the
+name of what changed; browsers then refetch through the normal API). Connections are
+only held while a tab is visible and are capped by `LIVE_MAX_CLIENTS` (default 400),
+so the free Render instance isn't overloaded — extra visitors simply see updates
+when they refocus or reload.
+
 ## 2b. Lycie AI assistant (Google Gemini, free)
 
 Lycie is the chat assistant on every public page. She answers from your live
@@ -130,6 +139,7 @@ change prices or see anyone's account.
 | `LYCIE_CHAT_MODELS` | `gemini-3.8-flash,gemini-3.1-flash-lite,gemini-3.5-flash` | Tried in order. If a model is over quota, overloaded or unavailable to your key it is skipped for a while and the next is used. Model names change over time — if answers start failing, check the Render logs for `Gemini model … failed (model not available to this key)` and update this list from Google's current model list. |
 | `LYCIE_DAILY_LIMIT` | `300` | Maximum AI answers per day, so the free quota is never exhausted by one busy day. Past it, visitors see your contact details instead. |
 | `LYCIE_HOURLY_LIMIT_PER_IP` | `40` | Per-visitor questions per hour (there is also a 10/minute burst limit). |
+| `LYCIE_WRITE_DAILY_LIMIT` | `150` | Maximum "Write with AI" drafts per day in the admin. |
 | `LYCIE_KNOWLEDGE_CHARS` | `12000` | How much of your knowledge notes go into each prompt. |
 | `LYCIE_LOG_RETENTION_DAYS` | `90` | Chat logs and visitor messages are deleted after this many days. |
 | `LYCIE_AUTO_SUGGEST` | `true` | Weekly Monday FAQ analysis (max 5 AI calls). `false` = only when you press the button. |
@@ -153,6 +163,20 @@ Google AI Studio occasionally.
 Render's free plan (one instance). If you ever scale to several instances,
 move the limiter to Redis.
 
+**Speed.** Answers stream in word by word (first word in about 1–2 seconds). The
+default model list is ordered by measured speed — `gemini-3.8-flash`, then
+`gemini-3.1-flash-lite`, then the slower `gemini-3.5-flash` as a last resort.
+
+**Teaching her with files.** Under **Lycie AI → Knowledge → Documents** upload
+price lists, terms, brochures or policies (PDF, Word .docx, text/Markdown/CSV, or
+PNG/JPG/WebP images, up to 8 MB). PDF, Word and text are read on your own server;
+only images are read by Google's AI (don't upload pictures of customers'
+personal details). Scanned PDFs have no text — upload the pages as images.
+
+**Writing with AI.** A "✨ Write with AI" button sits under vehicle descriptions,
+blog fields, FAQ answers, notices and the About/homepage text. It drafts from
+your company data plus what you tell it; nothing is saved until you press Save.
+
 **Teaching Lycie / growing the FAQ.** Every question asked in the chat, plus
 the anonymous "Ask us" form on `/faq`, is grouped by topic. Under **Lycie AI**:
 
@@ -163,6 +187,7 @@ the anonymous "Ask us" form on `/faq`, is grouped by topic. Under **Lycie AI**:
   edit first, or reject. Drafts marked "Needs your input" mean your data didn't
   cover that topic — write the answer yourself. **Nothing is ever published
   without your approval.**
+- *Testimonial ideas* — positive, specific reviews and comments Lycie spotted, shown word for word for you to publish, edit lightly, or dismiss.
 - *Visitor messages* — the questions and comments sent through the form.
 
 ---
@@ -198,6 +223,34 @@ Notes:
 - The database may still take about a second to "wake" on the first
   database-backed request after a quiet period. That is normal and short.
 - Upgrading to Render **Starter** (~$7/month) removes the need for the monitor.
+
+---
+
+## 2d. Email that really reaches customers (password resets, confirmations, messages)
+
+The site sends: password-reset links, hire-booking emails, replies you write to
+customers from the admin, and "new message" notices. Until an email provider is
+configured, none of these are delivered (the admin dashboard shows a warning and
+password resets silently go nowhere). Free hosting like Render **blocks normal
+SMTP ports**, so the site uses providers' HTTPS APIs. Pick one:
+
+**Option A — Resend + your own domain (best deliverability).**
+1. Sign up at resend.com, **Domains → Add Domain**, and add the DNS records it shows at the company that manages your domain.
+2. Once verified, create an API key.
+3. In Render set `RESEND_API_KEY`, `EMAIL_FROM` = `Lycie Investments <info@yourdomain.com>`, and `EMAIL_REPLY_TO` = your inbox.
+Without a verified domain Resend only delivers to your own address, so real customers would get nothing.
+
+**Option B — Brevo, no domain needed (free, 300 emails/day).**
+1. Sign up at brevo.com and under **Senders, Domains & Dedicated IPs → Senders** add your email address (e.g. your Gmail) and click the confirmation link it sends.
+2. **SMTP & API → API Keys → Generate a new API key.**
+3. In Render set `BREVO_API_KEY`, `EMAIL_FROM` = `Lycie Investments <that-verified-address>`, and optionally `EMAIL_REPLY_TO`.
+Emails sent "from" a Gmail address can be filtered to spam by some providers. It is fine to start with; move to Option A once you have a domain.
+
+Also set `ADMIN_NOTIFICATION_EMAIL` to the inbox that should be told about new inquiries and requests.
+
+**Check it works:** sign in as Owner → **Dashboard → Send a test email**. If it fails,
+the message says why (key rejected, sender not verified, …). Then try
+"Forgot your password?" on the admin login with a real admin email.
 
 ---
 
