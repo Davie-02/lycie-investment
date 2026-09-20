@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import type { Readable } from "stream";
 import { randomUUID } from "crypto";
@@ -26,6 +26,7 @@ import sharp from "sharp";
  */
 @Injectable()
 export class UploadsService {
+  private readonly logger = new Logger(UploadsService.name);
   private readonly s3Client: S3Client | null;
   private readonly bucket: string | undefined;
   private readonly publicUrlBase: string | undefined;
@@ -70,7 +71,10 @@ export class UploadsService {
     if (!this.s3Client || !this.bucket) return null;
     try {
       const result = await this.s3Client.send(new GetObjectCommand({ Bucket: this.bucket, Key: filename }));
-      if (!result.Body) return null;
+      if (!result.Body) {
+        this.logger.warn(`Storage returned an empty body for ${filename}.`);
+        return null;
+      }
       return {
         body: result.Body as Readable,
         contentType: result.ContentType ?? "image/webp",
@@ -78,7 +82,13 @@ export class UploadsService {
       };
     } catch (error) {
       const name = (error as { name?: string }).name;
-      if (name === "NoSuchKey" || name === "NotFound") return null;
+      if (name === "NoSuchKey" || name === "NotFound") {
+        // A 404 here means the file isn't in the bucket under this exact name.
+        this.logger.warn(`${filename} not found in bucket "${this.bucket}" (${name}).`);
+        return null;
+      }
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      this.logger.error(`Reading ${filename} from storage failed: ${name} (HTTP ${status ?? "?"})`);
       throw error;
     }
   }
@@ -96,13 +106,16 @@ export class UploadsService {
       .toBuffer();
 
     if (this.s3Client && this.bucket) {
-      await this.s3Client.send(
+      const put = await this.s3Client.send(
         new PutObjectCommand({
           Bucket: this.bucket,
           Key: filename,
           Body: optimizedImage,
           ContentType: "image/webp",
         })
+      );
+      this.logger.log(
+        `Stored ${filename} in bucket "${this.bucket}" (HTTP ${put.$metadata.httpStatusCode}, ${optimizedImage.length} bytes).`
       );
       // Private bucket: the browser can't fetch it directly, so hand out the API path.
       // (The frontend resolves this against the API's origin.)
