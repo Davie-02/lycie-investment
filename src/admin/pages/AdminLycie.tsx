@@ -4,6 +4,7 @@ import { adminApi } from "../adminApi";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { ApiError } from "@/services/http";
+import LycieDocuments from "../components/LycieDocuments";
 import LycieFaqSuggestions from "../components/LycieFaqSuggestions";
 import LycieVisitorMessages from "../components/LycieVisitorMessages";
 import type { KnowledgeCategory, KnowledgeEntry, KnowledgeList, LycieAnalytics, LycieLogEntry } from "@/types/lycie";
@@ -229,6 +230,8 @@ function KnowledgeTab({ draft, setDraft, refreshKey, refresh, setActionError }: 
 
   return (
     <div>
+      <LycieDocuments onChanged={refresh} />
+
       <div className="admin-toolbar">
         <h2>Knowledge notes</h2>
         <button type="button" className="btn btn-primary" onClick={() => setDraft(EMPTY_DRAFT)}>

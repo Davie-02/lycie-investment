@@ -97,3 +97,18 @@ export interface GenerateResult {
   updated: number;
   aiUnavailable: boolean;
 }
+
+export interface KnowledgeDocument {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  charCount: number;
+  isActive: boolean;
+  createdAt: string;
+  _count: { entries: number };
+}
+
+export interface KnowledgeDocumentDetail extends KnowledgeDocument {
+  entries: Array<{ id: string; title: string; content: string }>;
+}

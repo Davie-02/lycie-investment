@@ -535,16 +535,35 @@ model VehicleViewStat {
 /// guessing. Searched with Postgres full-text search (see the migration that
 /// adds the GIN index), so nothing is sent to an external service to index it.
 model KnowledgeEntry {
-  id        String   @id @default(cuid())
-  title     String
+  id         String             @id @default(cuid())
+  title      String
   /// Free-form grouping for the admin list: faq | policy | process | pricing | other
-  category  String   @default("faq")
-  content   String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  category   String             @default("faq")
+  content    String
+  isActive   Boolean            @default(true)
+  /// Set when this entry is one section of an uploaded file (see KnowledgeDocument).
+  documentId String?
+  document   KnowledgeDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   @@index([isActive, category])
+  @@index([documentId])
+}
+
+/// A file an admin uploaded for Lycie to learn from (PDF, Word, text, image…).
+/// Its text is split into KnowledgeEntry sections; deleting the document
+/// removes them all, pausing it pauses them all.
+model KnowledgeDocument {
+  id        String   @id @default(cuid())
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  charCount Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  entries KnowledgeEntry[]
 }
 
 /// One question/answer exchange with Lycie, kept so admins can see what

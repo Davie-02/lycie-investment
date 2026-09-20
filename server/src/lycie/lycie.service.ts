@@ -121,10 +121,13 @@ export class LycieService {
 
   async listKnowledge() {
     const [items, faqCount] = await Promise.all([
-      this.prisma.knowledgeEntry.findMany({ orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }] }),
+      // Notes only — sections of uploaded files are listed under Documents.
+      this.prisma.knowledgeEntry.findMany({ where: { documentId: null }, orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }] }),
       this.prisma.faq.count(),
     ]);
-    const activeChars = items.filter((i) => i.isActive).reduce((n, i) => n + i.title.length + i.content.length + 20, 0);
+    // The budget counts everything Lycie can draw on: notes AND sections of uploaded files.
+    const active = await this.prisma.knowledgeEntry.findMany({ where: { isActive: true }, select: { title: true, content: true } });
+    const activeChars = active.reduce((n, i) => n + i.title.length + i.content.length + 20, 0);
     return {
       items,
       faqCount,

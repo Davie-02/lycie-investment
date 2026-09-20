@@ -93,6 +93,20 @@ export class GeminiClient {
     this.config = config ?? readGeminiConfig();
   }
 
+  /**
+   * Models worth trying now: those not cooling down. If EVERY model is cooling down
+   * (a brief overload can knock out all of them at once) we still try the one that
+   * recovers soonest — a customer is better served by one more attempt than by an
+   * instant "I'm having trouble" for the rest of the cooldown.
+   */
+  private candidates(): string[] {
+    const now = this.now();
+    const ready = this.config.models.filter((model) => (this.cooldownUntil.get(model) ?? 0) <= now);
+    if (ready.length > 0) return ready;
+    const soonest = [...this.config.models].sort((a, b) => (this.cooldownUntil.get(a) ?? 0) - (this.cooldownUntil.get(b) ?? 0))[0];
+    return soonest ? [soonest] : [];
+  }
+
   get isConfigured(): boolean {
     return Boolean(this.config.apiKey);
   }
@@ -103,9 +117,7 @@ export class GeminiClient {
     const startedAt = this.now();
     let lastError = "no model available";
 
-    for (const model of this.config.models) {
-      if ((this.cooldownUntil.get(model) ?? 0) > this.now()) continue;
-
+    for (const model of this.candidates()) {
       const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
       if (remaining < 2_000) break;
 
@@ -203,8 +215,7 @@ export class GeminiClient {
     const startedAt = this.now();
     let lastError = "no model available";
 
-    for (const model of this.config.models) {
-      if ((this.cooldownUntil.get(model) ?? 0) > this.now()) continue;
+    for (const model of this.candidates()) {
       if (this.config.totalBudgetMs - (this.now() - startedAt) < 2_000) break;
 
       let started = false;

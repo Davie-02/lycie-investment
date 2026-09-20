@@ -206,3 +206,20 @@ describe("GeminiClient.generateStream", () => {
     await expect(client.generateStream("sys", turns, () => undefined)).rejects.toBeInstanceOf(GeminiUnavailableError);
   });
 });
+
+
+describe("GeminiClient when every model is cooling down", () => {
+  it("still tries the one that recovers soonest instead of failing instantly", async () => {
+    const responses = [fail(503), fail(503), fail(503), ok("recovered")];
+    const calls: string[] = [];
+    const fetchFn = jest.fn(async (url: string | URL | Request, _init?: RequestInit) => {
+      calls.push(String(url));
+      return responses.shift() as Response;
+    });
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, config);
+    await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError); // all three fail and cool down
+    const retry = await client.generate("sys", turns); // no model is "ready", but one is still attempted
+    expect(retry.text).toBe("recovered");
+    expect(calls).toHaveLength(4);
+  });
+});

@@ -9,10 +9,12 @@ import { SuggestionsController } from "./suggestions.controller";
 import { SubmissionsService } from "./submissions.service";
 import { SuggestionsService } from "./suggestions.service";
 import { LycieSuggestionsCron } from "./lycie-suggestions.cron";
+import { DocumentsController } from "./documents.controller";
+import { DocumentsService } from "./documents.service";
 
 @Module({
   imports: [AuthModule],
-  controllers: [LycieController, SuggestionsController],
+  controllers: [LycieController, SuggestionsController, DocumentsController],
   providers: [
     LycieService,
     ContextService,
@@ -21,6 +23,7 @@ import { LycieSuggestionsCron } from "./lycie-suggestions.cron";
     SubmissionsService,
     SuggestionsService,
     LycieSuggestionsCron,
+    DocumentsService,
   ],
 })
 export class LycieModule {}
