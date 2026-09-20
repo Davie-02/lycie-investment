@@ -72,6 +72,7 @@ simulated.
 - Admin extras: "needs your attention" dashboard, global search (Ctrl/⌘ K), CSV
   export of requests/reviews, activity log, AI writing assistant, files Lycie can
   learn from, and testimonial ideas Lycie spots in positive reviews
+- Company profile pages: story, vision & mission, values, services (import, dealership, hire, clearing, transport), team, clients, fleet gallery and contact cards, all CMS-editable — load the company's own profile with one click under Admin → Site Content
 - Branding pulled from the actual Lycie Investments logo (navy `#19406C` /
   sky blue `#76CAE9`) — see "Design system" below
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { SiteContentService } from "./site-content.service";
 import { UpdateSiteContentDto } from "./dto/update-site-content.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -12,6 +12,15 @@ export class SiteContentController {
   @Get()
   findAll() {
     return this.siteContentService.findAll();
+  }
+
+  // Owner only: replaces About/Services/Contact/Team/… text with the company profile.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER")
+  @HttpCode(200)
+  @Post("apply-profile")
+  applyProfile() {
+    return this.siteContentService.applyCompanyProfile();
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

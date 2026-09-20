@@ -14,6 +14,10 @@ const SiteContentContext = createContext<SiteContentContextValue | null>(null);
 
 function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
   return {
+    company: { ...DEFAULT_SITE_CONTENT.company, ...(partial.company as object) },
+    team: { ...DEFAULT_SITE_CONTENT.team, ...(partial.team as object) },
+    clients: { ...DEFAULT_SITE_CONTENT.clients, ...(partial.clients as object) },
+    fleet: { ...DEFAULT_SITE_CONTENT.fleet, ...(partial.fleet as object) },
     contact: { ...DEFAULT_SITE_CONTENT.contact, ...(partial.contact as object) },
     social: { ...DEFAULT_SITE_CONTENT.social, ...(partial.social as object) },
     about: { ...DEFAULT_SITE_CONTENT.about, ...(partial.about as object) },

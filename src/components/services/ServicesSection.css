@@ -1,17 +1,26 @@
+/* Centered, wrapping row of cards: four or five services both look balanced
+   (5 = three across, then two centered) instead of leaving one card orphaned. */
 .services-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-5);
 }
 
+.services-grid > * {
+  flex: 1 1 100%;
+}
+
 @media (min-width: 640px) {
-  .services-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .services-grid > * {
+    flex: 1 1 calc(50% - var(--space-5));
+    max-width: calc(50% - var(--space-5) / 2);
   }
 }
 
 @media (min-width: 1000px) {
-  .services-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .services-grid > * {
+    flex: 1 1 calc(33.333% - var(--space-5));
+    max-width: calc(33.333% - var(--space-5) * 2 / 3);
   }
 }

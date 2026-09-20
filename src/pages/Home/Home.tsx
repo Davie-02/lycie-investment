@@ -9,16 +9,20 @@ import TestimonialsSection from "@/components/common/TestimonialsSection";
 import FaqSection from "@/components/common/FaqSection";
 import CtaBand from "@/components/common/CtaBand";
 import Reveal from "@/components/common/Reveal";
+import TrustStrip from "@/components/company/TrustStrip";
+import ClientsSection from "@/components/company/ClientsSection";
+import FleetSection from "@/components/company/FleetSection";
 
 export default function Home() {
   return (
     <>
       <Seo
         title="Home"
-        description="Lycie Investments sources, imports, sells, hires and clears vehicles for customers in Malawi."
+        description="Lycie Investments and Transportation — vehicle imports and clearing, vehicle hire and safe, reliable transport in Malawi."
       />
       <Hero />
       <VehicleCarousel />
+      <TrustStrip />
       <Reveal>
         <ServicesSection />
       </Reveal>
@@ -31,6 +35,8 @@ export default function Home() {
       <Reveal>
         <WhyChooseUs />
       </Reveal>
+      <FleetSection />
+      <ClientsSection />
       <Reveal>
         <TestimonialsSection />
       </Reveal>

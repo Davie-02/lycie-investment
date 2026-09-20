@@ -29,6 +29,14 @@ export interface LycieContext {
     services: Array<{ title: string; description: string }>;
     process: string[];
     clearing: { disclaimer: string; areas: string[] };
+    /** Story, vision, mission, values. */
+    background?: string[];
+    /** One line per person: "Name — Role". */
+    team?: string[];
+    /** Who the company serves. */
+    clients?: string[];
+    /** The working fleet (types of vehicle). */
+    fleet?: string[];
   };
   vehicles: VehicleInfo[];
   hireVehicles: HireInfo[];
@@ -121,7 +129,7 @@ CLEARING SUPPORT
 Areas: ${company.clearing.areas.join("; ")}
 Note: ${company.clearing.disclaimer}
 
-VEHICLES FOR SALE
+${company.background?.length ? `COMPANY BACKGROUND\n${company.background.join("\n")}\n\n` : ""}${company.team?.length ? `OUR TEAM\n${company.team.join("\n")}\n\n` : ""}${company.clients?.length ? `WHO WE SERVE\n${company.clients.join("\n")}\n\n` : ""}${company.fleet?.length ? `OUR OWN FLEET (used for transport services — not for sale)\n${company.fleet.join("\n")}\n\n` : ""}VEHICLES FOR SALE
 ${vehicleLines}
 
 VEHICLES FOR HIRE

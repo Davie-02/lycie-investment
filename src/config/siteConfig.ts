@@ -13,6 +13,12 @@ import type { SiteContent } from "@/types/siteContent";
  * fresh database.
  */
 export const DEFAULT_SITE_CONTENT: SiteContent = {
+  // New sections start empty and stay hidden until content is added in
+  // Admin → Site Content (or loaded with "Load company profile").
+  company: { name: "", established: null, tagline: "", story: [], vision: "", mission: "", missionPoints: [], values: [] },
+  team: { eyebrow: "", heading: "", body: "", groups: [] },
+  clients: { eyebrow: "", heading: "", body: "", items: [] },
+  fleet: { eyebrow: "", heading: "", body: "", items: [] },
   contact: {
     phone: "Contact our team for current details",
     email: "hello@lycieinvestment.com",

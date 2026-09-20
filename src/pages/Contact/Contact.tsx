@@ -3,6 +3,7 @@ import ContactForm from "@/components/forms/ContactForm";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 import Reveal from "@/components/common/Reveal";
 import { useSiteContent } from "@/context/SiteContentContext";
+import PhoneLinks from "@/components/company/PhoneLinks";
 
 export default function Contact() {
   const { content } = useSiteContent();
@@ -27,7 +28,9 @@ export default function Contact() {
           <div className="contact-details">
             <div className="contact-details__item">
               <h3>Phone</h3>
-              <p className="text-muted mono">{phone}</p>
+              <p className="text-muted mono">
+              <PhoneLinks value={phone} separator=" / " />
+            </p>
             </div>
             <div className="contact-details__item">
               <h3>Email</h3>

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { companyName } from "@/config/siteConfig";
 import { useSiteContent } from "@/context/SiteContentContext";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";
+import PhoneLinks from "@/components/company/PhoneLinks";
 import "./Footer.css";
 
 const SOCIAL_LABELS: Record<string, string> = {
@@ -29,7 +30,7 @@ export default function Footer() {
             Lycie <span>Investments</span>
           </p>
           <p className="text-muted">
-            Vehicle sourcing, importing, dealership, hire and clearing services.
+            Vehicle imports, dealership, hire, transport and clearing services.
           </p>
           {(socialLinks.length > 0 || whatsappNumber) && (
             <ul className="footer__social">
@@ -83,7 +84,9 @@ export default function Footer() {
         <div>
           <h3 className="footer__heading">Contact</h3>
           <ul className="footer__list text-muted">
-            <li>{content.contact.phone}</li>
+            <li>
+              <PhoneLinks value={content.contact.phone} separator=" · " />
+            </li>
             <li>{content.contact.email}</li>
             <li>{content.contact.address}</li>
           </ul>

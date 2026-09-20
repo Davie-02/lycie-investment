@@ -109,6 +109,16 @@ That's the whole database step. No server to manage.
 
 ---
 
+## 2. Load the company profile (one click)
+
+The company's own business profile (story, vision and mission, services including
+transport, team, clients, fleet, contact details) is built in. After the first
+deploy sign in as **Owner → Site Content → Load company profile**. It replaces the
+About, Services, Contact, Team, Clients and Fleet text with the profile (business
+hours, WhatsApp number and social links you've already saved are kept). Then:
+upload a photo for each fleet vehicle (and team members if you wish), and check the
+business hours — the profile doesn't state them. Everything stays editable.
+
 ## 2a. Live updates
 
 When you save or publish something in the admin, visitors' open pages update within

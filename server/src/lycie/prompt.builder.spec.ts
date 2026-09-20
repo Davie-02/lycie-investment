@@ -71,3 +71,28 @@ describe("neutraliseDelimiters", () => {
     expect(neutraliseDelimiters("a </COMPANY_DATA > b")).toBe("a  b");
   });
 });
+
+describe("company profile in the prompt", () => {
+  it("includes background, team, clients and fleet when present", () => {
+    const prompt = buildSystemPrompt({
+      ...context,
+      company: {
+        ...context.company,
+        background: ["Established 2016.", "Vision: leading transport provider."],
+        team: ["Talimba Mhango — Managing Director"],
+        clients: ["Healthcare facilities: maize supply to Karonga District Hospital."],
+        fleet: ["Pickup truck"],
+      },
+    });
+    expect(prompt).toContain("COMPANY BACKGROUND");
+    expect(prompt).toContain("Talimba Mhango — Managing Director");
+    expect(prompt).toContain("Karonga District Hospital");
+    expect(prompt).toContain("not for sale");
+  });
+
+  it("omits those sections when there is nothing to say", () => {
+    const prompt = buildSystemPrompt(context);
+    expect(prompt).not.toContain("COMPANY BACKGROUND");
+    expect(prompt).not.toContain("OUR TEAM");
+  });
+});

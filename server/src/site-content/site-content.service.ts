@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSiteContentDto } from "./dto/update-site-content.dto";
+import { COMPANY_PROFILE } from "./company-profile";
 
 @Injectable()
 export class SiteContentService {
@@ -29,5 +30,23 @@ export class SiteContentService {
       update: { value },
       create: { key, value },
     });
+  }
+
+  /**
+   * Loads the company profile into the CMS. Each section is merged over what's
+   * already saved: fields the profile defines are replaced, other saved fields
+   * (business hours, WhatsApp number, social links…) are kept.
+   */
+  async applyCompanyProfile(): Promise<{ sections: string[] }> {
+    const existing = await this.findAll();
+    const sections = Object.keys(COMPANY_PROFILE);
+    await this.prisma.$transaction(
+      sections.map((key) => {
+        const current = (existing[key] && typeof existing[key] === "object" && !Array.isArray(existing[key]) ? existing[key] : {}) as Record<string, unknown>;
+        const value = { ...current, ...COMPANY_PROFILE[key] } as Prisma.InputJsonValue;
+        return this.prisma.siteContent.upsert({ where: { key }, update: { value }, create: { key, value } });
+      })
+    );
+    return { sections };
   }
 }

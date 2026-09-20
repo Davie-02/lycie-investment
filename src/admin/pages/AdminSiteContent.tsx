@@ -18,6 +18,7 @@ import type {
 } from "@/types/siteContent";
 import "../components/AdminLayout.css";
 import AiWriteButton from "../components/AiWriteButton";
+import { ClientsSectionEditor, CompanySection, FleetSectionEditor, LoadProfileButton, TeamSectionEditor } from "../components/CompanySections";
 
 const SECTION_LINKS = [
   { id: "site-content-hero", label: "Hero" },
@@ -30,6 +31,10 @@ const SECTION_LINKS = [
   { id: "site-content-contact", label: "Contact Info" },
   { id: "site-content-social", label: "Social Links" },
   { id: "site-content-about", label: "About Page" },
+  { id: "site-content-company", label: "Company Story" },
+  { id: "site-content-team", label: "Team" },
+  { id: "site-content-clients", label: "Clients" },
+  { id: "site-content-fleet", label: "Fleet" },
   { id: "site-content-seo", label: "SEO" },
 ];
 
@@ -43,6 +48,17 @@ export default function AdminSiteContent() {
   // whatever the admin had typed anywhere else on the page. Once the
   // first load completes, the gate never comes back.
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  // After "Load company profile" the section forms must restart from the new content
+  // (they keep their own local state), so they are remounted once it has been refetched.
+  const [formsVersion, setFormsVersion] = useState(0);
+  const [reloadPending, setReloadPending] = useState(false);
+  useEffect(() => {
+    if (reloadPending) {
+      setFormsVersion((v) => v + 1);
+      setReloadPending(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
   useEffect(() => {
     if (!isLoading) setHasLoadedOnce(true);
   }, [isLoading]);
@@ -59,6 +75,12 @@ export default function AdminSiteContent() {
         <p className="text-muted">Loading current content…</p>
       ) : (
         <>
+          <LoadProfileButton
+            onDone={() => {
+              setReloadPending(true);
+              refresh();
+            }}
+          />
           <nav className="site-content-jumpnav" aria-label="Jump to section">
             {SECTION_LINKS.map((link) => (
               <a key={link.id} href={`#${link.id}`}>
@@ -66,7 +88,7 @@ export default function AdminSiteContent() {
               </a>
             ))}
           </nav>
-          <div className="site-content-sections">
+          <div className="site-content-sections" key={formsVersion}>
             <HeroSection initial={content.hero} onSaved={refresh} />
             <ServicesSection initial={content.services} onSaved={refresh} />
             <JourneySection initial={content.journey} onSaved={refresh} />
@@ -77,6 +99,10 @@ export default function AdminSiteContent() {
             <ContactSection initial={content.contact} onSaved={refresh} />
             <SocialSection initial={content.social} onSaved={refresh} />
             <AboutSection initial={content.about} onSaved={refresh} />
+            <CompanySection initial={content.company} onSaved={refresh} />
+            <TeamSectionEditor initial={content.team} onSaved={refresh} />
+            <ClientsSectionEditor initial={content.clients} onSaved={refresh} />
+            <FleetSectionEditor initial={content.fleet} onSaved={refresh} />
             <SeoSection initial={content.seo} onSaved={refresh} />
           </div>
         </>

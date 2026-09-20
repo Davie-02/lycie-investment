@@ -107,6 +107,7 @@ export class ContextService {
     const contact = asRecord(site.contact);
     const about = asRecord(site.about);
     const clearing = asRecord(site.clearingPage);
+    const companyInfo = asRecord(site.company);
 
     const company: LycieContext["company"] = {
       contact: {
@@ -126,6 +127,26 @@ export class ContextService {
         .map((step) => [asString(step.title), asString(step.detail)].filter(Boolean).join(" — "))
         .filter(Boolean),
       clearing: { disclaimer: asString(clearing.disclaimer), areas: asStrings(clearing.areas) },
+      background: [
+        companyInfo.name && companyInfo.established ? `${asString(companyInfo.name)}, established ${companyInfo.established}.` : "",
+        ...asStrings(companyInfo.story),
+        asString(companyInfo.vision) ? `Vision: ${asString(companyInfo.vision)}` : "",
+        ...asStrings(companyInfo.missionPoints).map((point) => `Mission: ${point}`),
+        ...asArray(companyInfo.values).map((v) => asRecord(v)).map((v) => `Value — ${asString(v.title)}: ${asString(v.detail)}`),
+      ].filter(Boolean),
+      team: asArray(asRecord(site.team).groups)
+        .map((g) => asRecord(g))
+        .flatMap((g) => asArray(g.members).map((m) => asRecord(m)))
+        .map((m) => [asString(m.name), asString(m.role)].filter(Boolean).join(" — "))
+        .filter(Boolean),
+      clients: asArray(asRecord(site.clients).items)
+        .map((c) => asRecord(c))
+        .map((c) => `${asString(c.title)}: ${asString(c.detail)}`)
+        .filter((line) => line !== ": "),
+      fleet: asArray(asRecord(site.fleet).items)
+        .map((f) => asRecord(f))
+        .map((f) => [asString(f.title), asString(f.caption)].filter(Boolean).join(" — "))
+        .filter(Boolean),
     };
 
     const cards = new Map<string, VehicleCard>();

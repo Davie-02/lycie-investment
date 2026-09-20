@@ -91,7 +91,71 @@ export interface ClearingPageContent extends ServicePageContent {
   areas: string[];
 }
 
+export interface CompanyValue {
+  title: string;
+  detail: string;
+}
+
+/** Who the company is: story, vision, mission and values. Empty until content is added. */
+export interface CompanyContent {
+  name: string;
+  established: number | null;
+  tagline: string;
+  story: string[];
+  vision: string;
+  mission: string;
+  missionPoints: string[];
+  values: CompanyValue[];
+}
+
+export interface TeamMember {
+  name: string;
+  role: string;
+  photoUrl?: string;
+}
+
+export interface TeamGroup {
+  title: string;
+  members: TeamMember[];
+}
+
+export interface TeamContent {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  groups: TeamGroup[];
+}
+
+export interface ClientItem {
+  title: string;
+  detail: string;
+}
+
+export interface ClientsContent {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  items: ClientItem[];
+}
+
+export interface FleetItem {
+  title: string;
+  caption: string;
+  image?: string;
+}
+
+export interface FleetContent {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  items: FleetItem[];
+}
+
 export interface SiteContent {
+  company: CompanyContent;
+  team: TeamContent;
+  clients: ClientsContent;
+  fleet: FleetContent;
   contact: ContactContent;
   social: SocialContent;
   about: AboutContent;
