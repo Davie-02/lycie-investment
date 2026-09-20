@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { CreateFaqDto } from "./dto/create-faq.dto";
 import { UpdateFaqDto } from "./dto/update-faq.dto";
 
@@ -10,11 +11,12 @@ export class FaqService {
   async findAll(page = 1, pageSize = 100) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.faq.findMany({
+        where: PUBLIC.faq,
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.faq.count(),
+      this.prisma.faq.count({ where: PUBLIC.faq }),
     ]);
 
     return { items, total, page, pageSize };

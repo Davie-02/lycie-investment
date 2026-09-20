@@ -9,6 +9,7 @@ export interface BlogPost {
   seoTitle: string | null;
   seoDescription: string | null;
   publishedAt: string | null;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

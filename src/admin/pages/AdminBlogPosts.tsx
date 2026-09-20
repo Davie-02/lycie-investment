@@ -1,132 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
-import { useAsyncData } from "@/hooks/useAsyncData";
-import { adminApi } from "../adminApi";
+import ContentManager from "../components/ContentManager";
 import BlogPostForm from "../components/BlogPostForm";
-import AdminPagination from "../components/AdminPagination";
-import { ApiError } from "@/services/http";
+import { useAdminAuth } from "../context/AdminAuthContext";
 import type { BlogPost } from "@/types/blogPost";
-import type { Paginated } from "@/types/pagination";
-import "../components/AdminLayout.css";
-
-type View = { mode: "list" } | { mode: "create" } | { mode: "edit"; post: BlogPost };
-
-const PAGE_SIZE = 20;
 
 export default function AdminBlogPosts() {
-  const [view, setView] = useState<View>({ mode: "list" });
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [page, setPage] = useState(1);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  const { data: result, isLoading, error } = useAsyncData(
-    () => adminApi.get<Paginated<BlogPost>>(`/blog-posts/all?page=${page}&pageSize=${PAGE_SIZE}`),
-    [refreshKey, page]
-  );
-  const posts = result?.items ?? [];
-
-  useEffect(() => {
-    if (!isLoading && result && result.items.length === 0 && page > 1) {
-      setPage((p) => p - 1);
-    }
-  }, [isLoading, result, page]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-
-  async function handleDelete(post: BlogPost) {
-    if (!window.confirm(`Delete "${post.title}"? This cannot be undone.`)) return;
-    setActionError(null);
-    try {
-      await adminApi.delete(`/blog-posts/${post.id}`);
-      refresh();
-    } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Failed to delete blog post.");
-    }
-  }
-
-  if (view.mode === "create") {
-    return (
-      <BlogPostForm
-        post={null}
-        onSaved={() => {
-          setView({ mode: "list" });
-          setPage(1);
-          refresh();
-        }}
-        onCancel={() => setView({ mode: "list" })}
-      />
-    );
-  }
-
-  if (view.mode === "edit") {
-    return (
-      <BlogPostForm
-        post={view.post}
-        onSaved={() => {
-          setView({ mode: "list" });
-          refresh();
-        }}
-        onCancel={() => setView({ mode: "list" })}
-      />
-    );
-  }
+  const { currentUser } = useAdminAuth();
+  const canEdit = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
 
   return (
-    <div>
-      <div className="admin-toolbar">
-        <h1>Blog</h1>
-        <button type="button" className="btn btn-primary" onClick={() => setView({ mode: "create" })}>
-          Add Blog Post
-        </button>
-      </div>
-
-      {actionError && <p className="admin-error-text" role="alert">{actionError}</p>}
-      {isLoading && <p className="text-muted">Loading posts…</p>}
-      {error && <p className="text-muted" role="alert">Unable to load blog posts.</p>}
-
-      {result && posts.length === 0 && (
-        <div className="admin-empty-state">No blog posts yet. Add one to publish it on /blog.</div>
-      )}
-
-      {posts.length > 0 && (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Slug</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {posts.map((post) => (
-                  <tr key={post.id}>
-                    <td>{post.title}</td>
-                    <td className="mono">{post.slug}</td>
-                    <td>
-                      <span className={`admin-badge ${post.publishedAt ? "admin-badge--available" : "admin-badge--reserved"}`}>
-                        {post.publishedAt ? "Published" : "Draft"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-table__actions">
-                        <button type="button" className="btn-ghost" onClick={() => setView({ mode: "edit", post })}>
-                          Edit
-                        </button>
-                        <button type="button" className="btn-ghost" onClick={() => handleDelete(post)}>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <AdminPagination page={page} pageSize={PAGE_SIZE} total={result?.total ?? 0} onPageChange={setPage} />
-        </>
-      )}
-    </div>
+    <ContentManager<BlogPost>
+      type="blog-posts"
+      title="Blog"
+      noun="post"
+      canEdit={canEdit}
+      describe={(p) => p.title}
+      isLive={(p) => Boolean(p.publishedAt) && !p.archivedAt}
+      isArchived={(p) => Boolean(p.archivedAt)}
+      columns={[
+        { header: "Title", render: (p) => p.title },
+        { header: "Slug", render: (p) => <span className="mono">{p.slug}</span> },
+        {
+          header: "Published",
+          render: (p) => (p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : "—"),
+        },
+      ]}
+      renderForm={(item, onDone, onCancel) => <BlogPostForm post={item} onSaved={onDone} onCancel={onCancel} />}
+    />
   );
 }

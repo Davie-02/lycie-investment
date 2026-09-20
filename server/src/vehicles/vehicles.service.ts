@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "./../content-admin/content-state";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
 
@@ -10,11 +11,12 @@ export class VehiclesService {
   async findAll(page = 1, pageSize = 24) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.vehicle.findMany({
-        orderBy: { createdAt: "desc" },
+        where: PUBLIC.vehicles,
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.vehicle.count(),
+      this.prisma.vehicle.count({ where: PUBLIC.vehicles }),
     ]);
 
     return { items, total, page, pageSize };
@@ -22,14 +24,14 @@ export class VehiclesService {
 
   findFeatured(limit: number) {
     return this.prisma.vehicle.findMany({
-      where: { status: "available" },
-      orderBy: { createdAt: "desc" },
+      where: { ...PUBLIC.vehicles, status: "available" },
+      orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
       take: limit,
     });
   }
 
   async findBySlug(slug: string) {
-    const vehicle = await this.prisma.vehicle.findUnique({ where: { slug } });
+    const vehicle = await this.prisma.vehicle.findFirst({ where: { slug, ...PUBLIC.vehicles } });
     if (!vehicle) {
       throw new NotFoundException(`No vehicle found with slug "${slug}".`);
     }

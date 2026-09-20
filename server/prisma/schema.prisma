@@ -255,6 +255,12 @@ model Vehicle {
   savedBy       SavedVehicle[]
   reviews       Review[]
   viewStats     VehicleViewStat[]
+  /// Hidden from the public site when false (a draft or temporarily off the market).
+  isPublished   Boolean           @default(true)
+  /// Set = archived: hidden everywhere public, kept so it can be restored or duplicated later.
+  archivedAt    DateTime?
+  /// Pinned first on the homepage carousel and listings.
+  isFeatured    Boolean           @default(false)
 }
 
 /// A customer's shortlist while browsing — bookmark now, compare/decide
@@ -291,6 +297,8 @@ model HireVehicle {
 
   hireRequests  HireRequest[]
   customerCases CustomerCase[]
+  isPublished   Boolean        @default(true)
+  archivedAt    DateTime?
 }
 
 model Inquiry {
@@ -416,14 +424,15 @@ model ContactMessage {
 /// palette stays centralized in one place (src/types/notice.ts) rather than
 /// admins picking arbitrary hex values per notice.
 model Notice {
-  id        String   @id @default(cuid())
-  title     String?
-  message   String
-  type      String   @default("info") // "info" | "warning" | "success" | "promo"
-  displayAs String   @default("banner") // "banner" | "popup"
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  title      String?
+  message    String
+  type       String    @default("info") // "info" | "warning" | "success" | "promo"
+  displayAs  String    @default("banner") // "banner" | "popup"
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
 }
 
 // Marketing content — testimonials, FAQ, and the blog — managed the same
@@ -434,25 +443,29 @@ model Notice {
 // with this app — so they live here instead, in the same database and admin
 // dashboard as everything else.
 model Testimonial {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   quote          String
   authorName     String
   authorTitle    String?
   authorPhotoUrl String?
-  rating         Int      @default(5) // 1-5
-  isFeatured     Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  rating         Int       @default(5) // 1-5
+  isFeatured     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  isPublished    Boolean   @default(true)
+  archivedAt     DateTime?
 }
 
 model Faq {
-  id        String   @id @default(cuid())
-  question  String
-  answer    String
-  category  String?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(cuid())
+  question    String
+  answer      String
+  category    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isPublished Boolean   @default(true)
+  archivedAt  DateTime?
 }
 
 model BlogPost {
@@ -469,6 +482,7 @@ model BlogPost {
   publishedAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  archivedAt     DateTime?
 }
 
 /// A visitor's or customer's rating + comment, either about a specific

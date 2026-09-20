@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { CreateTestimonialDto } from "./dto/create-testimonial.dto";
 import { UpdateTestimonialDto } from "./dto/update-testimonial.dto";
 
@@ -10,11 +11,12 @@ export class TestimonialsService {
   async findAll(page = 1, pageSize = 100) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.testimonial.findMany({
+        where: PUBLIC.testimonials,
         orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.testimonial.count(),
+      this.prisma.testimonial.count({ where: PUBLIC.testimonials }),
     ]);
 
     return { items, total, page, pageSize };

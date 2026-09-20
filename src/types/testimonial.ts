@@ -6,6 +6,8 @@ export interface Testimonial {
   authorPhotoUrl: string | null;
   rating: number;
   isFeatured: boolean;
+  isPublished?: boolean;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

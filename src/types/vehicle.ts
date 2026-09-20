@@ -30,6 +30,10 @@ export interface Vehicle {
   description: string;
   features: string[];
   images: string[];
+  /** Present on admin lists; public endpoints only ever return published, non-archived items. */
+  isPublished?: boolean;
+  archivedAt?: string | null;
+  isFeatured?: boolean;
 }
 
 export interface HireVehicle {
@@ -44,4 +48,6 @@ export interface HireVehicle {
   seats: number;
   available: boolean;
   image: string;
+  isPublished?: boolean;
+  archivedAt?: string | null;
 }

@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsInt, IsNotEmpty, IsString, Min } from "class-validator";
+import { IsArray, IsBoolean, IsIn, IsOptional, IsInt, IsNotEmpty, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
 
 const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"];
@@ -75,4 +75,12 @@ export class CreateVehicleDto {
   @IsArray()
   @IsString({ each: true })
   images!: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
 }

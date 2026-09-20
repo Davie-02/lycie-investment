@@ -4,6 +4,8 @@ export interface Faq {
   answer: string;
   category: string | null;
   sortOrder: number;
+  isPublished?: boolean;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

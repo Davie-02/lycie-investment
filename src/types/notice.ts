@@ -8,6 +8,7 @@ export interface Notice {
   type: NoticeType;
   displayAs: NoticeDisplayMode;
   isActive: boolean;
+  archivedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

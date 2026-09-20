@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { CreateHireVehicleDto } from "./dto/create-hire-vehicle.dto";
 import { UpdateHireVehicleDto } from "./dto/update-hire-vehicle.dto";
 
@@ -10,11 +11,12 @@ export class HireVehiclesService {
   async findAll(page = 1, pageSize = 24) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.hireVehicle.findMany({
+        where: PUBLIC["hire-vehicles"],
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.hireVehicle.count(),
+      this.prisma.hireVehicle.count({ where: PUBLIC["hire-vehicles"] }),
     ]);
 
     return { items, total, page, pageSize };

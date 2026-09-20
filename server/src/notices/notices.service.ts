@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { CreateNoticeDto } from "./dto/create-notice.dto";
 import { UpdateNoticeDto } from "./dto/update-notice.dto";
 
@@ -9,7 +10,7 @@ export class NoticesService {
 
   findActive() {
     return this.prisma.notice.findMany({
-      where: { isActive: true },
+      where: PUBLIC.notices,
       orderBy: { createdAt: "desc" },
     });
   }

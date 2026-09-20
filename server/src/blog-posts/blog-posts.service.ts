@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { CreateBlogPostDto } from "./dto/create-blog-post.dto";
 import { UpdateBlogPostDto } from "./dto/update-blog-post.dto";
 
@@ -9,14 +10,14 @@ export class BlogPostsService {
 
   findPublished() {
     return this.prisma.blogPost.findMany({
-      where: { publishedAt: { not: null } },
+      where: PUBLIC["blog-posts"],
       orderBy: { publishedAt: "desc" },
     });
   }
 
   async findPublishedBySlug(slug: string) {
     const post = await this.prisma.blogPost.findUnique({ where: { slug } });
-    if (!post || !post.publishedAt) {
+    if (!post || !post.publishedAt || post.archivedAt) {
       throw new NotFoundException("Blog post not found.");
     }
     return post;

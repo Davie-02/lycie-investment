@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { PUBLIC } from "../content-admin/content-state";
 import { HireInfo, LycieContext, VehicleInfo } from "./prompt.builder";
 import { KnowledgeItem, selectKnowledge } from "./knowledge-select.util";
 
@@ -93,13 +94,13 @@ export class ContextService {
     const [siteRows, vehicles, hire, entries, faqs] = await Promise.all([
       this.prisma.siteContent.findMany(),
       this.prisma.vehicle.findMany({
-        where: { status: { in: ["available", "reserved"] } },
+        where: { ...PUBLIC.vehicles, status: { in: ["available", "reserved"] } },
         orderBy: { createdAt: "desc" },
         take: MAX_VEHICLES,
       }),
-      this.prisma.hireVehicle.findMany({ orderBy: { createdAt: "asc" } }),
+      this.prisma.hireVehicle.findMany({ where: PUBLIC["hire-vehicles"], orderBy: { createdAt: "asc" } }),
       this.prisma.knowledgeEntry.findMany({ where: { isActive: true }, orderBy: { updatedAt: "desc" } }),
-      this.prisma.faq.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
+      this.prisma.faq.findMany({ where: PUBLIC.faq, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     ]);
 
     const site = Object.fromEntries(siteRows.map((row) => [row.key, asRecord(row.value)]));
