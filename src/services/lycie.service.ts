@@ -32,17 +32,17 @@ export async function streamLycieMessage(
   history: Array<{ role: "user" | "model"; text: string }>,
   { onDelta }: StreamHandlers
 ): Promise<LycieChatResponse> {
-  const { getCsrfToken } = await import("./csrf");
+  const { fetchWithCsrf } = await import("./csrf");
   const { ApiError } = await import("./http");
   const { parseErrorMessage } = await import("@/utils/apiError");
   const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 
   let response: Response;
   try {
-    response = await fetch(`${base}/lycie/chat/stream`, {
+    response = await fetchWithCsrf(`${base}/lycie/chat/stream`, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", "x-csrf-token": await getCsrfToken() },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, history }),
     });
   } catch {

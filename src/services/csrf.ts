@@ -20,3 +20,24 @@ export async function getCsrfToken(): Promise<string> {
 export function clearCsrfToken(): void {
   csrfToken = null;
 }
+
+/**
+ * fetch() for state-changing requests: attaches the CSRF token and, if the server
+ * rejects it as stale (the token cookie expired while a phone tab sat in the
+ * background, or was cleared), fetches a fresh token and retries once.
+ */
+export async function fetchWithCsrf(url: string, init: RequestInit = {}): Promise<Response> {
+  const send = async () => {
+    const token = await getCsrfToken();
+    return fetch(url, { ...init, headers: { ...init.headers, "x-csrf-token": token } });
+  };
+
+  const response = await send();
+  if (response.status !== 403) return response;
+
+  const message = await response.clone().text().catch(() => "");
+  if (!/csrf/i.test(message)) return response;
+
+  clearCsrfToken();
+  return send();
+}

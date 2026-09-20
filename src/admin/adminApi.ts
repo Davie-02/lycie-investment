@@ -1,5 +1,5 @@
 import { ApiError } from "@/services/http";
-import { clearCsrfToken, getCsrfToken } from "@/services/csrf";
+import { clearCsrfToken, fetchWithCsrf, getCsrfToken } from "@/services/csrf";
 import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
 import { parseErrorMessage } from "@/utils/apiError";
 
@@ -52,15 +52,14 @@ export function clearStoredUser(): void {
 }
 
 async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const csrfToken = init.method && init.method !== "GET" ? await getCsrfToken() : null;
+  const send = init.method && init.method !== "GET" ? fetchWithCsrf : fetch;
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await send(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: "include",
       headers: {
-        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
         ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
         ...init.headers,
       },

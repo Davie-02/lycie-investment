@@ -1,6 +1,6 @@
 import type { Vehicle } from "@/types/vehicle";
 import { ApiError } from "./http";
-import { clearCsrfToken, getCsrfToken } from "./csrf";
+import { clearCsrfToken, fetchWithCsrf } from "./csrf";
 import { parseErrorMessage } from "@/utils/apiError";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
@@ -109,15 +109,14 @@ export function logoutCustomer() {
 }
 
 async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const csrfToken = init.method && init.method !== "GET" ? await getCsrfToken() : null;
+  const send = init.method && init.method !== "GET" ? fetchWithCsrf : fetch;
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await send(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: "include",
       headers: {
-        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
         ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...init.headers,
       },

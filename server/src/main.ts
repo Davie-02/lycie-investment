@@ -8,7 +8,7 @@ import compression from "compression";
 import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
 import { AppModule } from "./app.module";
-import { hasValidCsrfToken } from "./auth/csrf";
+import { csrfCheckRequired, hasValidCsrfToken } from "./auth/csrf";
 import { readCookie } from "./auth/cookies";
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE } from "./auth/session-cookie";
 
@@ -108,7 +108,7 @@ async function bootstrap() {
     const usesBearerToken = request.headers.authorization?.startsWith("Bearer ");
     const isCsrfEndpoint = request.path === "/api/auth/csrf";
 
-    if (isStateChanging && !usesBearerToken && !isCsrfEndpoint && !hasValidCsrfToken(request)) {
+    if (isStateChanging && !usesBearerToken && !isCsrfEndpoint && csrfCheckRequired(request) && !hasValidCsrfToken(request)) {
       throw new ForbiddenException("A valid CSRF token is required.");
     }
     next();
