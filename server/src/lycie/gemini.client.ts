@@ -12,9 +12,16 @@ export interface GeminiConfig {
   maxOutputTokens: number;
   perAttemptTimeoutMs: number;
   totalBudgetMs: number;
+  /** Streaming: give up on a model that hasn't produced a first word by then. */
+  firstTokenTimeoutMs: number;
+  /** Streaming: hard cap for one whole streamed answer. */
+  streamTimeoutMs: number;
 }
 
-const DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"];
+// Order matters: measured first-word times were ~2.5s (3.8-flash, when not overloaded), ~2.2s
+// (3.1-flash-lite) and ~13s (3.5-flash — kept only as a last resort). 3.5-flash-lite rejects
+// our request settings (HTTP 400), so it is not in the default chain.
+const DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
 
 export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiConfig {
   const models = (env.LYCIE_CHAT_MODELS ?? "")
@@ -34,12 +41,16 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     // customer waiting 15s+ for a chat reply is worse than a lighter model's answer.
     perAttemptTimeoutMs: 10_000,
     totalBudgetMs: 25_000,
+    firstTokenTimeoutMs: 6_000,
+    streamTimeoutMs: 40_000,
   };
 }
 
 export interface ChatTurn {
   role: "user" | "model";
   text: string;
+  /** An image the model should look at (used to read uploaded pictures into knowledge). */
+  image?: { mimeType: string; data: string };
 }
 
 export interface GeminiResult {
@@ -127,15 +138,7 @@ export class GeminiClient {
       response = await this.fetchFn(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey as string },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents: turns.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
-          generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: this.config.maxOutputTokens,
-            thinkingConfig: { thinkingBudget: this.config.thinkingBudget },
-          },
-        }),
+        body: this.buildBody(system, turns),
         signal: controller.signal,
       });
     } catch (error) {
@@ -163,6 +166,165 @@ export class GeminiClient {
       if (data?.candidates?.[0]?.finishReason === "SAFETY") throw new GeminiBlockedError("blocked: SAFETY");
       throw new ModelError("empty response", MINUTE);
     }
+    return text;
+  }
+
+  private buildBody(system: string, turns: ChatTurn[]): string {
+    return JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: turns.map((turn) => ({
+        role: turn.role,
+        parts: [
+          ...(turn.image ? [{ inlineData: { mimeType: turn.image.mimeType, data: turn.image.data } }] : []),
+          { text: turn.text },
+        ],
+      })),
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: this.config.maxOutputTokens,
+        thinkingConfig: { thinkingBudget: this.config.thinkingBudget },
+      },
+    });
+  }
+
+  /**
+   * Like generate(), but hands each piece of the answer to `onText` the moment
+   * Google produces it, so the customer sees words appear in real time
+   * instead of waiting for the whole reply.
+   *
+   * Fallback works until the first word: a model that errors or stays silent
+   * for firstTokenTimeoutMs is skipped for the next one. Once words have been
+   * shown we stay with that model — if it then breaks off, the customer keeps
+   * the (partial) answer rather than seeing it restart.
+   */
+  async generateStream(system: string, turns: ChatTurn[], onText: (delta: string) => void): Promise<GeminiResult> {
+    if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
+
+    const startedAt = this.now();
+    let lastError = "no model available";
+
+    for (const model of this.config.models) {
+      if ((this.cooldownUntil.get(model) ?? 0) > this.now()) continue;
+      if (this.config.totalBudgetMs - (this.now() - startedAt) < 2_000) break;
+
+      let started = false;
+      let text = "";
+      try {
+        await this.streamModel(model, system, turns, (delta) => {
+          started = true;
+          text += delta;
+          onText(delta);
+        });
+        return { text, model };
+      } catch (error) {
+        if (started && text) {
+          // Words are already on the customer's screen — keep them.
+          this.logger.warn(`Gemini model ${model} stopped mid-answer (${error instanceof Error ? error.message : error}).`);
+          return { text, model };
+        }
+        if (error instanceof GeminiBlockedError) throw error;
+        if (error instanceof KeyError) {
+          this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
+          throw new GeminiUnavailableError("The AI provider rejected the API key.");
+        }
+        const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
+        this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
+        lastError = `${model}: ${failure.message}`;
+        this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
+      }
+    }
+    throw new GeminiUnavailableError(lastError);
+  }
+
+  private async streamModel(model: string, system: string, turns: ChatTurn[], onDelta: (delta: string) => void): Promise<void> {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
+    const controller = new AbortController();
+    let timer = setTimeout(() => controller.abort(), this.config.firstTokenTimeoutMs);
+    const overall = setTimeout(() => controller.abort(), this.config.streamTimeoutMs);
+
+    try {
+      let response: Response;
+      try {
+        response = await this.fetchFn(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey as string },
+          body: this.buildBody(system, turns),
+          signal: controller.signal,
+        });
+      } catch (error) {
+        const aborted = error instanceof Error && error.name === "AbortError";
+        throw new ModelError(aborted ? "no first word in time" : "network error", MINUTE);
+      }
+      if (!response.ok) throw await this.classifyFailure(response);
+      if (!response.body) throw new ModelError("no response body", MINUTE);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let gotText = false;
+
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+
+          let boundary: number;
+          while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+            const rawEvent = buffer.slice(0, boundary);
+            buffer = buffer.slice(boundary + 2);
+            const delta = this.textFromEvent(rawEvent, gotText);
+            if (delta) {
+              if (!gotText) {
+                gotText = true;
+                clearTimeout(timer); // first word arrived — only the overall cap applies now
+                timer = overall;
+              }
+              onDelta(delta);
+            }
+          }
+        }
+      } catch (error) {
+        if (error instanceof GeminiBlockedError || error instanceof ModelError) throw error;
+        const aborted = error instanceof Error && error.name === "AbortError";
+        throw new ModelError(aborted ? (gotText ? "stream timed out" : "no first word in time") : "stream interrupted", MINUTE);
+      }
+      // A trailing event without the final blank line.
+      const last = this.textFromEvent(buffer, gotText);
+      if (last) {
+        gotText = true;
+        onDelta(last);
+      }
+      if (!gotText) throw new ModelError("empty response", MINUTE);
+    } finally {
+      clearTimeout(timer);
+      clearTimeout(overall);
+    }
+  }
+
+  /** Pulls the visible text out of one SSE event, ignoring the model's hidden "thought" parts. */
+  private textFromEvent(rawEvent: string, alreadyStarted: boolean): string {
+    const dataLines = rawEvent
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim());
+    if (dataLines.length === 0) return "";
+
+    let data: GeminiResponse;
+    try {
+      data = JSON.parse(dataLines.join("")) as GeminiResponse;
+    } catch {
+      return "";
+    }
+    if (data.promptFeedback?.blockReason && !alreadyStarted) {
+      throw new GeminiBlockedError(`blocked: ${data.promptFeedback.blockReason}`);
+    }
+    const candidate = data.candidates?.[0];
+    const text = (candidate?.content?.parts ?? [])
+      .filter((part) => !part.thought && typeof part.text === "string")
+      .map((part) => part.text)
+      .join("");
+    if (!text && candidate?.finishReason === "SAFETY" && !alreadyStarted) throw new GeminiBlockedError("blocked: SAFETY");
     return text;
   }
 

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ContextService, VehicleCard } from "./context.service";
 import { ChatTurn, GeminiBlockedError, GeminiClient } from "./gemini.client";
+import { MarkerFilter } from "./marker-filter.util";
 import { buildSystemPrompt, wrapCustomerMessage } from "./prompt.builder";
 import { redactPii } from "./pii.util";
 import { parseReply } from "./reply.util";
@@ -40,7 +41,13 @@ export class LycieService {
     return this.gemini.isConfigured;
   }
 
-  async chat(dto: ChatDto, ip: string): Promise<ChatResponse> {
+  /**
+   * Answers one question. If `onDelta` is given, the answer is streamed: each
+   * piece of text is passed to it as soon as it's produced (with our internal
+   * markers already removed). The returned response always carries the final,
+   * tidied text, which the caller should treat as authoritative.
+   */
+  async chat(dto: ChatDto, ip: string, onDelta?: (text: string) => void): Promise<ChatResponse> {
     const question = redactPii(dto.message.trim());
     if (!question) return this.refuse("Please type a question and I'll do my best to help.", "blocked", null);
 
@@ -73,7 +80,20 @@ export class LycieService {
     ];
 
     try {
-      const { text, model } = await this.gemini.generate(buildSystemPrompt(context), turns);
+      const system = buildSystemPrompt(context);
+      let result;
+      if (onDelta) {
+        const filter = new MarkerFilter();
+        result = await this.gemini.generateStream(system, turns, (delta) => {
+          const safe = filter.push(delta);
+          if (safe) onDelta(safe);
+        });
+        const rest = filter.end();
+        if (rest) onDelta(rest);
+      } else {
+        result = await this.gemini.generate(system, turns);
+      }
+      const { text, model } = result;
       this.today.increment();
       const parsed = parseReply(text, new Set(cards.keys()));
       const vehicles = parsed.vehicleSlugs.map((slug) => cards.get(slug)).filter((c): c is VehicleCard => Boolean(c));

@@ -213,6 +213,44 @@
   overflow-wrap: anywhere;
 }
 
+.lycie-msg--assistant .lycie-msg__bubble {
+  white-space: normal;
+}
+
+.lycie-msg__bubble p {
+  margin: 0;
+}
+
+.lycie-msg__bubble p + p,
+.lycie-msg__bubble p + ul,
+.lycie-msg__bubble p + ol,
+.lycie-msg__bubble ul + p,
+.lycie-msg__bubble ol + p {
+  margin-top: 0.6em;
+}
+
+.lycie-msg__bubble ul,
+.lycie-msg__bubble ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.lycie-msg__bubble li + li {
+  margin-top: 0.25em;
+}
+
+.lycie-msg__bubble strong {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.lycie-msg__bubble a {
+  color: var(--color-accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
 .lycie-msg--user .lycie-msg__bubble {
   background: var(--color-primary);
   color: #fff;

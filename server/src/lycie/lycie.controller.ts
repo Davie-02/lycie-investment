@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 import { LycieService } from "./lycie.service";
 import { ChatDto, FeedbackDto } from "./dto/chat.dto";
 import { CreateKnowledgeDto, UpdateKnowledgeDto } from "./dto/knowledge.dto";
@@ -24,6 +24,31 @@ export class LycieController {
   @Post("chat")
   chat(@Body() dto: ChatDto, @Req() request: Request) {
     return this.lycie.chat(dto, request.ip ?? "unknown");
+  }
+
+  // Same as /chat, but the answer arrives word by word as newline-delimited JSON:
+  //   {"type":"delta","text":"…"}  …repeated…  then {"type":"done", reply, vehicles, outcome, logId}
+  // Validation/throttle errors happen before streaming starts and are ordinary JSON errors.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post("chat/stream")
+  async chatStream(@Body() dto: ChatDto, @Req() request: Request, @Res() response: Response): Promise<void> {
+    response.status(200);
+    response.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
+    response.setHeader("Cache-Control", "no-store");
+    response.setHeader("X-Accel-Buffering", "no");
+    response.flushHeaders();
+
+    const write = (payload: object) => {
+      if (!response.writableEnded && !response.destroyed) response.write(`${JSON.stringify(payload)}\n`);
+    };
+    try {
+      const result = await this.lycie.chat(dto, request.ip ?? "unknown", (text) => write({ type: "delta", text }));
+      write({ type: "done", ...result });
+    } catch {
+      write({ type: "error", message: "Something went wrong. Please try again." });
+    } finally {
+      response.end();
+    }
   }
 
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

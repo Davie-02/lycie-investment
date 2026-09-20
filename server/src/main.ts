@@ -66,7 +66,8 @@ async function bootstrap() {
   // delayed batches instead of instantly.
   app.use(
     compression({
-      filter: (req, res) => (req.path === "/api/events" ? false : compression.filter(req, res)),
+      filter: (req, res) =>
+        req.path === "/api/events" || req.path === "/api/lycie/chat/stream" ? false : compression.filter(req, res),
     })
   );
 

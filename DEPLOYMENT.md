@@ -127,7 +127,7 @@ change prices or see anyone's account.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `LYCIE_CHAT_MODELS` | `gemini-3.8-flash,gemini-3.5-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite` | Tried in order. If a model is over quota, overloaded or unavailable to your key it is skipped for a while and the next is used. Model names change over time — if answers start failing, check the Render logs for `Gemini model … failed (model not available to this key)` and update this list from Google's current model list. |
+| `LYCIE_CHAT_MODELS` | `gemini-3.8-flash,gemini-3.1-flash-lite,gemini-3.5-flash` | Tried in order. If a model is over quota, overloaded or unavailable to your key it is skipped for a while and the next is used. Model names change over time — if answers start failing, check the Render logs for `Gemini model … failed (model not available to this key)` and update this list from Google's current model list. |
 | `LYCIE_DAILY_LIMIT` | `300` | Maximum AI answers per day, so the free quota is never exhausted by one busy day. Past it, visitors see your contact details instead. |
 | `LYCIE_HOURLY_LIMIT_PER_IP` | `40` | Per-visitor questions per hour (there is also a 10/minute burst limit). |
 | `LYCIE_KNOWLEDGE_CHARS` | `12000` | How much of your knowledge notes go into each prompt. |

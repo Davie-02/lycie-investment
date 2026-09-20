@@ -7,6 +7,8 @@ const config: GeminiConfig = {
   maxOutputTokens: 100,
   perAttemptTimeoutMs: 1_000,
   totalBudgetMs: 25_000,
+  firstTokenTimeoutMs: 200,
+  streamTimeoutMs: 2_000,
 };
 
 const ok = (text: string, extraParts: object[] = []) =>
@@ -108,5 +110,99 @@ describe("GeminiClient", () => {
     const client = new GeminiClient(jest.fn() as unknown as typeof fetch, { ...config, apiKey: undefined });
     expect(client.isConfigured).toBe(false);
     await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError);
+  });
+});
+
+
+describe("GeminiClient.generateStream", () => {
+  const sse = (...texts: Array<string | object>) =>
+    texts
+      .map((t) => `data: ${JSON.stringify(typeof t === "string" ? { candidates: [{ content: { parts: [{ text: t }] } }] } : t)}\r\n\r\n`)
+      .join("");
+
+  /** A streaming Response that emits the given chunks, optionally then fails or stalls. */
+  function streamResponse(chunks: string[], end: "close" | "error" | "stall" = "close", signal?: AbortSignal) {
+    const encoder = new TextEncoder();
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>({
+      // Chunks go out on the first read; an "error" ending fails on the NEXT read
+      // (erroring inside start() would discard the queued chunks before they're read).
+      pull(controller) {
+        pulls += 1;
+        if (pulls === 1) {
+          chunks.forEach((c) => controller.enqueue(encoder.encode(c)));
+          if (end === "close") controller.close();
+        } else if (end === "error") {
+          controller.error(new Error("connection reset"));
+        }
+      },
+      start(controller) {
+        if (end === "stall") {
+          signal?.addEventListener("abort", () => {
+            const err = new Error("aborted");
+            err.name = "AbortError";
+            controller.error(err);
+          });
+        }
+      },
+    });
+    return new Response(body, { status: 200 });
+  }
+
+  function clientFor(responses: Array<(signal?: AbortSignal) => Response>) {
+    const calls: string[] = [];
+    const fetchFn = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      calls.push(String(url));
+      const next = responses.shift();
+      if (!next) throw new Error("unexpected extra call");
+      return next(init?.signal as AbortSignal | undefined);
+    });
+    return { client: new GeminiClient(fetchFn as unknown as typeof fetch, config), calls };
+  }
+
+  it("delivers text piece by piece, split across network chunks, hiding thoughts", async () => {
+    const event = sse("Hel") + sse({ candidates: [{ content: { parts: [{ text: "secret", thought: true }] } }] });
+    const { client, calls } = clientFor([
+      () => streamResponse([event.slice(0, 30), event.slice(30), sse("lo ", "world")]),
+    ]);
+    const pieces: string[] = [];
+    const result = await client.generateStream("sys", turns, (d) => pieces.push(d));
+    expect(pieces).toEqual(["Hel", "lo ", "world"]);
+    expect(result).toEqual({ text: "Hello world", model: "m1" });
+    expect(calls[0]).toContain(":streamGenerateContent?alt=sse");
+  });
+
+  it("falls back to the next model when the first fails before any words", async () => {
+    const { client } = clientFor([() => fail(503), () => streamResponse([sse("from m2")])]);
+    const pieces: string[] = [];
+    const result = await client.generateStream("sys", turns, (d) => pieces.push(d));
+    expect(result.model).toBe("m2");
+    expect(pieces.join("")).toBe("from m2");
+  });
+
+  it("skips a model that stays silent past the first-word deadline", async () => {
+    const { client } = clientFor([(signal) => streamResponse([], "stall", signal), () => streamResponse([sse("quick")])]);
+    const result = await client.generateStream("sys", turns, () => undefined);
+    expect(result).toEqual({ text: "quick", model: "m2" });
+  });
+
+  it("keeps a partial answer if the stream breaks after words were shown", async () => {
+    const { client, calls } = clientFor([() => streamResponse([sse("Partial answer")], "error")]);
+    const pieces: string[] = [];
+    const result = await client.generateStream("sys", turns, (d) => pieces.push(d));
+    expect(result).toEqual({ text: "Partial answer", model: "m1" });
+    expect(calls).toHaveLength(1); // no restart on another model
+  });
+
+  it("surfaces a safety block without trying other models", async () => {
+    const blocked = sse({ promptFeedback: { blockReason: "SAFETY" } });
+    const { client, calls } = clientFor([() => streamResponse([blocked])]);
+    await expect(client.generateStream("sys", turns, () => undefined)).rejects.toBeInstanceOf(GeminiBlockedError);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("throws unavailable when every model fails", async () => {
+    const { client } = clientFor([() => fail(503), () => fail(429), () => fail(404)]);
+    await expect(client.generateStream("sys", turns, () => undefined)).rejects.toBeInstanceOf(GeminiUnavailableError);
   });
 });

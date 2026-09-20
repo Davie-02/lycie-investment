@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { getLycieStatus, sendLycieFeedback, sendLycieMessage } from "@/services/lycie.service";
+import { getLycieStatus, sendLycieFeedback, streamLycieMessage } from "@/services/lycie.service";
+import RichText from "./RichText";
 import Img from "@/components/common/Img";
 import { formatCurrency } from "@/utils/format";
 import type { LycieVehicleCard } from "@/types/lycie";
@@ -109,24 +110,34 @@ export default function LycieChat() {
     setInput("");
     setIsSending(true);
 
+    // The reply appears word by word: the message is created on the first piece of text.
+    const replyId = nextId.current++;
+    let started = false;
+    const setReply = (patch: Partial<ChatMessage>, append?: string) =>
+      setMessages((prev) => {
+        if (!prev.some((m) => m.id === replyId)) {
+          return [...prev, { id: replyId, role: "assistant", text: append ?? "", ...patch }];
+        }
+        return prev.map((m) => (m.id === replyId ? { ...m, ...patch, text: append ? m.text + append : (patch.text ?? m.text) } : m));
+      });
+
     try {
-      const response = await sendLycieMessage(text, history);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextId.current++,
-          role: "assistant",
-          text: response.reply,
-          vehicles: response.vehicles,
-          logId: response.logId,
+      const response = await streamLycieMessage(text, history, {
+        onDelta: (delta) => {
+          started = true;
+          setReply({}, delta);
         },
-      ]);
+      });
+      // The final text is the tidied version — it replaces what streamed in.
+      setReply({ text: response.reply, vehicles: response.vehicles, logId: response.logId });
     } catch (err) {
       const message = err instanceof Error && err.message ? err.message : "Something went wrong.";
-      setMessages((prev) => [
-        ...prev,
-        { id: nextId.current++, role: "assistant", text: `Sorry — ${message} Please try again in a moment.` },
-      ]);
+      if (started) {
+        // Some of the answer is already on screen — keep it and say it was cut short.
+        setReply({}, "\n\n(The answer was cut short — please ask again.)");
+      } else {
+        setReply({ text: `Sorry — ${message} Please try again in a moment.` });
+      }
     } finally {
       setIsSending(false);
     }
@@ -213,7 +224,9 @@ export default function LycieChat() {
 
             {messages.map((message) => (
               <div key={message.id} className={`lycie-msg lycie-msg--${message.role}`}>
-                <div className="lycie-msg__bubble">{message.text}</div>
+                <div className="lycie-msg__bubble">
+                  {message.role === "assistant" ? <RichText text={message.text} /> : message.text}
+                </div>
 
                 {message.vehicles && message.vehicles.length > 0 && (
                   <ul className="lycie-cards">
@@ -250,7 +263,7 @@ export default function LycieChat() {
               </div>
             ))}
 
-            {isSending && (
+            {isSending && messages[messages.length - 1]?.role === "user" && (
               <div className="lycie-msg lycie-msg--assistant" aria-label="Lycie is typing">
                 <div className="lycie-msg__bubble lycie-typing" aria-hidden="true">
                   <span />
