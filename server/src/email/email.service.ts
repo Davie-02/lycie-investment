@@ -55,10 +55,26 @@ export class EmailService {
     return process.env.EMAIL_FROM || "Lycie Investments <onboarding@resend.dev>";
   }
 
-  /** Replies go here (e.g. the company inbox) even if the sending address is a no-reply. */
+  /**
+   * Replies go here (e.g. the company inbox) even if the sending address is a no-reply.
+   * Accepts "info@x.com" or "Name <info@x.com>", with or without stray quotes; anything
+   * that isn't a valid address is ignored (with a warning) rather than making every
+   * email fail — providers reject a malformed reply-to outright.
+   */
   get replyTo(): string | undefined {
-    return process.env.EMAIL_REPLY_TO || undefined;
+    const raw = (process.env.EMAIL_REPLY_TO ?? "").trim().replace(/^["']+|["']+$/g, "");
+    if (!raw) return undefined;
+    const { email } = parseAddress(raw);
+    if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) {
+      if (!this.warnedReplyTo) {
+        this.warnedReplyTo = true;
+        this.logger.warn(`EMAIL_REPLY_TO ("${raw}") isn't a valid email address, so it is being ignored.`);
+      }
+      return undefined;
+    }
+    return email;
   }
+  private warnedReplyTo = false;
 
   get adminNotificationEmail(): string | undefined {
     return process.env.ADMIN_NOTIFICATION_EMAIL;
@@ -117,14 +133,24 @@ export class EmailService {
   }
 
   private explain(provider: EmailProvider, status: number, body: string): string {
-    if (status === 401 || status === 403) return `The ${provider} API key was rejected. Check it in the hosting settings.`;
-    if (provider === "resend" && /verify|domain|own email/i.test(body)) {
+    // Providers explain themselves in JSON; quote that rather than guessing.
+    let detail = "";
+    try {
+      const parsed = JSON.parse(body) as { message?: string; error?: { message?: string } };
+      detail = parsed.message ?? parsed.error?.message ?? "";
+    } catch {
+      detail = body.slice(0, 200);
+    }
+    if (status === 401 || status === 403) {
+      return `The ${provider} API key or account was rejected${detail ? ` (${detail})` : ""}. Check the key, and any IP restrictions, in ${provider}.`;
+    }
+    if (provider === "resend" && /verify|domain|own email/i.test(detail || body)) {
       return "Resend only delivers to your own address until a domain is verified. Verify your domain in Resend, or switch to Brevo.";
     }
-    if (provider === "brevo" && /sender|not valid|unauthorized/i.test(body)) {
-      return "Brevo doesn't recognise the sending address. Add and verify EMAIL_FROM as a sender in Brevo.";
+    if (provider === "brevo" && /sender/i.test(detail) && /valid|verif|exist|not found|unrecogni/i.test(detail)) {
+      return `Brevo doesn't accept the sending address. Add and verify EMAIL_FROM as a sender in Brevo. (Brevo said: ${detail})`;
     }
-    return `The email service refused the message (HTTP ${status}).`;
+    return `${provider === "brevo" ? "Brevo" : "Resend"} refused the message${detail ? `: ${detail}` : ` (HTTP ${status})`}.`;
   }
 
   async notifyAdmin(subject: string, html: string): Promise<void> {
