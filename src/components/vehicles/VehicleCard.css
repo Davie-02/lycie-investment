@@ -106,7 +106,7 @@
 .vehicle-card__price {
   font-size: var(--fs-lg);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
   margin-top: var(--space-2);
 }
 

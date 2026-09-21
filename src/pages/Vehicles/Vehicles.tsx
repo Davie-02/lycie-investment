@@ -10,6 +10,7 @@ import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicles } from "@/services/vehicles.service";
 import { useSiteContent } from "@/context/SiteContentContext";
+import { usePricing } from "@/context/PricingContext";
 import { applyFilters, EMPTY_FILTERS, type VehicleFilters } from "@/utils/vehicleFilters";
 
 // Caps the stagger at 6 cards' worth of delay so a long results grid
@@ -19,13 +20,14 @@ const STAGGER_CAP = 6;
 
 export default function Vehicles() {
   const { content } = useSiteContent();
+  const { rate } = usePricing();
   const { data: vehicles, isLoading, error } = useAsyncData(() => getVehicles(), [], ["vehicles"]);
   const [filters, setFilters] = useState<VehicleFilters>(EMPTY_FILTERS);
 
   const filteredVehicles = useMemo(() => {
     if (!vehicles) return [];
-    return applyFilters(vehicles, filters);
-  }, [vehicles, filters]);
+    return applyFilters(vehicles, filters, rate);
+  }, [vehicles, filters, rate]);
 
   return (
     <>

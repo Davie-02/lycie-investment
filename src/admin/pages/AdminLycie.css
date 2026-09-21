@@ -86,7 +86,7 @@
 .lycie-notice {
   padding: var(--space-3) var(--space-4);
   margin-block: var(--space-3);
-  background: #eef6fb;
+  background: var(--color-tint);
   border-left: 3px solid var(--color-accent-dark);
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
@@ -174,7 +174,7 @@
 
 .lycie-drop--active {
   border-color: var(--color-accent-dark);
-  background: #eef6fb;
+  background: var(--color-tint);
 }
 
 .lycie-upload-results {

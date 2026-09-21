@@ -23,7 +23,7 @@
   padding: var(--space-2) var(--space-4);
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -104,7 +104,7 @@
   font-family: var(--font-display);
   font-size: var(--fs-2xl);
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-ink);
   line-height: 1.1;
   margin-top: var(--space-1);
 }

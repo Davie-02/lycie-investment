@@ -122,7 +122,7 @@
 .value-card {
   height: 100%;
   padding: var(--space-5);
-  background: #f2f9fc;
+  background: var(--color-tint);
   border-radius: var(--radius-md);
 }
 
@@ -245,7 +245,7 @@
   height: 52px;
   margin-bottom: var(--space-3);
   border-radius: var(--radius-md);
-  background: #eaf4f9;
+  background: var(--color-tint);
   color: var(--color-accent-dark);
 }
 
@@ -361,7 +361,7 @@
 }
 
 .contact-card__value a {
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -442,7 +442,7 @@
 }
 
 .map-embed__links a:hover {
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 @media (max-width: 599px) {

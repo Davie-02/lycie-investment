@@ -7,7 +7,7 @@
 .form-field label {
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .form-field__required {
@@ -72,13 +72,13 @@ textarea.form-field__input {
 }
 
 .form-status--success {
-  background: #eaf6ef;
+  background: var(--color-success-bg);
   color: var(--color-success);
   border: 1px solid var(--color-success);
 }
 
 .form-status--error {
-  background: #fbecea;
+  background: var(--color-error-bg);
   color: var(--color-error);
   border: 1px solid var(--color-error);
 }
@@ -120,7 +120,7 @@ textarea.form-field__input {
 
 .form-field__toggle:hover,
 .form-field__toggle[aria-pressed="true"] {
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 /* ---- New-password helper: strength meter, checklist, suggestion ---- */
@@ -192,7 +192,7 @@ textarea.form-field__input {
 }
 
 .link-button:hover {
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 /* ---- Checkbox row ("Keep me signed in") ---- */
@@ -280,7 +280,7 @@ textarea.form-field__input {
 
 /* Neutral notice (e.g. "Please confirm your email") — same shape as the success/error banners. */
 .form-status--info {
-  background: #eef6fa;
-  color: var(--color-primary);
+  background: var(--color-tint);
+  color: var(--color-ink);
   border: 1px solid var(--color-accent-dark);
 }

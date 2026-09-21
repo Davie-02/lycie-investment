@@ -52,14 +52,14 @@
 
 .attention__tile--urgent {
   border-color: #e34948;
-  background: #fdf1f1;
+  background: var(--color-error-bg);
 }
 
 .attention__count {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--color-ink);
   min-width: 2ch;
   text-align: center;
 }
@@ -76,7 +76,7 @@
 .attention__clear {
   padding: var(--space-4);
   color: var(--color-success);
-  background: #eef7f1;
+  background: var(--color-success-bg);
   border-radius: var(--radius-md);
 }
 
@@ -94,15 +94,15 @@
 }
 
 .attention__setup--warning {
-  background: #fef6e7;
+  background: var(--color-warn-bg);
   border-color: #d99a2b;
   color: #6b4700;
 }
 
 .attention__setup--info {
-  background: #eef6fb;
+  background: var(--color-tint);
   border-color: var(--color-accent-dark);
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .attention__test {

@@ -94,7 +94,7 @@
 }
 
 .hire-form__vehicle strong {
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .hire-form__estimate {
@@ -116,7 +116,7 @@
 
 .hire-form__estimate strong {
   font-size: var(--fs-lg);
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .hire-form__estimate-note {

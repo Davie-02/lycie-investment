@@ -66,7 +66,7 @@
 }
 
 .admin-search__hit--active {
-  background: #eef6fb;
+  background: var(--color-tint);
 }
 
 .admin-search__note {

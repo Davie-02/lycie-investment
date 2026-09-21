@@ -185,7 +185,7 @@
 }
 
 .customer-saved-vehicle__price {
-  color: var(--color-primary);
+  color: var(--color-ink);
   font-weight: 600;
   margin-top: var(--space-1);
 }

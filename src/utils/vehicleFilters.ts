@@ -5,6 +5,7 @@
  * loaded list.
  */
 import type { Vehicle } from "@/types/vehicle";
+import { toUsd } from "@/utils/price";
 
 export interface VehicleFilters {
   search: string;
@@ -26,7 +27,11 @@ export const EMPTY_FILTERS: VehicleFilters = {
   maxPrice: "",
 };
 
-export function applyFilters(vehicles: Vehicle[], filters: VehicleFilters): Vehicle[] {
+/**
+ * @param rate kwacha per US dollar — needed to compare the max price (entered in USD) with
+ * older listings still stored in kwacha.
+ */
+export function applyFilters(vehicles: Vehicle[], filters: VehicleFilters, rate: number | null = null): Vehicle[] {
   return vehicles.filter((vehicle) => {
     if (filters.search) {
       const term = filters.search.toLowerCase();
@@ -38,7 +43,11 @@ export function applyFilters(vehicles: Vehicle[], filters: VehicleFilters): Vehi
     if (filters.transmission && vehicle.transmission !== filters.transmission) return false;
     if (filters.bodyType && vehicle.bodyType !== filters.bodyType) return false;
     if (filters.status && vehicle.status !== filters.status) return false;
-    if (filters.maxPrice && vehicle.price > Number(filters.maxPrice)) return false;
+    if (filters.maxPrice) {
+      const usd = toUsd(vehicle.price, vehicle.currency, rate);
+      // A kwacha listing we can't convert yet is kept rather than hidden by mistake.
+      if (usd !== null && usd > Number(filters.maxPrice)) return false;
+    }
     return true;
   });
 }

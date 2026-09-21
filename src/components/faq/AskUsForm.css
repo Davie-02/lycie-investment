@@ -31,7 +31,7 @@
   border-radius: 999px;
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
   background: var(--color-surface);
   cursor: pointer;
   transition: background-color var(--transition), color var(--transition);

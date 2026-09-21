@@ -27,6 +27,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     whatsappNumber: null,
     mapQuery: null,
   },
+  theme: { defaultTheme: "classic", allowVisitorSwitch: true, followDeviceDarkMode: false },
   footer: {
     tagline: "Vehicle imports, dealership, hire, transport and clearing services.",
     rightsText: "All rights reserved.",

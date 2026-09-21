@@ -32,7 +32,7 @@
 
 .vehicle-specs dd {
   margin: 0;
-  color: var(--color-primary);
+  color: var(--color-ink);
   font-weight: 600;
 }
 

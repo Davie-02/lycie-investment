@@ -175,7 +175,7 @@
   text-align: left;
   padding: 0.6rem 0.85rem;
   font-size: var(--fs-sm);
-  color: var(--color-primary);
+  color: var(--color-ink);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
@@ -184,7 +184,7 @@
 
 .lycie-suggestions button:hover:not(:disabled) {
   border-color: var(--color-accent-dark);
-  background: #f2f9fc;
+  background: var(--color-tint);
 }
 
 .lycie-msg {
@@ -241,7 +241,7 @@
 
 .lycie-msg__bubble strong {
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .lycie-msg__bubble a {

@@ -35,6 +35,7 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
     fleet: { ...DEFAULT_SITE_CONTENT.fleet, ...(partial.fleet as object) },
     contact: { ...DEFAULT_SITE_CONTENT.contact, ...(partial.contact as object) },
     footer: { ...DEFAULT_SITE_CONTENT.footer, ...(partial.footer as object) },
+    theme: { ...DEFAULT_SITE_CONTENT.theme, ...(partial.theme as object) },
     pageHeadings: mergeNested(DEFAULT_SITE_CONTENT.pageHeadings, partial.pageHeadings),
     homeSections: mergeNested(DEFAULT_SITE_CONTENT.homeSections, partial.homeSections),
     social: { ...DEFAULT_SITE_CONTENT.social, ...(partial.social as object) },

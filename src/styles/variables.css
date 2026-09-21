@@ -16,6 +16,17 @@
   --color-success: #1e7d4f;
   --color-error: #b3261e;
 
+  /* Theme tokens. In the default (Classic) theme they equal the values the site has always used.
+     --color-ink is the brand navy when used as TEXT (headings, links, prices): in the dark theme
+     it becomes a light sky blue so it stays readable. Backgrounds keep using --color-primary,
+     which never changes, so the header, footer and buttons are always the brand navy. */
+  --color-ink: #19406c;
+  --color-tint: #eef6fb;
+  --color-tint-strong: #dcedf7;
+  --color-error-bg: #fbecea;
+  --color-success-bg: #eaf6ef;
+  --color-warn-bg: #fef6e7;
+
   /* Type */
   --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Inter", "Helvetica Neue", Arial, sans-serif;
@@ -49,4 +60,69 @@
   --shadow-md: 0 4px 16px rgba(13, 22, 34, 0.08);
 
   --transition: 160ms ease;
+}
+
+
+/* =========================================================================
+   THEMES
+   Chosen by an admin (Site Content → Theme) and optionally switched to dark by visitors.
+   A theme sets <html data-theme="…">. Only surface tones change: the brand colours
+   (--color-primary navy, --color-accent sky blue), the logo, and the header/footer/button
+   colours are identical in every theme. Classic = the :root values above.
+   ========================================================================= */
+
+/* Ocean — cool, blue-tinted whites. */
+:root[data-theme="ocean"] {
+  --color-background: #f0f6fb;
+  --color-surface: #ffffff;
+  --color-border: #d4e3ef;
+  --color-text: #13202f;
+  --color-muted: #5a6f83;
+  --color-tint: #e3f0f9;
+  --color-tint-strong: #cfe4f3;
+}
+
+/* Warm — soft cream and sand. */
+:root[data-theme="warm"] {
+  --color-background: #f8f3ea;
+  --color-surface: #fffdf8;
+  --color-border: #e6dccb;
+  --color-text: #2a2419;
+  --color-muted: #75695a;
+  --color-tint: #f2e9d9;
+  --color-tint-strong: #e8dbc3;
+  --color-warn-bg: #fbeed2;
+}
+
+/* Dark — deep navy surfaces with light text; sky blue takes over from navy for text and links. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-background: #0b1626;
+  --color-surface: #12233a;
+  --color-border: #243b57;
+  --color-text: #e6edf5;
+  --color-muted: #9fb0c3;
+  --color-ink: #bfe1f5;
+  --color-accent-dark: #76cae9;
+  --color-success: #6fd3a1;
+  --color-error: #f28b82;
+  --color-tint: #16314f;
+  --color-tint-strong: #1e4166;
+  --color-error-bg: #3a1f24;
+  --color-success-bg: #143324;
+  --color-warn-bg: #3a2f17;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* The logo artwork has dark lettering, so on the dark theme it sits on a white chip (brand stays intact). */
+:root[data-theme="dark"] .navbar__logo {
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+}
+
+/* Primary buttons are brand navy on every theme; on dark a fine sky-blue edge keeps them defined. */
+:root[data-theme="dark"] .btn-primary {
+  border-color: rgba(118, 202, 233, 0.45);
 }

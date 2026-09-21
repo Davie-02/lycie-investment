@@ -12,6 +12,20 @@ export interface ContactContent {
   mapQuery: string | null;
 }
 
+export type ThemeName = "classic" | "ocean" | "warm" | "dark";
+
+/**
+ * How the public site looks. Every theme keeps the brand navy and sky blue, the logo, and the
+ * header/footer/button colours; only surface tones (page background, cards, borders) change.
+ */
+export interface ThemeContent {
+  defaultTheme: ThemeName;
+  /** Show a light/dark switch in the header so visitors can choose for themselves. */
+  allowVisitorSwitch: boolean;
+  /** Start in dark mode for visitors whose device is set to dark mode (only if the switch is on). */
+  followDeviceDarkMode: boolean;
+}
+
 /** Footer texts. The year and company name in the copyright line are added automatically. */
 export interface FooterContent {
   tagline: string;
@@ -201,6 +215,7 @@ export interface SiteContent {
   fleet: FleetContent;
   contact: ContactContent;
   footer: FooterContent;
+  theme: ThemeContent;
   pageHeadings: PageHeadingsContent;
   homeSections: HomeSectionsContent;
   social: SocialContent;

@@ -112,7 +112,7 @@ export default function VehicleFiltersPanel({
         <input
           type="number"
           aria-label="Maximum price"
-          placeholder="Max price (MWK)"
+          placeholder="Max price (USD)"
           value={filters.maxPrice}
           onChange={(e) => update("maxPrice", e.target.value)}
           className="form-field__input"

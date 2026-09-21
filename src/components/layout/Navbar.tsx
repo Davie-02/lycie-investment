@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "@/assets/logo.png";
+import ThemeToggle from "./ThemeToggle";
 import "./Navbar.css";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
@@ -56,6 +57,7 @@ export default function Navbar() {
           ))}
         </nav>
 
+        <ThemeToggle />
         <NavLink to="/vehicles" className="btn btn-primary navbar__cta">
           Get a Quote
         </NavLink>

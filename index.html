@@ -14,7 +14,27 @@
       content="Vehicle sourcing, importing, dealership, hire and clearing services."
     />
     <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#19406c" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <!-- Paints the chosen theme before the page loads, so it never flashes the wrong colours.
+         Same rules as src/utils/theme.ts (admin default, visitor's light/dark choice, device setting). -->
+    <script>
+      try {
+        if (location.pathname.indexOf("/admin") !== 0) {
+          var cfg = JSON.parse(localStorage.getItem("lycie_site_theme_cfg") || "{}");
+          var names = ["classic", "ocean", "warm", "dark"];
+          var base = names.indexOf(cfg.defaultTheme) > -1 ? cfg.defaultTheme : "classic";
+          var choice = localStorage.getItem("lycie_theme_choice");
+          var theme = base;
+          if (cfg.allowVisitorSwitch !== false) {
+            if (choice === "dark") theme = "dark";
+            else if (choice === "light") theme = base === "dark" ? "classic" : base;
+            else if (cfg.followDeviceDarkMode && window.matchMedia("(prefers-color-scheme: dark)").matches) theme = "dark";
+          }
+          if (theme !== "classic") document.documentElement.setAttribute("data-theme", theme);
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

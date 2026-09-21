@@ -189,7 +189,7 @@
 .admin-badge--overdue {
   color: #8a5a00;
   border-color: #d99a2b;
-  background: #fef6e7;
+  background: var(--color-warn-bg);
 }
 
 .request-status-cell {
@@ -292,7 +292,7 @@
 }
 
 .admin-tabs .admin-nav__link--active {
-  color: var(--color-primary);
+  color: var(--color-ink);
   border-bottom-color: var(--color-accent-dark);
 }
 
@@ -326,7 +326,7 @@
 .site-content-jumpnav a {
   font-size: var(--fs-xs);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: 999px;
@@ -357,7 +357,7 @@
   padding-inline: var(--space-2);
   font-size: var(--fs-sm);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-ink);
 }
 
 .admin-dashboard-card {
@@ -439,7 +439,7 @@
 
 .booking-card__total {
   font-size: var(--fs-md);
-  color: var(--color-primary);
+  color: var(--color-ink);
   margin-top: var(--space-2);
 }
 
@@ -560,7 +560,7 @@
   gap: var(--space-3);
   padding: var(--space-4);
   margin-bottom: var(--space-5);
-  background: #eef6fb;
+  background: var(--color-tint);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
 }
