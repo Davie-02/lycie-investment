@@ -60,11 +60,13 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     maxOutputTokens: number(env.LYCIE_MAX_OUTPUT_TOKENS, 700),
     // A model slower than this is abandoned for the next (faster) one — a
     // customer waiting 15s+ for a chat reply is worse than a lighter model's answer.
-    perAttemptTimeoutMs: 10_000,
-    totalBudgetMs: 32_000,
-    firstTokenTimeoutMs: 8_000,
+    // Generous on purpose: models race, so a slow-but-alive request costs nothing extra, and cancelling it early
+    // only throws away an answer Google may be about to send. The overall budget below is what ends a hopeless wait.
+    perAttemptTimeoutMs: 26_000,
+    totalBudgetMs: 30_000,
+    firstTokenTimeoutMs: 14_000,
     streamTimeoutMs: 40_000,
-    lastResortFirstTokenTimeoutMs: 15_000,
+    lastResortFirstTokenTimeoutMs: 20_000,
     retryDelayMs: 1_500,
     hedgeDelayMs: number(env.LYCIE_HEDGE_MS, 1_200),
     parallelStart: Math.max(1, Math.floor(number(env.LYCIE_PARALLEL, 2))),
