@@ -4,6 +4,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PricingService } from "../pricing/pricing.service";
 import { priceText } from "../pricing/price-format";
 import { PUBLIC } from "../content-admin/content-state";
+import { directAnswer } from "./direct-answer.util";
 import { HireInfo, LycieContext, VehicleInfo } from "./prompt.builder";
 import { KnowledgeItem, KnowledgeMatch, bestKnowledgeMatch, selectKnowledge } from "./knowledge-select.util";
 
@@ -104,6 +105,18 @@ export class ContextService implements OnApplicationBootstrap {
     const snap = await this.load();
     const pool = faqOnly ? snap.knowledge.filter((item) => item.category === "faq") : snap.knowledge;
     return bestKnowledgeMatch(pool, question, minScore, minShared);
+  }
+
+  /**
+   * Straight-from-the-data answer to a simple stock / price / hire question (see direct-answer.util), with the
+   * vehicle cards to show under it. Null when the question needs the AI.
+   */
+  async directAnswer(question: string): Promise<{ text: string; cards: VehicleCard[] } | null> {
+    const snap = await this.load();
+    const found = directAnswer(question, snap.vehicles, snap.hireVehicles);
+    if (!found) return null;
+    const cards = found.slugs.map((slug) => snap.cards.get(slug)).filter((c): c is VehicleCard => Boolean(c));
+    return { text: found.text, cards };
   }
 
   /** Contact line for the "AI unavailable" fallback message. */

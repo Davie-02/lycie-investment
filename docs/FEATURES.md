@@ -489,9 +489,13 @@ the next, and the model we used first was the slowest. Now:
    (at least two shared meaningful words, so unrelated questions never get a random answer) plus how to reach the team.
 8. **No cold start:** Lycie's knowledge is built when the server starts and refreshed in the background (an expired copy
    is served instantly while a new one is built), so the first visitor never waits for it.
+9. **Stock, price and hire questions need no AI:** "Do you have a Toyota Hilux?", "How much is a Corolla?", "What SUVs
+   do you have?" and "What can I hire?" are answered straight from your live vehicles and hire fleet, with vehicle cards
+   (about 0.01 s, always current, works when Google is down). Anything more involved — finance, importing, comparisons,
+   follow-up questions in a conversation — still goes to the AI. Sold and reserved vehicles are described as such.
 Measured on the real key: fresh answers 2.6–5 s (previously 4–12 s for the model alone); repeats 0.02 s; streamed
 answers finish in about 2.3 s and start showing words sooner.
-**Where:** `server/src/lycie/gemini.client.ts` (`race`, `thinkingFor`), `lycie/answer-cache.util.ts`, `lycie/knowledge-select.util.ts` (`bestKnowledgeMatch`), `lycie/lycie.service.ts`, `lycie/context.service.ts`.
+**Where:** `server/src/lycie/gemini.client.ts` (`race`, `thinkingFor`), `lycie/answer-cache.util.ts`, `lycie/knowledge-select.util.ts` (`bestKnowledgeMatch`), `lycie/direct-answer.util.ts`, `lycie/lycie.service.ts`, `lycie/context.service.ts`.
 **Check it:** Admin → Lycie AI → **AI connection check** tests every model live and shows which work, how fast, and why any fail.
 **The limit of what code can do:** on Google's free tier response times are erratic and daily quotas are small. Enabling billing on the Google AI project gives priority and removes the quotas; nothing else changes.
 **If it's slow:** check `GEMINI` warnings in the API log — a line like "model X failed (quota exhausted)" means that model's

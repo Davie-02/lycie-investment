@@ -118,6 +118,16 @@ export class LycieService {
       return this.log(question, exact.item.content, "faq", "answered");
     }
 
+    // A plain "do you have a Hilux?" / "what can I hire?" is a lookup in our own data — answer it directly.
+    // Only for a first question: in a conversation, words like "it" depend on earlier turns the lookup can't see.
+    if (!dto.history || dto.history.length === 0) {
+      const direct = await this.context.directAnswer(question);
+      if (direct) {
+        onDelta?.(direct.text);
+        return this.log(question, direct.text, "direct", "answered", direct.cards);
+      }
+    }
+
     if (!this.gemini.isConfigured) return (await answerFromKnowledge()) ?? this.log(question, fallback(), null, "unavailable");
 
     if (!this.perIp.allow(ip)) {
