@@ -120,8 +120,9 @@ async function bootstrap() {
     if (path === "/api/blog-posts/all") return false;
 
     return (
-      /^\/api\/(vehicles|hire-vehicles|site-content|testimonials|faq|blog-posts)(\/|$)/.test(path) ||
-      path === "/api/notices"
+      /^\/api\/(vehicles|hire-vehicles|site-content|testimonials|faq|blog-posts|deals)(\/|$)/.test(path) ||
+      path === "/api/notices" ||
+      path === "/api/pricing"
     );
   }
 

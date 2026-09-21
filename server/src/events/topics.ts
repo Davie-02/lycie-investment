@@ -21,6 +21,9 @@ export function topicsForWrite(path: string): string[] {
     case "reviews":
     case "likes":
       return [first];
+    // A new exchange rate or currency setting changes every price shown on the site.
+    case "pricing":
+      return ["pricing", "vehicles", "hire-vehicles"];
     // Bookings change which hire vehicles are available.
     case "hire-requests":
       return ["hire-vehicles"];

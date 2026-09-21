@@ -37,6 +37,11 @@ export class CreateHireVehicleDto {
   @Min(1)
   seats!: number;
 
+  /** Rates are entered in US dollars. Older listings may still be "MWK" until edited or bulk-converted. */
+  @IsIn(["USD", "MWK"])
+  @IsOptional()
+  currency?: string;
+
   @IsBoolean()
   @IsOptional()
   available?: boolean;

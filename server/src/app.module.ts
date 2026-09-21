@@ -30,6 +30,7 @@ import { LikesModule } from "./likes/likes.module";
 import { ContactAdminModule } from "./contact-admin/contact-admin.module";
 import { AdminToolsModule } from "./admin-tools/admin-tools.module";
 import { InsightsModule } from "./insights/insights.module";
+import { PricingModule } from "./pricing/pricing.module";
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { InsightsModule } from "./insights/insights.module";
     ContactAdminModule,
     AdminToolsModule,
     InsightsModule,
+    PricingModule,
   ],
   controllers: [HealthController],
   providers: [

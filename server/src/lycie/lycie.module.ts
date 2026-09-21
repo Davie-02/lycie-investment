@@ -5,6 +5,7 @@
  */
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { PricingModule } from "../pricing/pricing.module";
 import { LycieController } from "./lycie.controller";
 import { LycieService } from "./lycie.service";
 import { ContextService } from "./context.service";
@@ -21,7 +22,7 @@ import { WriterService } from "./writer.service";
 import { TestimonialIdeasService } from "./testimonial-ideas.service";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PricingModule],
   controllers: [LycieController, SuggestionsController, DocumentsController, WriterController],
   providers: [
     LycieService,

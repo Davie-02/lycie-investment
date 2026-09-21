@@ -36,6 +36,7 @@ import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import MyMessages from "@/components/customer/MyMessages";
 import "./customer.css";
+import Price from "@/components/common/Price";
 
 const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
   inquiry: "Vehicle inquiry",
@@ -395,7 +396,7 @@ export default function CustomerAccount() {
                                   ({new Date(request.hireDetails.pickupDate).toLocaleDateString()} →{" "}
                                   {new Date(request.hireDetails.returnDate).toLocaleDateString()},{" "}
                                   {request.hireDetails.days} day{request.hireDetails.days === 1 ? "" : "s"},{" "}
-                                  {formatCurrency(request.hireDetails.totalCost, request.hireDetails.currency)})
+                                  <Price amount={request.hireDetails.totalCost} currency={request.hireDetails.currency} layout="inline" />)
                                 </span>
                               </>
                             )}
@@ -449,7 +450,7 @@ export default function CustomerAccount() {
                           {vehicle.year} · {formatMileage(vehicle.mileageKm)}
                         </p>
                         <p className="mono customer-saved-vehicle__price">
-                          {formatCurrency(vehicle.price, vehicle.currency)}
+                          <Price amount={vehicle.price} currency={vehicle.currency} layout="inline" />
                         </p>
                       </div>
                       <SaveVehicleButton vehicleId={vehicle.id} className="customer-saved-vehicle__save" />

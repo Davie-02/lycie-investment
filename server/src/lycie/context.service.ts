@@ -1,6 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { PricingService } from "../pricing/pricing.service";
+import { priceText } from "../pricing/price-format";
 import { PUBLIC } from "../content-admin/content-state";
 import { HireInfo, LycieContext, VehicleInfo } from "./prompt.builder";
 import { KnowledgeItem, selectKnowledge } from "./knowledge-select.util";
@@ -50,7 +52,10 @@ export class ContextService {
   private snapshot: Snapshot | null = null;
   private loading: Promise<Snapshot> | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pricing: PricingService
+  ) {}
 
   invalidate(): void {
     this.snapshot = null;
@@ -149,6 +154,10 @@ export class ContextService {
         .filter(Boolean),
     };
 
+    // One exchange rate for the whole snapshot, so every price Lycie quotes is consistent.
+    const { rate, roundMwkTo } = await this.pricing.getEffectiveRate();
+    const money = (amount: number, currency: string) => priceText(amount, currency, rate, roundMwkTo);
+
     const cards = new Map<string, VehicleCard>();
     const vehicleInfo: VehicleInfo[] = vehicles.map((v) => {
       const label = `${v.make} ${v.model} ${v.year}`;
@@ -156,7 +165,7 @@ export class ContextService {
       return {
         slug: v.slug,
         label,
-        priceMwk: v.price,
+        priceText: money(v.price, v.currency),
         mileageKm: v.mileageKm,
         fuelType: v.fuelType,
         transmission: v.transmission,
@@ -184,8 +193,8 @@ export class ContextService {
       cards,
       hireVehicles: hire.map((h) => ({
         name: h.name,
-        dailyRate: h.dailyRate,
-        weeklyRate: h.weeklyRate,
+        dailyText: money(h.dailyRate, h.currency),
+        weeklyText: h.weeklyRate ? money(h.weeklyRate, h.currency) : null,
         seats: h.seats,
         transmission: h.transmission,
         fuelType: h.fuelType,

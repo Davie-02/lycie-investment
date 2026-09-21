@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFeaturedVehicles } from "@/services/vehicles.service";
-import { formatCurrency } from "@/utils/format";
+
 import Img from "@/components/common/Img";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import "./VehicleCarousel.css";
+import Price from "@/components/common/Price";
 
 const AUTO_ADVANCE_MS = 6000;
 const SWIPE_THRESHOLD_PX = 50;
@@ -125,7 +126,7 @@ export default function VehicleCarousel() {
             {vehicle.year} · {vehicle.transmission} · {vehicle.fuelType}
           </p>
           <p className="vehicle-carousel__price mono">
-            {formatCurrency(vehicle.price, vehicle.currency)}
+            <Price amount={vehicle.price} currency={vehicle.currency} layout="inline" />
           </p>
           <div className="vehicle-carousel__actions">
             <Link to={`/vehicles/${vehicle.slug}`} className="btn btn-primary">

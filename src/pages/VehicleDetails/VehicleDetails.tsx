@@ -15,8 +15,9 @@ import ReviewsSection from "@/components/reviews/ReviewsSection";
 import { recordVehicleView } from "@/services/reviews.service";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicleBySlug } from "@/services/vehicles.service";
-import { formatCurrency, formatMileage } from "@/utils/format";
+import { formatMileage } from "@/utils/format";
 import "./VehicleDetails.css";
+import Price from "@/components/common/Price";
 
 export default function VehicleDetails() {
   const { slug } = useParams<{ slug: string }>();
@@ -81,7 +82,7 @@ export default function VehicleDetails() {
                 {vehicle.transmission} · {vehicle.fuelType} · {formatMileage(vehicle.mileageKm)}
               </p>
               <p className="mono vehicle-details__heading-price">
-                {formatCurrency(vehicle.price, vehicle.currency)}
+                <Price amount={vehicle.price} currency={vehicle.currency} />
               </p>
             </div>
             <SaveVehicleButton vehicleId={vehicle.id} className="vehicle-details__save" />

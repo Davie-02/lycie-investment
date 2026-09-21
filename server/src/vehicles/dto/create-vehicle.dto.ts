@@ -32,6 +32,11 @@ export class CreateVehicleDto {
   @Min(0)
   price!: number;
 
+  /** Prices are entered in US dollars. Older listings may still be "MWK" until edited or bulk-converted. */
+  @IsOptional()
+  @IsIn(["USD", "MWK"])
+  currency?: string;
+
   @Type(() => Number)
   @IsInt()
   @Min(0)

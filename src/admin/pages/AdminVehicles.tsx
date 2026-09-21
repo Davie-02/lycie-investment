@@ -6,8 +6,9 @@ import ContentManager from "../components/ContentManager";
 import VehicleForm from "../components/VehicleForm";
 import { adminApi } from "../adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
-import { formatCurrency, formatMileage } from "@/utils/format";
+import { formatMileage } from "@/utils/format";
 import type { Vehicle } from "@/types/vehicle";
+import Price from "@/components/common/Price";
 
 export default function AdminVehicles() {
   const { currentUser } = useAdminAuth();
@@ -33,7 +34,7 @@ export default function AdminVehicles() {
             </>
           ),
         },
-        { header: "Price", render: (v) => <span className="mono">{formatCurrency(v.price, v.currency)}</span> },
+        { header: "Price", render: (v) => <span className="mono"><Price amount={v.price} currency={v.currency} layout="inline" /></span> },
         { header: "Mileage", render: (v) => <span className="mono">{formatMileage(v.mileageKm)}</span> },
         { header: "Stock", render: (v) => <span className={`admin-badge admin-badge--${v.status}`}>{v.status}</span> },
       ]}

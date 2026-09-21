@@ -5,10 +5,11 @@
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
-import { formatCurrency } from "@/utils/format";
+
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import { getBookingPhase, type Booking } from "@/types/booking";
 import "../components/AdminLayout.css";
+import Price from "@/components/common/Price";
 
 const PHASE_LABELS: Record<string, string> = {
   upcoming: "Upcoming",
@@ -73,7 +74,7 @@ export default function AdminBookings() {
                   </p>
                   <p className="text-muted">{booking.fullName}</p>
                   <p className="mono booking-card__total">
-                    {formatCurrency(booking.totalCost, booking.currency)}
+                    <Price amount={booking.totalCost} currency={booking.currency} layout="inline" />
                   </p>
                 </div>
               </Link>

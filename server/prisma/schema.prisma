@@ -288,7 +288,7 @@ model Vehicle {
   model        String
   year         Int
   price        Int
-  currency     String   @default("MWK")
+  currency     String   @default("USD")
   mileageKm    Int
   fuelType     String
   transmission String
@@ -340,7 +340,7 @@ model HireVehicle {
   name         String
   dailyRate    Int
   weeklyRate   Int?
-  currency     String   @default("MWK")
+  currency     String   @default("USD")
   transmission String
   fuelType     String
   seats        Int
@@ -446,7 +446,7 @@ model HireRequest {
   /// to claim a lower price. See src/hire-requests/hire-pricing.util.ts.
   days                   Int
   totalCost              Int
-  currency               String        @default("MWK")
+  currency               String        @default("USD")
   /// "pending" (just submitted, not yet reviewed) | "confirmed" (a real
   /// booking — this vehicle is committed for these dates) | "cancelled" |
   /// "completed" (vehicle actually confirmed returned by an admin — distinct

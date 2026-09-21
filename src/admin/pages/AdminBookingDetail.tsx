@@ -9,11 +9,12 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { useCountdown } from "../hooks/useCountdown";
-import { formatCurrency } from "@/utils/format";
+
 import { getBookingPhase, type Booking } from "@/types/booking";
 import { ApiError } from "@/services/http";
 import ContactCell from "../components/ContactCell";
 import "../components/AdminLayout.css";
+import Price from "@/components/common/Price";
 
 function CountdownDisplay({ target, label, countingUp }: { target: Date; label: string; countingUp?: boolean }) {
   const countdown = useCountdown(target);
@@ -138,7 +139,7 @@ export default function AdminBookingDetail() {
             <div className="vehicle-specs__row"><dt>Pickup</dt><dd className="mono">{pickupDate.toLocaleString()}</dd></div>
             <div className="vehicle-specs__row"><dt>Return</dt><dd className="mono">{returnDate.toLocaleString()}</dd></div>
             <div className="vehicle-specs__row"><dt>Days</dt><dd className="mono">{booking.days}</dd></div>
-            <div className="vehicle-specs__row"><dt>Total</dt><dd className="mono">{formatCurrency(booking.totalCost, booking.currency)}</dd></div>
+            <div className="vehicle-specs__row"><dt>Total</dt><dd className="mono"><Price amount={booking.totalCost} currency={booking.currency} layout="inline" /></dd></div>
           </dl>
           {booking.additionalRequirements && (
             <p className="text-muted booking-detail__notes">

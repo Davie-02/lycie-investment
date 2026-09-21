@@ -9,6 +9,8 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import ImageUploader from "./ImageUploader";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
+import { usePricing } from "@/context/PricingContext";
+import { toUsd, usdHint } from "@/utils/price";
 import type { Vehicle } from "@/types/vehicle";
 import AiWriteButton from "./AiWriteButton";
 
@@ -37,7 +39,7 @@ type FormValues = {
   featuresText: string;
 };
 
-function toFormValues(vehicle: Vehicle | null): FormValues {
+function toFormValues(vehicle: Vehicle | null, rate: number | null): FormValues {
   if (!vehicle) {
     return {
       slug: "",
@@ -63,7 +65,8 @@ function toFormValues(vehicle: Vehicle | null): FormValues {
     make: vehicle.make,
     model: vehicle.model,
     year: String(vehicle.year),
-    price: String(vehicle.price),
+    // Older listings were entered in kwacha: show them as dollars so saving converts them.
+    price: String(Math.round(toUsd(vehicle.price, vehicle.currency, rate) ?? vehicle.price)),
     mileageKm: String(vehicle.mileageKm),
     fuelType: vehicle.fuelType,
     transmission: vehicle.transmission,
@@ -79,7 +82,8 @@ function toFormValues(vehicle: Vehicle | null): FormValues {
 }
 
 export default function VehicleForm({ vehicle, onSaved, onCancel }: VehicleFormProps) {
-  const [values, setValues] = useState<FormValues>(toFormValues(vehicle));
+  const { rate, roundTo } = usePricing();
+  const [values, setValues] = useState<FormValues>(toFormValues(vehicle, rate));
   const [images, setImages] = useState<string[]>(vehicle?.images ?? []);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +109,7 @@ export default function VehicleForm({ vehicle, onSaved, onCancel }: VehicleFormP
       model: values.model,
       year: Number(values.year),
       price: Number(values.price),
+      currency: "USD",
       mileageKm: Number(values.mileageKm),
       fuelType: values.fuelType,
       transmission: values.transmission,
@@ -152,7 +157,15 @@ export default function VehicleForm({ vehicle, onSaved, onCancel }: VehicleFormP
         <FormField id="make" label="Make" required value={values.make} onChange={handleChange("make")} />
         <FormField id="model" label="Model" required value={values.model} onChange={handleChange("model")} />
         <FormField id="year" label="Year" type="number" required value={values.year} onChange={handleChange("year")} />
-        <FormField id="price" label="Price (MWK)" type="number" required value={values.price} onChange={handleChange("price")} />
+        <FormField
+          id="price"
+          label="Price (USD)"
+          type="number"
+          required
+          value={values.price}
+          onChange={handleChange("price")}
+          footer={<p className="form-field__hint">{usdHint(values.price, rate, roundTo)}</p>}
+        />
         <FormField id="mileageKm" label="Mileage (km)" type="number" required value={values.mileageKm} onChange={handleChange("mileageKm")} />
 
         <FormField id="fuelType" label="Fuel Type" as="select" value={values.fuelType} onChange={handleChange("fuelType")}>
@@ -197,7 +210,7 @@ export default function VehicleForm({ vehicle, onSaved, onCancel }: VehicleFormP
                   ["Make", values.make],
                   ["Model", values.model],
                   ["Year", values.year],
-                  ["Price (MWK)", values.price],
+                  ["Price (USD)", values.price],
                   ["Mileage (km)", values.mileageKm],
                   ["Fuel", values.fuelType],
                   ["Transmission", values.transmission],

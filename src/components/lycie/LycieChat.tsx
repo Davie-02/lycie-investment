@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { getLycieStatus, sendLycieFeedback, streamLycieMessage } from "@/services/lycie.service";
 import RichText from "./RichText";
 import Img from "@/components/common/Img";
-import { formatCurrency } from "@/utils/format";
+
 import type { LycieVehicleCard } from "@/types/lycie";
 import "./LycieChat.css";
+import Price from "@/components/common/Price";
 
 interface ChatMessage {
   id: number;
@@ -236,7 +237,7 @@ export default function LycieChat() {
                           {vehicle.image && <Img src={vehicle.image} alt="" sizes="76px" />}
                           <span className="lycie-card__body">
                             <strong>{vehicle.label}</strong>
-                            <span className="mono">{formatCurrency(vehicle.price, vehicle.currency)}</span>
+                            <span className="mono"><Price amount={vehicle.price} currency={vehicle.currency} layout="inline" /></span>
                           </span>
                         </Link>
                       </li>

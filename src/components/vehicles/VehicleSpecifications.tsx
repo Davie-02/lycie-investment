@@ -3,7 +3,8 @@
  * type, colour, etc.) drawn from the vehicle record.
  */
 import type { Vehicle } from "@/types/vehicle";
-import { formatCurrency, formatMileage } from "@/utils/format";
+import { formatMileage } from "@/utils/format";
+import { usePricing } from "@/context/PricingContext";
 import "./VehicleSpecifications.css";
 
 interface VehicleSpecificationsProps {
@@ -11,11 +12,12 @@ interface VehicleSpecificationsProps {
 }
 
 export default function VehicleSpecifications({ vehicle }: VehicleSpecificationsProps) {
+  const { label } = usePricing();
   const specs: [string, string][] = [
     ["Make", vehicle.make],
     ["Model", vehicle.model],
     ["Year", String(vehicle.year)],
-    ["Price", formatCurrency(vehicle.price, vehicle.currency)],
+    ["Price", label(vehicle.price, vehicle.currency)],
     ["Mileage", formatMileage(vehicle.mileageKm)],
     ["Fuel", vehicle.fuelType],
     ["Transmission", vehicle.transmission],

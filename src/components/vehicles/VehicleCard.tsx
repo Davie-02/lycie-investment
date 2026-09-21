@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
-import { formatCurrency, formatMileage } from "@/utils/format";
+import { formatMileage } from "@/utils/format";
 import ImageSlider from "@/components/common/ImageSlider";
 import SaveVehicleButton from "./SaveVehicleButton";
 import "./VehicleCard.css";
+import Price from "@/components/common/Price";
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -38,7 +39,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         <p className="text-muted mono vehicle-card__meta">
           {vehicle.year} · {vehicle.transmission} · {vehicle.fuelType}
         </p>
-        <p className="mono vehicle-card__price">{formatCurrency(vehicle.price, vehicle.currency)}</p>
+        <p className="mono vehicle-card__price"><Price amount={vehicle.price} currency={vehicle.currency} /></p>
         <p className="text-muted vehicle-card__mileage">{formatMileage(vehicle.mileageKm)}</p>
 
         <Link to={`/vehicles/${vehicle.slug}`} className="btn btn-secondary vehicle-card__cta">

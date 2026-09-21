@@ -9,6 +9,8 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import ImageUploader from "./ImageUploader";
 import { adminApi } from "../adminApi";
 import { ApiError } from "@/services/http";
+import { usePricing } from "@/context/PricingContext";
+import { toUsd, usdHint } from "@/utils/price";
 import type { HireVehicle } from "@/types/vehicle";
 
 interface HireVehicleFormProps {
@@ -28,7 +30,7 @@ type FormValues = {
   available: boolean;
 };
 
-function toFormValues(vehicle: HireVehicle | null): FormValues {
+function toFormValues(vehicle: HireVehicle | null, rate: number | null): FormValues {
   if (!vehicle) {
     return {
       slug: "",
@@ -44,8 +46,9 @@ function toFormValues(vehicle: HireVehicle | null): FormValues {
   return {
     slug: vehicle.slug,
     name: vehicle.name,
-    dailyRate: String(vehicle.dailyRate),
-    weeklyRate: vehicle.weeklyRate ? String(vehicle.weeklyRate) : "",
+    // Older listings were entered in kwacha: show them as dollars so saving converts them.
+    dailyRate: String(Math.round(toUsd(vehicle.dailyRate, vehicle.currency, rate) ?? vehicle.dailyRate)),
+    weeklyRate: vehicle.weeklyRate ? String(Math.round(toUsd(vehicle.weeklyRate, vehicle.currency, rate) ?? vehicle.weeklyRate)) : "",
     transmission: vehicle.transmission,
     fuelType: vehicle.fuelType,
     seats: String(vehicle.seats),
@@ -54,7 +57,8 @@ function toFormValues(vehicle: HireVehicle | null): FormValues {
 }
 
 export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehicleFormProps) {
-  const [values, setValues] = useState<FormValues>(toFormValues(vehicle));
+  const { rate, roundTo } = usePricing();
+  const [values, setValues] = useState<FormValues>(toFormValues(vehicle, rate));
   // The whole gallery (first photo = cover). Older vehicles only have a single `image`.
   const [image, setImage] = useState<string[]>(vehicle?.images?.length ? vehicle.images : vehicle?.image ? [vehicle.image] : []);
   const [isSaving, setIsSaving] = useState(false);
@@ -79,6 +83,7 @@ export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehi
       slug: values.slug,
       name: values.name,
       dailyRate: Number(values.dailyRate),
+      currency: "USD",
       weeklyRate: values.weeklyRate ? Number(values.weeklyRate) : undefined,
       transmission: values.transmission,
       fuelType: values.fuelType,
@@ -119,8 +124,8 @@ export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehi
           placeholder="toyota-corolla-hire"
         />
         <FormField id="name" label="Name" required value={values.name} onChange={handleChange("name")} />
-        <FormField id="dailyRate" label="Daily Rate (MWK)" type="number" required value={values.dailyRate} onChange={handleChange("dailyRate")} />
-        <FormField id="weeklyRate" label="Weekly Rate (MWK, optional)" type="number" value={values.weeklyRate} onChange={handleChange("weeklyRate")} />
+        <FormField id="dailyRate" label="Daily Rate (USD)" type="number" required value={values.dailyRate} onChange={handleChange("dailyRate")} footer={<p className="form-field__hint">{usdHint(values.dailyRate, rate, roundTo)}</p>} />
+        <FormField id="weeklyRate" label="Weekly Rate (USD, optional)" type="number" value={values.weeklyRate} onChange={handleChange("weeklyRate")} footer={<p className="form-field__hint">{usdHint(values.weeklyRate, rate, roundTo)}</p>} />
 
         <FormField id="transmission" label="Transmission" as="select" value={values.transmission} onChange={handleChange("transmission")}>
           <option value="Automatic">Automatic</option>

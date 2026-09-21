@@ -1,8 +1,9 @@
 import type { HireVehicle } from "@/types/vehicle";
-import { formatCurrency } from "@/utils/format";
+
 import ImageSlider from "@/components/common/ImageSlider";
 import LikeButton from "@/components/common/LikeButton";
 import "@/components/vehicles/VehicleCard.css";
+import Price from "@/components/common/Price";
 
 interface HireVehicleCardProps {
   vehicle: HireVehicle;
@@ -37,11 +38,11 @@ export default function HireVehicleCard({ vehicle, onRequestHire }: HireVehicleC
           {vehicle.transmission} · {vehicle.seats} Seats · {vehicle.fuelType}
         </p>
         <p className="mono vehicle-card__price">
-          From {formatCurrency(vehicle.dailyRate, vehicle.currency)} / day
+          From <Price amount={vehicle.dailyRate} currency={vehicle.currency} layout="inline" /> / day
         </p>
         {vehicle.weeklyRate && (
           <p className="text-muted vehicle-card__mileage">
-            {formatCurrency(vehicle.weeklyRate, vehicle.currency)} / week
+            <Price amount={vehicle.weeklyRate} currency={vehicle.currency} layout="inline" /> / week
           </p>
         )}
 

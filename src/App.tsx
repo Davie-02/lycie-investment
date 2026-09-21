@@ -5,6 +5,7 @@
  */
 import { BrowserRouter } from "react-router-dom";
 import { SiteContentProvider } from "@/context/SiteContentContext";
+import { PricingProvider } from "@/context/PricingContext";
 import { NoticesProvider } from "@/context/NoticesContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SavedVehiclesProvider } from "@/context/SavedVehiclesContext";
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <SiteContentProvider>
+        <PricingProvider>
         <NoticesProvider>
           <CustomerAuthProvider>
             <SavedVehiclesProvider>
@@ -24,6 +26,7 @@ export default function App() {
             </SavedVehiclesProvider>
           </CustomerAuthProvider>
         </NoticesProvider>
+        </PricingProvider>
       </SiteContentProvider>
     </BrowserRouter>
   );

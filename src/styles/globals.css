@@ -502,3 +502,25 @@ p {
     transition: none;
   }
 }
+
+/* ---- Prices: dollars first, kwacha equivalent on a smaller, quieter line ---- */
+.price__main {
+  display: block;
+}
+
+.price__approx {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+/* One-line version (tables, sentences): the kwacha part flows after the dollars. */
+.price--inline .price__main,
+.price--inline .price__approx {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+}

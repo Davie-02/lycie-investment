@@ -10,10 +10,11 @@ import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitHireRequest } from "@/services/inquiries.service";
 import { calculateHireCost } from "@/utils/hirePricing";
-import { formatCurrency } from "@/utils/format";
+
 import type { HireRequest } from "@/types/requests";
 import type { HireVehicle } from "@/types/vehicle";
 import PreferredContactSelect, { type PreferredContact } from "./PreferredContactSelect";
+import Price from "@/components/common/Price";
 
 type FormValues = {
   fullName: string;
@@ -143,7 +144,7 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
             {estimate.days} day{estimate.days === 1 ? "" : "s"}
             {estimate.days >= 7 && vehicle.weeklyRate ? " (weekly rate applied automatically where cheaper)" : ""}
           </span>
-          <strong className="mono">{formatCurrency(estimate.totalCost, vehicle.currency)}</strong>
+          <strong className="mono"><Price amount={estimate.totalCost} currency={vehicle.currency} layout="inline" /></strong>
         </div>
       )}
       <p className="text-muted hire-form__estimate-note">

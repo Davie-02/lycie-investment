@@ -12,7 +12,7 @@ const context: LycieContext = {
     {
       slug: "toyota-hilux-2022",
       label: "Toyota Hilux 2022",
-      priceMwk: 45000000,
+      priceText: "USD 26,000 (≈ MWK 45,500,000)",
       mileageKm: 32000,
       fuelType: "Diesel",
       transmission: "Automatic",
@@ -30,7 +30,7 @@ describe("buildSystemPrompt", () => {
 
   it("includes live inventory with slugs and formatted prices", () => {
     expect(prompt).toContain("slug=toyota-hilux-2022");
-    expect(prompt).toContain("MWK 45,000,000");
+    expect(prompt).toContain("USD 26,000 (≈ MWK 45,500,000)");
   });
 
   it("includes admin-fed knowledge", () => {

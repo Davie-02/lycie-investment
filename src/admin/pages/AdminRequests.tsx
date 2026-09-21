@@ -6,6 +6,7 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import { ApiError } from "@/services/http";
 import ContactCell from "../components/ContactCell";
 import "../components/AdminLayout.css";
+import Price from "@/components/common/Price";
 
 type TabKey = "inquiries" | "import" | "clearing" | "hire" | "contact";
 type RequestStatus = "new" | "contacted" | "closed";
@@ -480,7 +481,7 @@ function HireRequestsTable() {
               <td>{new Date(row.pickupDate).toLocaleDateString()}</td>
               <td>{new Date(row.returnDate).toLocaleDateString()}</td>
               <td className="mono">{row.days}</td>
-              <td className="mono">{row.currency} {row.totalCost.toLocaleString()}</td>
+              <td className="mono"><Price amount={row.totalCost} currency={row.currency} layout="inline" /></td>
               <td>
                 <span
                   className={`admin-badge ${
