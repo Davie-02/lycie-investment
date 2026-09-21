@@ -1,4 +1,5 @@
 import { Controller, Get, NotFoundException, Param, Res } from "@nestjs/common";
+import { Readable } from "stream";
 import { SkipThrottle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { UploadsService } from "./uploads.service";
@@ -26,7 +27,14 @@ export class MediaController {
       throw new NotFoundException();
     }
 
-    const file = await this.uploads.readPrivateObject(filename);
+    const isResizedCopy = /-w\d+\.webp$/.test(filename);
+    let file = await this.uploads.readPrivateObject(filename, isResizedCopy);
+
+    // An older photo has no resized copy yet: create it from the original (and keep it) instead of 404ing.
+    if (!file && isResizedCopy) {
+      const created = await this.uploads.createMissingVariant(filename);
+      if (created) file = { body: Readable.from(created), contentType: "image/webp", contentLength: created.length };
+    }
     if (!file) throw new NotFoundException();
 
     response.setHeader("Content-Type", file.contentType);

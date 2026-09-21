@@ -208,18 +208,55 @@ describe("GeminiClient.generateStream", () => {
 });
 
 
-describe("GeminiClient when every model is cooling down", () => {
-  it("still tries the one that recovers soonest instead of failing instantly", async () => {
-    const responses = [fail(503), fail(503), fail(503), ok("recovered")];
-    const calls: string[] = [];
-    const fetchFn = jest.fn(async (url: string | URL | Request, _init?: RequestInit) => {
-      calls.push(String(url));
-      return responses.shift() as Response;
-    });
-    const client = new GeminiClient(fetchFn as unknown as typeof fetch, config);
-    await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError); // all three fail and cool down
-    const retry = await client.generate("sys", turns); // no model is "ready", but one is still attempted
-    expect(retry.text).toBe("recovered");
+describe("GeminiClient when every model is briefly overloaded", () => {
+  it("makes one more pass instead of failing, and recovers", async () => {
+    // Three models all answer 503 (a brief overload), then the first is healthy again.
+    const { client, calls } = clientWith([fail(503), fail(503), fail(503), ok("recovered")]);
+    const result = await client.generate("sys", turns);
+    expect(result.text).toBe("recovered");
     expect(calls).toHaveLength(4);
+  });
+
+  it("gives up after that single extra pass", async () => {
+    const { client, calls } = clientWith([fail(503), fail(503), fail(503), fail(503)]);
+    await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError);
+    // Pass 1 tries all three; pass 2 (all are resting) tries only the one that recovers soonest. Never a third pass.
+    expect(calls).toHaveLength(4);
+  });
+
+  it("does NOT retry quota, missing-model or other non-overload failures", async () => {
+    const { client, calls } = clientWith([fail(429), fail(404), fail(400)]);
+    await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError);
+    expect(calls).toHaveLength(3);
+  });
+
+  it("streams the same way: one more pass after a full overload", async () => {
+    const sse = (text: string) => new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`, { status: 200 });
+    const { client, calls } = clientWith([fail(503), fail(503), fail(503), sse("hello")]);
+    const seen: string[] = [];
+    const result = await client.generateStream("sys", turns, (d) => seen.push(d));
+    expect(result.text).toBe("hello");
+    expect(seen.join("")).toBe("hello");
+    expect(calls).toHaveLength(4);
+  });
+});
+
+describe("GeminiClient last-resort patience", () => {
+  it("lets the final model take longer than the normal first-word deadline", async () => {
+    const slowConfig: GeminiConfig = { ...config, models: ["fast", "slow"], firstTokenTimeoutMs: 30, lastResortFirstTokenTimeoutMs: 400 };
+    let call = 0;
+    const fetchFn = jest.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      call++;
+      // The first model never answers in time; the last one answers after 150ms — far past 30ms.
+      const delay = call === 1 ? 5_000 : 150;
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delay);
+        init?.signal?.addEventListener("abort", () => { clearTimeout(timer); reject(Object.assign(new Error("aborted"), { name: "AbortError" })); });
+      });
+      return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: "slow but fine" }] } }] })}\n\n`, { status: 200 });
+    });
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, slowConfig);
+    const result = await client.generateStream("sys", turns, () => undefined);
+    expect(result).toEqual({ text: "slow but fine", model: "slow" });
   });
 });

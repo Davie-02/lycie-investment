@@ -16,6 +16,14 @@ export interface GeminiConfig {
   firstTokenTimeoutMs: number;
   /** Streaming: hard cap for one whole streamed answer. */
   streamTimeoutMs: number;
+  /**
+   * Extra first-word patience for the LAST model in the chain. It is the last resort and is
+   * often the slowest (measured ~13s), so cutting it off at the normal deadline made the
+   * final fallback pointless. Defaults to 15s.
+   */
+  lastResortFirstTokenTimeoutMs?: number;
+  /** Pause before one more pass when every model just failed with a brief server overload. Default 1.5s. */
+  retryDelayMs?: number;
 }
 
 // Order matters: measured first-word times were ~2.5s (3.8-flash, when not overloaded), ~2.2s
@@ -40,9 +48,11 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     // A model slower than this is abandoned for the next (faster) one — a
     // customer waiting 15s+ for a chat reply is worse than a lighter model's answer.
     perAttemptTimeoutMs: 10_000,
-    totalBudgetMs: 25_000,
+    totalBudgetMs: 32_000,
     firstTokenTimeoutMs: 6_000,
     streamTimeoutMs: 40_000,
+    lastResortFirstTokenTimeoutMs: 15_000,
+    retryDelayMs: 1_500,
   };
 }
 
@@ -124,27 +134,44 @@ export class GeminiClient {
     const startedAt = this.now();
     let lastError = "no model available";
 
-    for (const model of this.candidates()) {
-      const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
-      if (remaining < 2_000) break;
+    // Two passes at most: a second one only when every model failed with a BRIEF overload (5xx),
+    // which is usually over within a second or two. Quota, key and blocked errors never retry.
+    for (let pass = 0; pass < 2; pass++) {
+      let overloaded = false;
 
-      try {
-        const text = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
-        return { text, model };
-      } catch (error) {
-        if (error instanceof GeminiBlockedError) throw error;
-        if (error instanceof KeyError) {
-          this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
-          throw new GeminiUnavailableError("The AI provider rejected the API key.");
+      for (const model of this.candidates()) {
+        const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
+        if (remaining < 2_000) break;
+
+        try {
+          const text = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
+          return { text, model };
+        } catch (error) {
+          if (error instanceof GeminiBlockedError) throw error;
+          if (error instanceof KeyError) {
+            this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
+            throw new GeminiUnavailableError("The AI provider rejected the API key.");
+          }
+          const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
+          this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
+          lastError = `${model}: ${failure.message}`;
+          overloaded = failure.message.startsWith("server error");
+          this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
         }
-        const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
-        this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
-        lastError = `${model}: ${failure.message}`;
-        this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
       }
+
+      if (!overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
     }
 
     throw new GeminiUnavailableError(lastError);
+  }
+
+  /** Waits briefly, then says whether there is still time in the budget for another pass. */
+  private async pauseBeforeRetry(startedAt: number): Promise<boolean> {
+    const delay = this.config.retryDelayMs ?? 0;
+    if (this.config.totalBudgetMs - (this.now() - startedAt) < delay + 4_000) return false;
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    return true;
   }
 
   private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions): Promise<string> {
@@ -222,42 +249,56 @@ export class GeminiClient {
     const startedAt = this.now();
     let lastError = "no model available";
 
-    for (const model of this.candidates()) {
-      if (this.config.totalBudgetMs - (this.now() - startedAt) < 2_000) break;
+    for (let pass = 0; pass < 2; pass++) {
+      let overloaded = false;
+      const chain = this.candidates();
 
-      let started = false;
-      let text = "";
-      try {
-        await this.streamModel(model, system, turns, (delta) => {
-          started = true;
-          text += delta;
-          onText(delta);
-        });
-        return { text, model };
-      } catch (error) {
-        if (started && text) {
-          // Words are already on the customer's screen — keep them.
-          this.logger.warn(`Gemini model ${model} stopped mid-answer (${error instanceof Error ? error.message : error}).`);
+      for (const [index, model] of chain.entries()) {
+        if (this.config.totalBudgetMs - (this.now() - startedAt) < 2_000) break;
+
+        // The final model in the chain gets longer to say its first word (see the config note).
+        const isLastResort = chain.length > 1 && index === chain.length - 1;
+        const firstWordMs = isLastResort
+          ? Math.max(this.config.firstTokenTimeoutMs, this.config.lastResortFirstTokenTimeoutMs ?? 0)
+          : this.config.firstTokenTimeoutMs;
+
+        let started = false;
+        let text = "";
+        try {
+          await this.streamModel(model, system, turns, (delta) => {
+            started = true;
+            text += delta;
+            onText(delta);
+          }, firstWordMs);
           return { text, model };
+        } catch (error) {
+          if (started && text) {
+            // Words are already on the customer's screen — keep them.
+            this.logger.warn(`Gemini model ${model} stopped mid-answer (${error instanceof Error ? error.message : error}).`);
+            return { text, model };
+          }
+          if (error instanceof GeminiBlockedError) throw error;
+          if (error instanceof KeyError) {
+            this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
+            throw new GeminiUnavailableError("The AI provider rejected the API key.");
+          }
+          const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
+          this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
+          lastError = `${model}: ${failure.message}`;
+          overloaded = failure.message.startsWith("server error");
+          this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
         }
-        if (error instanceof GeminiBlockedError) throw error;
-        if (error instanceof KeyError) {
-          this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
-          throw new GeminiUnavailableError("The AI provider rejected the API key.");
-        }
-        const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
-        this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
-        lastError = `${model}: ${failure.message}`;
-        this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
       }
+
+      if (!overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
     }
     throw new GeminiUnavailableError(lastError);
   }
 
-  private async streamModel(model: string, system: string, turns: ChatTurn[], onDelta: (delta: string) => void): Promise<void> {
+  private async streamModel(model: string, system: string, turns: ChatTurn[], onDelta: (delta: string) => void, firstTokenTimeoutMs = this.config.firstTokenTimeoutMs): Promise<void> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
     const controller = new AbortController();
-    let timer = setTimeout(() => controller.abort(), this.config.firstTokenTimeoutMs);
+    let timer = setTimeout(() => controller.abort(), firstTokenTimeoutMs);
     const overall = setTimeout(() => controller.abort(), this.config.streamTimeoutMs);
 
     try {
@@ -356,7 +397,8 @@ export class GeminiClient {
       return new ModelError("quota exhausted", perDay ? 60 * MINUTE : 5 * MINUTE);
     }
     if (status === 404) return new ModelError("model not available to this key", 6 * 60 * MINUTE);
-    if (status >= 500) return new ModelError(`server error ${status}`, MINUTE);
+    // Server overloads are usually brief: rest the model for 20s, not a full minute.
+    if (status >= 500) return new ModelError(`server error ${status}`, 20_000);
     if (status === 401 || status === 403 || /API_KEY_INVALID|API key not valid/i.test(body)) {
       return new KeyError(`HTTP ${status}`);
     }

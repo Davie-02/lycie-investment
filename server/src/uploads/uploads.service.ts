@@ -67,9 +67,14 @@ export class UploadsService {
     return this.s3Client !== null && this.privateBucket;
   }
 
-  /** Reads one uploaded file from the private bucket. Returns null if it doesn't exist. */
+  /**
+   * Reads one uploaded file from the private bucket. Returns null if it doesn't exist.
+   * `quiet` is for resized copies (…-w960.webp): older photos never had them, so a miss is
+   * expected and gets created on demand — not something to warn about.
+   */
   async readPrivateObject(
-    filename: string
+    filename: string,
+    quiet = false
   ): Promise<{ body: Readable; contentType: string; contentLength?: number } | null> {
     if (!this.s3Client || !this.bucket) return null;
     try {
@@ -87,13 +92,55 @@ export class UploadsService {
       const name = (error as { name?: string }).name;
       if (name === "NoSuchKey" || name === "NotFound") {
         // A 404 here means the file isn't in the bucket under this exact name.
-        this.logger.warn(`${filename} not found in bucket "${this.bucket}" (${name}).`);
+        if (!quiet) this.logger.warn(`${filename} not found in bucket "${this.bucket}" (${name}).`);
         return null;
       }
       const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
       this.logger.error(`Reading ${filename} from storage failed: ${name} (HTTP ${status ?? "?"})`);
       throw error;
     }
+  }
+
+  /** Copies still being made, so ten simultaneous requests for the same missing size do the work once. */
+  private readonly pendingVariants = new Map<string, Promise<Buffer | null>>();
+
+  /**
+   * Photos uploaded before resized copies existed only have the original. When a browser asks
+   * for "<id>-w960.webp" that doesn't exist yet, make it from the original, save it for next
+   * time, and return it. Returns null when the original itself is missing (a real 404).
+   * After the first visit each old photo therefore downloads at a fraction of its size.
+   */
+  createMissingVariant(variantName: string): Promise<Buffer | null> {
+    const existing = this.pendingVariants.get(variantName);
+    if (existing) return existing;
+
+    const work = this.buildVariant(variantName).finally(() => this.pendingVariants.delete(variantName));
+    this.pendingVariants.set(variantName, work);
+    return work;
+  }
+
+  private async buildVariant(variantName: string): Promise<Buffer | null> {
+    const match = /^(.+)-w(\d+)\.webp$/.exec(variantName);
+    if (!match) return null;
+    const width = Number(match[2]);
+    if (!IMAGE_VARIANT_WIDTHS.includes(width)) return null;
+
+    const original = await this.readPrivateObject(`${match[1]}.webp`);
+    if (!original) return null;
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of original.body) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const resized = await sharp(Buffer.concat(chunks), { limitInputPixels: 50_000_000 })
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: 78 })
+      .toBuffer();
+
+    // Saving is best-effort: if it fails the photo is still served, just rebuilt next time.
+    await this.store(variantName, resized).catch((error) =>
+      this.logger.warn(`Could not save ${variantName}: ${error instanceof Error ? error.message : error}`)
+    );
+    this.logger.log(`Created missing size ${variantName} from its original.`);
+    return resized;
   }
 
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
