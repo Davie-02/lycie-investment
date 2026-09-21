@@ -35,7 +35,9 @@ export async function streamLycieMessage(
   const { fetchWithCsrf } = await import("./csrf");
   const { ApiError } = await import("./http");
   const { parseErrorMessage } = await import("@/utils/apiError");
-  const base = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
+  // Lycie's streamed answers connect straight to the API (see vite.config.ts): a long-lived,
+  // anonymous request that gains nothing from going through the site's proxy.
+  const base = import.meta.env.VITE_STREAM_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 
   let response: Response;
   try {

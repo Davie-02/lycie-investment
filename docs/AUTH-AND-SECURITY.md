@@ -62,25 +62,36 @@ Now the token is **signed**: `nonce.expiry.HMAC(JWT_SECRET)`. The API just check
 signature — no cookie involved. Requests using a Bearer header skip CSRF (a forged
 cross-site request cannot set that header).
 
-### Optional upgrade: serve the API from the website's own domain
+### Same-domain API (enabled)
 
-Making cookies first-party removes the need for the fallback entirely (and is the most
-secure setup). Nothing here is required — the fallback already makes logins work.
+The production site now talks to the API through **its own address**, so the session
+cookie is first-party and works in every browser; the token fallback above stays as a
+safety net for anything unusual.
 
-1. In `vercel.json`, add **before** the existing catch-all rewrite (replace the URL with
-   your Render API address):
-   ```json
-   { "source": "/api/:path*", "destination": "https://YOUR-API.onrender.com/api/:path*" },
-   { "source": "/uploads/:path*", "destination": "https://YOUR-API.onrender.com/uploads/:path*" }
-   ```
-2. In Vercel set `VITE_API_BASE_URL` to `/api` and redeploy.
-3. In Render set `FRONTEND_URL` to your Vercel address and `COOKIE_SAMESITE=lax`.
-4. Check `https://your-site/api/health` answers, then sign in and check the cookie in
-   browser dev tools shows your **site's** domain.
+How it is wired:
 
-Note: the live-update stream (`/api/events`) and Lycie's streaming answers pass through
-Vercel's proxy too; if either ever seems delayed, point `VITE_API_BASE_URL` back at the
-Render address (the fallback covers sign-in).
+- `vercel.json` forwards `/api/*` and `/uploads/*` on the website to
+  `https://lycie-investment-api.onrender.com` (before the catch-all page rule).
+- `vite.config.ts`: when building on Vercel, `VITE_API_BASE_URL` becomes `/api`
+  automatically — no Vercel dashboard change needed. Set **`VITE_DIRECT_API=true`** in
+  Vercel to switch back to calling the API's own address.
+- Two long-lived anonymous streams (live updates, Lycie's typing answers) deliberately
+  still call the API directly (`VITE_STREAM_BASE_URL`, set by the same build step).
+- `render.yaml` sets `TRUST_PROXY=2`: requests now pass through Vercel *and* Render, and
+  the API must skip both proxies to see each visitor's real address. With `1`, every
+  visitor would look like Vercel's servers and the per-visitor rate limits (login,
+  forms, chat) would throttle everyone together. **If you switch the same-domain setup
+  off, set it back to `1`.**
+- Trade-off worth knowing: with two trusted proxies, someone who calls the API's Render
+  address directly (not through your site) can forge their address and slip past the
+  per-IP rate limits. Account lockout (5 wrong passwords), strong passwords and optional
+  two-step verification still protect sign-in.
+- If the API's Render address ever changes, update the two destinations in `vercel.json`.
+
+Check it works: open `https://<your-site>/api/health` — it should answer
+`{"status":"ok"}` from your own domain. After signing in, browser dev tools →
+Application → Cookies should list `lycie_customer_session` (or `lycie_admin_session`)
+under **your site's** domain, and `localStorage` should have no `lycie_*_token`.
 
 ## "Keep me signed in"
 
@@ -212,8 +223,10 @@ and not expired; Facebook's token against Facebook's Graph API. Then
 | `JWT_SECRET` | *(required)* | signs sessions **and** CSRF tokens; changing it signs everyone out |
 | `JWT_EXPIRES_IN` | `2h` | normal session length |
 | `REMEMBER_ME_EXPIRES_IN` | `30d` | "Keep me signed in" length |
-| `COOKIE_SAMESITE` | `none` in production, `lax` in dev | `lax`/`strict` for the same-domain setup |
+| `COOKIE_SAMESITE` | `none` in production, `lax` in dev | optional; the default works for the same-domain setup too |
 | `FRONTEND_URL` | `http://localhost:5173` | the only origin CORS allows; used in email links |
+| `TRUST_PROXY` | `2` on Render | number of proxies in front of the API (Vercel + Render); see above |
+| `VITE_DIRECT_API` (Vercel) | unset | `true` = call the API directly instead of through the site's domain |
 | `GOOGLE_CLIENT_ID` | unset | enables Google button |
 | `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | unset | enables Facebook button |
 | `EMAIL_*`, `RESEND_API_KEY` / `BREVO_API_KEY` | unset | confirmation and reset emails (see DEPLOYMENT.md) |

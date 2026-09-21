@@ -27,11 +27,14 @@ services:
         value: production
       - key: FRONTEND_URL
         sync: false # set this to your deployed frontend URL after it exists
-      # Render puts one reverse proxy in front of the app. Without this every
-      # visitor appears to share the proxy's IP, so per-visitor rate limits
-      # (login, forms, Lycie chat) would throttle everyone together.
+      # Requests now pass through TWO proxies before reaching the app: Vercel (which
+      # forwards /api on the website's domain) and Render's own. The app must skip both
+      # to see each visitor's real address; with 1 it would see Vercel's servers instead
+      # and the per-visitor rate limits (login, forms, Lycie chat) would throttle
+      # everyone together. If you turn off the same-domain setup (VITE_DIRECT_API=true
+      # on Vercel), set this back to 1.
       - key: TRUST_PROXY
-        value: 1
+        value: 2
       # Free key from https://aistudio.google.com/apikey — leave blank and the
       # Lycie chat widget simply hides itself.
       - key: GEMINI_API_KEY

@@ -79,7 +79,7 @@ That's the whole database step. No server to manage.
    | `PORT` | `3001` |
    | `NODE_ENV` | `production` — **required**, not optional. Session cookies use different security settings in production vs. development, and the app refuses to start without `FRONTEND_URL` set when this is `production`. |
    | `FRONTEND_URL` | Leave as `http://localhost:5173` for now — you'll update this after step 3 |
-   | `TRUST_PROXY` | `1` — **required behind Render** (the blueprint sets it). Render sits behind one reverse proxy; without this, every visitor looks like the same IP and the per-visitor rate limits (login, forms, Lycie chat) would apply to everyone at once. Never set it when the API is exposed directly to the internet — clients could then fake their IP. |
+   | `TRUST_PROXY` | `2` — **required** (the blueprint sets it). Requests reach the API through two proxies: Vercel (which forwards `/api` on your site's domain) and Render's own. Without this every visitor looks like the same IP and the per-visitor rate limits (login, forms, Lycie chat) would apply to everyone at once. Use `1` if you turn the same-domain setup off (`VITE_DIRECT_API=true` on Vercel). Never set it when the API is exposed directly to the internet — clients could then fake their IP. |
    | `GEMINI_API_KEY` | Optional but recommended — powers the Lycie chat assistant. See "Lycie AI assistant" below. |
    | `ADMIN_NAME` | Your name |
    | `ADMIN_EMAIL` | Your email — this becomes your Owner login |
@@ -301,8 +301,7 @@ combination allowed for this setup. Some browsers (Safari, Firefox strict mode, 
 browsers) refuse such third-party cookies regardless. The site handles that automatically:
 right after sign-in it checks whether the cookie stuck, and if not it switches to a
 header-based session for that browser. So logins work everywhere with no extra setup. If
-you would rather have first-party cookies everywhere (the most secure option), see "Optional
-upgrade: serve the API from the website's own domain" in `docs/AUTH-AND-SECURITY.md`.
+the site is also set up to reach the API through its own domain (`vercel.json` rewrites, `TRUST_PROXY=2`), which makes the cookie first-party everywhere — see "Same-domain API" in `docs/AUTH-AND-SECURITY.md`, including how to turn it off.
 If login appears to succeed but every later request acts logged-out, check `NODE_ENV` is
 `production` on Render and that `FRONTEND_URL` matches your site's address exactly.
 

@@ -5,7 +5,9 @@
  * tab is visible, so background tabs don't hold a connection open, and on
  * return (or reconnect) everything resyncs so no change is ever missed.
  */
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
+// The live stream connects straight to the API (not through the site proxy): it stays open for
+// a long time and carries no login, so proxying would only add cost. See vite.config.ts.
+const API_BASE_URL = import.meta.env.VITE_STREAM_BASE_URL ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 
 type Listener = () => void;
 
