@@ -1,6 +1,157 @@
 {
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/robots.txt"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/"
+    },
+    {
+      "source": "/vehicles",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/vehicles"
+    },
+    {
+      "source": "/vehicles/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/vehicles/:slug"
+    },
+    {
+      "source": "/hire",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/hire"
+    },
+    {
+      "source": "/import",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/import"
+    },
+    {
+      "source": "/clearing",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/clearing"
+    },
+    {
+      "source": "/deals",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/deals"
+    },
+    {
+      "source": "/about",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/about"
+    },
+    {
+      "source": "/contact",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/contact"
+    },
+    {
+      "source": "/faq",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/faq"
+    },
+    {
+      "source": "/blog",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/blog"
+    },
+    {
+      "source": "/blog/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/blog/:slug"
+    },
+    {
+      "source": "/reviews",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|bingbot|BingPreview|YandexBot|DuckDuckBot|Baiduspider|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|TelegramBot|Pinterest|Applebot|Discordbot|Embedly|redditbot).*"
+        }
+      ],
+      "destination": "https://lycie-investment-api.onrender.com/api/seo/render?path=/reviews"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://lycie-investment-api.onrender.com/api/:path*"
     },
@@ -14,6 +165,15 @@
     }
   ],
   "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

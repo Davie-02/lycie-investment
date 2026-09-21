@@ -80,6 +80,10 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     defaultDescription:
       "Lycie Investments sources, imports, sells, hires and clears vehicles for customers in Malawi.",
     facebookAppId: null,
+    ogImage: null,
+    twitterHandle: null,
+    googleVerification: null,
+    bingVerification: null,
   },
   hero: {
     eyebrow: "Source · Import · Clear · Deliver",

@@ -31,6 +31,7 @@ import { ContactAdminModule } from "./contact-admin/contact-admin.module";
 import { AdminToolsModule } from "./admin-tools/admin-tools.module";
 import { InsightsModule } from "./insights/insights.module";
 import { PricingModule } from "./pricing/pricing.module";
+import { SeoModule } from "./seo/seo.module";
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { PricingModule } from "./pricing/pricing.module";
     AdminToolsModule,
     InsightsModule,
     PricingModule,
+    SeoModule,
   ],
   controllers: [HealthController],
   providers: [

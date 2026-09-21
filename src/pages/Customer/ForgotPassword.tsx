@@ -44,7 +44,7 @@ export default function ForgotPassword() {
 
   return (
     <>
-      <Seo title="Forgot Password" description="Reset your Lycie Investments customer account password." />
+      <Seo noindex title="Forgot Password" description="Reset your Lycie Investments customer account password." />
       <section className="service-hero">
         <div className="container">
           <h1>Forgot your password?</h1>

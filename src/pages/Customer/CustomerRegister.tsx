@@ -65,7 +65,7 @@ export default function CustomerRegister() {
 
   return (
     <>
-      <Seo title="Create Customer Account" description="Create a Lycie Investments customer account." />
+      <Seo noindex title="Create Customer Account" description="Create a Lycie Investments customer account." />
       <section className="service-hero">
         <div className="container">
           <h1>{content.pageHeadings.register.heading}</h1>

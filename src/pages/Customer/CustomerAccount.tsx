@@ -266,7 +266,7 @@ export default function CustomerAccount() {
 
   return (
     <>
-      <Seo title="My Account" description="View your Lycie Investments account and transaction history." />
+      <Seo noindex title="My Account" description="View your Lycie Investments account and transaction history." />
       <section className="service-hero">
         <div className="container customer-account__heading">
           <div>

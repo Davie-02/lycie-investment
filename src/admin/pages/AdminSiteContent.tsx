@@ -23,6 +23,7 @@ import "../components/AdminLayout.css";
 import AiWriteButton from "../components/AiWriteButton";
 import PricingSettings from "../components/PricingSettings";
 import ThemeSettings from "../components/ThemeSettings";
+import ImageUploader from "../components/ImageUploader";
 import { ClientsSectionEditor, CompanySection, FleetSectionEditor, LoadProfileButton, TeamSectionEditor } from "../components/CompanySections";
 
 const SECTION_LINKS = [
@@ -795,6 +796,30 @@ function SeoSection({ initial, onSaved }: { initial: SeoContent; onSaved: () => 
           value={values.facebookAppId ?? ""}
           onChange={(e) => setValues({ ...values, facebookAppId: e.target.value || null })}
         />
+        <FormField
+          id="seo-twitterHandle"
+          label="X (Twitter) handle — e.g. @lycieinvestments"
+          value={values.twitterHandle ?? ""}
+          onChange={(e) => setValues({ ...values, twitterHandle: e.target.value || null })}
+        />
+        <FormField
+          id="seo-google"
+          label="Google Search Console verification code"
+          value={values.googleVerification ?? ""}
+          onChange={(e) => setValues({ ...values, googleVerification: e.target.value || null })}
+          placeholder="the content=… value of the google-site-verification tag"
+        />
+        <FormField
+          id="seo-bing"
+          label="Bing Webmaster Tools verification code"
+          value={values.bingVerification ?? ""}
+          onChange={(e) => setValues({ ...values, bingVerification: e.target.value || null })}
+        />
+        <div className="form-field form-grid__full">
+          <label>Sharing picture (shown when a page is shared on Facebook, WhatsApp, X…)</label>
+          <ImageUploader images={values.ogImage ? [values.ogImage] : []} onChange={(images) => setValues({ ...values, ogImage: images[0] ?? null })} multiple={false} />
+          <p className="form-field__hint">Use a landscape picture about 1200 × 630. Pages with their own photo (vehicles, blog posts) use that instead.</p>
+        </div>
         <FormField
           id="seo-defaultDescription"
           label="Default Meta Description"

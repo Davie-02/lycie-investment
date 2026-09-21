@@ -4,6 +4,7 @@
  */
 import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
+import ShareButtons from "@/components/common/ShareButtons";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPostBySlug } from "@/services/blog.service";
 import Img from "@/components/common/Img";
@@ -53,7 +54,7 @@ export default function BlogPost() {
 
   return (
     <>
-      <Seo title={post.seoTitle ?? post.title} description={post.seoDescription ?? post.excerpt ?? post.title} />
+      <Seo title={post.seoTitle ?? post.title} description={post.seoDescription ?? post.excerpt ?? post.title} image={post.coverImageUrl} type="article" />
 
       <article className="section container blog-post">
         <Link to="/blog" className="blog-post__back">
@@ -76,6 +77,7 @@ export default function BlogPost() {
           />
         )}
         <div className="blog-post__body">{post.body}</div>
+        <ShareButtons text={post.title} />
       </article>
     </>
   );

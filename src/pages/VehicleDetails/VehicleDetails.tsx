@@ -18,8 +18,14 @@ import { getVehicleBySlug } from "@/services/vehicles.service";
 import { formatMileage } from "@/utils/format";
 import "./VehicleDetails.css";
 import Price from "@/components/common/Price";
+import ShareButtons from "@/components/common/ShareButtons";
+import { useSiteContent } from "@/context/SiteContentContext";
+import { usePricing } from "@/context/PricingContext";
+import { vehicleLd } from "@/utils/structuredData";
 
 export default function VehicleDetails() {
+  const { content } = useSiteContent();
+  const { rate } = usePricing();
   const { slug } = useParams<{ slug: string }>();
   const { data: vehicle, isLoading, error } = useAsyncData(
     () => getVehicleBySlug(slug ?? ""),
@@ -71,6 +77,9 @@ export default function VehicleDetails() {
       <Seo
         title={vehicleLabel}
         description={`${vehicleLabel} — ${vehicle.transmission}, ${vehicle.fuelType}, ${vehicle.mileageKm.toLocaleString()} km. ${vehicle.description}`}
+        image={vehicle.images[0]}
+        type="product"
+        jsonLd={vehicleLd(vehicle, content, window.location.origin, rate)}
       />
 
       <section className="section container vehicle-details">
@@ -92,6 +101,7 @@ export default function VehicleDetails() {
             images={vehicle.images}
             altBase={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
           />
+          <ShareButtons text={`${vehicleLabel} — ${content.seo.siteName}`} />
 
           <Reveal>
             <div className="vehicle-details__description">

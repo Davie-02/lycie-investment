@@ -81,6 +81,14 @@ export interface SeoContent {
   siteName: string;
   defaultDescription: string;
   facebookAppId: string | null;
+  /** Picture shown when a page is shared (Facebook, WhatsApp, X…) and in some search results. */
+  ogImage: string | null;
+  /** e.g. @lycieinvestments — used for X (Twitter) cards. */
+  twitterHandle: string | null;
+  /** The code Google Search Console gives to prove you own the site. */
+  googleVerification: string | null;
+  /** The code Bing Webmaster Tools gives to prove you own the site. */
+  bingVerification: string | null;
 }
 
 export interface HeroHighlight {

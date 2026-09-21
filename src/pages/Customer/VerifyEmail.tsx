@@ -43,7 +43,7 @@ export default function VerifyEmail() {
 
   return (
     <>
-      <Seo title="Confirm Email" description="Confirm your email address for your Lycie Investments account." />
+      <Seo noindex title="Confirm Email" description="Confirm your email address for your Lycie Investments account." />
       <section className="service-hero">
         <div className="container">
           <h1>Confirm your email</h1>

@@ -18,6 +18,7 @@ import TrustStrip from "@/components/company/TrustStrip";
 import ClientsSection from "@/components/company/ClientsSection";
 import FleetSection from "@/components/company/FleetSection";
 import { useSiteContent } from "@/context/SiteContentContext";
+import { organizationLd } from "@/utils/structuredData";
 
 export default function Home() {
   const { content } = useSiteContent();
@@ -25,6 +26,7 @@ export default function Home() {
     <>
       <Seo
         title="Home"
+        jsonLd={organizationLd(content, window.location.origin)}
         description="Lycie Investments and Transportation — vehicle imports and clearing, vehicle hire and safe, reliable transport in Malawi."
       />
       <Hero />
