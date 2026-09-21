@@ -1,11 +1,11 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PricingService } from "../pricing/pricing.service";
 import { priceText } from "../pricing/price-format";
 import { PUBLIC } from "../content-admin/content-state";
 import { HireInfo, LycieContext, VehicleInfo } from "./prompt.builder";
-import { KnowledgeItem, selectKnowledge } from "./knowledge-select.util";
+import { KnowledgeItem, KnowledgeMatch, bestKnowledgeMatch, selectKnowledge } from "./knowledge-select.util";
 
 const CACHE_TTL_MS = 45_000;
 const MAX_VEHICLES = 40;
@@ -47,7 +47,7 @@ const asStrings = (value: unknown): string[] => asArray(value).map((v) => asStri
  * immediately and other CMS edits appear within CACHE_TTL_MS.
  */
 @Injectable()
-export class ContextService {
+export class ContextService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ContextService.name);
   private snapshot: Snapshot | null = null;
   private loading: Promise<Snapshot> | null = null;
@@ -56,6 +56,14 @@ export class ContextService {
     private readonly prisma: PrismaService,
     private readonly pricing: PricingService
   ) {}
+
+  /**
+   * Builds the knowledge snapshot as soon as the server starts, so the first visitor after a deploy or a
+   * restart isn't the one who waits several seconds for it (measured: 7s cold vs. instant warm).
+   */
+  onApplicationBootstrap(): void {
+    void this.load().catch((error) => this.logger.warn(`Could not pre-load Lycie's knowledge: ${error instanceof Error ? error.message : error}`));
+  }
 
   /** Bumps every time admin content that Lycie learns from changes; used to discard cached answers. */
   private invalidations = 0;
@@ -88,6 +96,16 @@ export class ContextService {
     };
   }
 
+  /**
+   * The FAQ / knowledge entry closest to a question, or null. `faqOnly` restricts it to published FAQs (used for
+   * instant answers, where only a near-identical question should skip the AI); the fallback path is more lenient.
+   */
+  async closestKnowledge(question: string, minScore: number, faqOnly: boolean, minShared = 1): Promise<KnowledgeMatch | null> {
+    const snap = await this.load();
+    const pool = faqOnly ? snap.knowledge.filter((item) => item.category === "faq") : snap.knowledge;
+    return bestKnowledgeMatch(pool, question, minScore, minShared);
+  }
+
   /** Contact line for the "AI unavailable" fallback message. */
   async contact(): Promise<LycieContext["company"]["contact"]> {
     return (await this.load()).company.contact;
@@ -95,13 +113,27 @@ export class ContextService {
 
   private async load(): Promise<Snapshot> {
     if (this.snapshot && Date.now() - this.snapshot.builtAt < CACHE_TTL_MS) return this.snapshot;
+
     // Concurrent chats share one rebuild instead of stampeding the database.
-    this.loading ??= this.build().finally(() => {
-      this.loading = null;
-    });
-    this.snapshot = await this.loading;
+    const rebuild = () => {
+      this.loading ??= this.build().finally(() => {
+        this.loading = null;
+      });
+      return this.loading;
+    };
+
+    // Stale-while-revalidate: an expired copy is still good enough to answer with right now (it is only minutes old),
+    // so the visitor gets an instant reply while a fresh copy is built for the next one. Explicit admin changes
+    // call invalidate(), which drops the copy and forces a fresh build — those are never served stale.
+    if (this.snapshot) {
+      void rebuild().then((fresh) => (this.snapshot = fresh)).catch((error) => this.logger.warn(`Refreshing Lycie's knowledge failed: ${error instanceof Error ? error.message : error}`));
+      return this.snapshot;
+    }
+
+    this.snapshot = await rebuild();
     return this.snapshot;
   }
+
 
   private async build(): Promise<Snapshot> {
     const [siteRows, vehicles, hire, entries, faqs] = await Promise.all([

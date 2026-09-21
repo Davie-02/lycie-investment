@@ -71,12 +71,29 @@ export class LycieService {
     if (!question) return this.refuse("Please type a question and I'll do my best to help.", "blocked", null);
 
     const contact = await this.context.contact();
-    const fallback = () =>
-      `I'm having trouble answering right now. Our team can help directly — call ${contact.phone}, email ${contact.email}${
-        contact.whatsappNumber ? `, or message us on WhatsApp at ${contact.whatsappNumber}` : ""
-      } (${contact.businessHours}).`;
+    const contactLine = `call ${contact.phone}, email ${contact.email}${contact.whatsappNumber ? `, or message us on WhatsApp at ${contact.whatsappNumber}` : ""} (${contact.businessHours})`;
+    const fallback = () => `I'm having trouble answering right now. Our team can help directly — ${contactLine}.`;
 
-    if (!this.gemini.isConfigured) return this.log(question, fallback(), null, "unavailable");
+    /**
+     * When the AI can't answer, a close FAQ or knowledge note is far more useful than a generic apology: give
+     * that answer, plus how to reach the team. Only if nothing is close do we show the plain fallback.
+     */
+    const answerFromKnowledge = async () => {
+      // Looser than the instant path (0.7): a related answer plus the contact details beats an apology — but at least
+      // two meaningful words must be shared, so unrelated questions never get a random answer.
+      const near = await this.context.closestKnowledge(question, 0.25, false, 2);
+      if (!near) return null;
+      return this.log(question, `${near.item.content}\n\nFor anything more, ${contactLine}.`, "faq", "answered");
+    };
+
+    // A near-identical FAQ question: answer it straight away — no AI call, no waiting, no quota.
+    const exact = await this.context.closestKnowledge(question, 0.7, true);
+    if (exact) {
+      onDelta?.(exact.item.content);
+      return this.log(question, exact.item.content, "faq", "answered");
+    }
+
+    if (!this.gemini.isConfigured) return (await answerFromKnowledge()) ?? this.log(question, fallback(), null, "unavailable");
 
     if (!this.perIp.allow(ip)) {
       return this.refuse(
@@ -86,7 +103,7 @@ export class LycieService {
       );
     }
     if (await this.dailyCapReached()) {
-      return this.log(question, fallback(), null, "unavailable");
+      return (await answerFromKnowledge()) ?? this.log(question, fallback(), null, "unavailable");
     }
 
     // A standalone question we answered a moment ago: reply instantly, no AI call, no quota used.
@@ -139,7 +156,7 @@ export class LycieService {
         );
       }
       this.logger.warn(`Lycie could not answer: ${error instanceof Error ? error.message : error}`);
-      return this.log(question, fallback(), null, "unavailable");
+      return (await answerFromKnowledge()) ?? this.log(question, fallback(), null, "unavailable");
     }
   }
 

@@ -479,9 +479,21 @@ the next, and the model we used first was the slowest. Now:
 3. **Instant repeat answers:** Lycie remembers answers to standalone questions for 5 minutes (any admin change to
    vehicles, prices or knowledge starts fresh) — a repeated question is answered in about 0.02 seconds and uses no AI quota.
 4. **Search quota can't break chat:** search-related failures are tracked separately from ordinary chat.
+5. **Two models start together** (`LYCIE_PARALLEL`, default 2): Google's response time has a long tail on the free tier
+   (the same model answered in 1 s, then 6 s, then 19 s on the same afternoon), so the two fastest models start at the
+   same instant and the first answer wins. More models join if both stall.
+6. **FAQ first — no AI at all:** a visitor question that is nearly the same as one of your FAQs is answered from the FAQ
+   immediately (about 0.01 s), even while Google is slow or down. Write your common questions as FAQs and Lycie answers
+   them instantly.
+7. **Real fallback when the AI is down:** instead of only "I'm having trouble", Lycie gives the closest FAQ/knowledge answer
+   (at least two shared meaningful words, so unrelated questions never get a random answer) plus how to reach the team.
+8. **No cold start:** Lycie's knowledge is built when the server starts and refreshed in the background (an expired copy
+   is served instantly while a new one is built), so the first visitor never waits for it.
 Measured on the real key: fresh answers 2.6–5 s (previously 4–12 s for the model alone); repeats 0.02 s; streamed
 answers finish in about 2.3 s and start showing words sooner.
-**Where:** `server/src/lycie/gemini.client.ts` (`race`, `thinkingFor`), `lycie/answer-cache.util.ts`, `lycie/lycie.service.ts`.
+**Where:** `server/src/lycie/gemini.client.ts` (`race`, `thinkingFor`), `lycie/answer-cache.util.ts`, `lycie/knowledge-select.util.ts` (`bestKnowledgeMatch`), `lycie/lycie.service.ts`, `lycie/context.service.ts`.
+**Check it:** Admin → Lycie AI → **AI connection check** tests every model live and shows which work, how fast, and why any fail.
+**The limit of what code can do:** on Google's free tier response times are erratic and daily quotas are small. Enabling billing on the Google AI project gives priority and removes the quotas; nothing else changes.
 **If it's slow:** check `GEMINI` warnings in the API log — a line like "model X failed (quota exhausted)" means that model's
 daily free quota is used up (it rests and the others carry on). Free-tier limits are the usual cause of slowness; a paid
 Google AI plan removes them.

@@ -54,3 +54,32 @@ export function selectKnowledge(
   }
   return chosen;
 }
+
+export interface KnowledgeMatch {
+  item: KnowledgeItem;
+  /** 0–1: how much of the question's meaning-bearing words the entry's title shares (1 = same words). */
+  score: number;
+}
+
+/**
+ * The knowledge entry whose TITLE (for FAQs, the question) is most like the visitor's question, or null.
+ * Compares meaning-bearing words only (stop words dropped), so "How long does clearing take?" matches the FAQ
+ * "How long does clearing take at the border?" but not "What are your opening hours?".
+ * Used to answer common questions instantly with no AI call, and as a real answer when the AI is unavailable.
+ */
+export function bestKnowledgeMatch(items: KnowledgeItem[], question: string, minScore = 0, minShared = 1): KnowledgeMatch | null {
+  const wanted = new Set(extractKeywords(question, 12));
+  if (wanted.size === 0) return null;
+
+  let best: KnowledgeMatch | null = null;
+  for (const item of items) {
+    const words = new Set(extractKeywords(item.title, 12));
+    if (words.size === 0) continue;
+    let shared = 0;
+    for (const word of wanted) if (words.has(word)) shared += 1;
+    // Jaccard similarity: shared words over all distinct words in either.
+    const score = shared / (wanted.size + words.size - shared);
+    if (shared >= minShared && score >= minScore && (!best || score > best.score)) best = { item, score };
+  }
+  return best;
+}

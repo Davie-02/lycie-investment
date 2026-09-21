@@ -30,6 +30,12 @@ export interface GeminiConfig {
    * 12s on the very same model, so racing cuts the worst waits dramatically. 0/undefined = one at a time.
    */
   hedgeDelayMs?: number;
+  /**
+   * How many of the fastest models to start at the very same instant (default 1). Google's response time has a long
+   * tail — the same model can answer in 1s or 19s — so starting two together and keeping the first answer avoids most
+   * of the long waits, at the cost of one extra small request per uncached question.
+   */
+  parallelStart?: number;
 }
 
 // Order matters: fastest first. Measured on a real key (typical answer, 3 runs each):
@@ -61,6 +67,7 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     lastResortFirstTokenTimeoutMs: 15_000,
     retryDelayMs: 1_500,
     hedgeDelayMs: number(env.LYCIE_HEDGE_MS, 1_200),
+    parallelStart: Math.max(1, Math.floor(number(env.LYCIE_PARALLEL, 2))),
   };
 }
 
@@ -181,7 +188,7 @@ export class GeminiClient {
 
   /** The effective, non-secret configuration (shown in the admin check). */
   get settings() {
-    return { models: this.config.models, raceAfterMs: this.config.hedgeDelayMs ?? 0, firstWordDeadlineMs: this.config.firstTokenTimeoutMs };
+    return { models: this.config.models, startTogether: this.config.parallelStart ?? 1, raceAfterMs: this.config.hedgeDelayMs ?? 0, firstWordDeadlineMs: this.config.firstTokenTimeoutMs };
   }
 
   get isConfigured(): boolean {
@@ -261,13 +268,13 @@ export class GeminiClient {
         finish();
       };
 
-      const launch = () => {
+      const launch = (scheduleNext = true) => {
         if (settled || launched >= chain.length) return;
         const model = chain[launched++];
         const controller = new AbortController();
         controllers.set(model, controller);
         // If this model is slow, start the next one alongside it.
-        if (hedgeMs > 0 && launched < chain.length) timers.push(setTimeout(launch, hedgeMs));
+        if (scheduleNext && hedgeMs > 0 && launched < chain.length) timers.push(setTimeout(() => launch(), hedgeMs));
 
         attempt(model, controller, controllers).then(
           (value) => settle(() => resolve({ value, model })),
@@ -292,7 +299,9 @@ export class GeminiClient {
       };
 
       timers.push(setTimeout(() => settle(() => reject(new RaceFailure(lastError === "no model available" ? "timed out" : lastError, overloaded))), deadlineMs));
-      launch();
+      // Start the fastest few together; only the last one schedules the next "still slow?" start.
+      const together = Math.min(chain.length, Math.max(1, this.config.parallelStart ?? 1));
+      for (let i = 0; i < together; i++) launch(i === together - 1);
     });
   }
 

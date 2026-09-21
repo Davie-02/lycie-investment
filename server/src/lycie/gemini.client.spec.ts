@@ -409,3 +409,33 @@ describe("GeminiClient.diagnose", () => {
     expect(results).toEqual([{ model: "(none)", ok: false, ms: 0, problem: "GEMINI_API_KEY is not set." }]);
   });
 });
+
+describe("GeminiClient starting models together", () => {
+  it("starts the fastest two at the same instant and keeps whichever answers first", async () => {
+    const started: Array<{ model: string; at: number }> = [];
+    const t0 = Date.now();
+    const delays: Record<string, number> = { a: 600, b: 30, c: 30 };
+    const fetchFn = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const model = /models\/([^:]+):/.exec(String(url))![1];
+      started.push({ model, at: Date.now() - t0 });
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delays[model]);
+        init?.signal?.addEventListener("abort", () => { clearTimeout(timer); reject(Object.assign(new Error("x"), { name: "AbortError" })); });
+      });
+      return ok(`from ${model}`);
+    });
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, { ...config, models: ["a", "b", "c"], parallelStart: 2, hedgeDelayMs: 5_000 });
+    const result = await client.generate("sys", turns);
+    expect(result.model).toBe("b");
+    // a and b began together (both within a few ms of the start); c never needed to start.
+    expect(started.map((s) => s.model)).toEqual(["a", "b"]);
+    expect(Math.abs(started[0].at - started[1].at)).toBeLessThan(50);
+  });
+
+  it("still falls through to the remaining models when the first two fail", async () => {
+    const responses: Record<string, Response> = { a: fail(503), b: fail(503), c: ok("from c") };
+    const fetchFn = jest.fn(async (url: string | URL | Request) => responses[/models\/([^:]+):/.exec(String(url))![1]]);
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, { ...config, models: ["a", "b", "c"], parallelStart: 2 });
+    expect((await client.generate("sys", turns)).text).toBe("from c");
+  });
+});
