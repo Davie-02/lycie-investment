@@ -6,17 +6,6 @@
   aspect-ratio: 3 / 2;
 }
 
-/* Absolutely positioned — a percentage height on the img doesn't reliably
-   resolve against this wrapper's aspect-ratio-driven auto height, so
-   portrait photos were escaping the fixed box instead of being cropped. */
-.vehicle-gallery__main img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 .vehicle-gallery__thumbs {
   display: flex;
   gap: var(--space-3);

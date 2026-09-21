@@ -1,0 +1,146 @@
+/* Photo slider used on vehicle cards, hire vehicle cards and the vehicle gallery.
+   The slider fills whatever box its parent gives it (parents set the aspect ratio),
+   so dropping it into an existing card doesn't change the card's size or look. */
+
+.image-slider {
+  position: absolute;
+  inset: 0;
+}
+
+.image-slider__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Each swipe lands exactly on a photo. */
+  scroll-snap-type: x mandatory;
+  /* Deliberately NOT using scroll-snap-stop: always — it makes a jump from photo 1 to photo 3 (a dot click) halt at photo 2. */
+  overscroll-behavior-x: contain;
+  /* Vertical swipes still scroll the page; only sideways ones move the photos. */
+  touch-action: pan-x pan-y pinch-zoom;
+  /* The arrows and dots replace the scrollbar. */
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.image-slider__track::-webkit-scrollbar {
+  display: none;
+}
+
+.image-slider__slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+}
+
+.image-slider__slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease;
+  /* Dragging should scroll the slider, not start dragging the picture itself. */
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* Same subtle zoom the cards had on hover before they had sliders. */
+.vehicle-card:hover .image-slider__slide img {
+  transform: scale(1.06);
+}
+
+.image-slider__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-sm);
+  /* Hidden until the pointer is over the photos, on devices that have a pointer. */
+  opacity: 0;
+  transition: opacity var(--transition), background-color var(--transition);
+}
+
+.image-slider__arrow--prev {
+  left: var(--space-3);
+}
+
+.image-slider__arrow--next {
+  right: var(--space-3);
+}
+
+.image-slider:hover .image-slider__arrow,
+.image-slider:focus-within .image-slider__arrow {
+  opacity: 1;
+}
+
+.image-slider__arrow:hover {
+  background: #fff;
+}
+
+.image-slider__arrow:disabled {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* Touch screens can't hover, and swiping is the natural gesture there — keep arrows out of the way. */
+@media (hover: none) {
+  .image-slider__arrow {
+    display: none;
+  }
+}
+
+.image-slider__dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--space-2);
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.image-slider__dot {
+  /* Big invisible tap target around a small visible dot. */
+  position: relative;
+  width: 20px;
+  height: 20px;
+  pointer-events: auto;
+}
+
+.image-slider__dot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 0 1px rgba(13, 22, 34, 0.25);
+  transition: background-color var(--transition), transform var(--transition);
+}
+
+.image-slider__dot--active::after {
+  background: #fff;
+  transform: translate(-50%, -50%) scale(1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-slider__slide img {
+    transition: none;
+  }
+
+  .vehicle-card:hover .image-slider__slide img {
+    transform: none;
+  }
+}

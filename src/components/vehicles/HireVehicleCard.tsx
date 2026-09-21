@@ -1,6 +1,6 @@
 import type { HireVehicle } from "@/types/vehicle";
 import { formatCurrency } from "@/utils/format";
-import Img from "@/components/common/Img";
+import ImageSlider from "@/components/common/ImageSlider";
 import LikeButton from "@/components/common/LikeButton";
 import "@/components/vehicles/VehicleCard.css";
 
@@ -13,11 +13,11 @@ export default function HireVehicleCard({ vehicle, onRequestHire }: HireVehicleC
   return (
     <article className="vehicle-card">
       <div className="vehicle-card__image-wrap">
-        <Img
-          src={vehicle.image}
+        {/* Whole gallery when there is one; older vehicles only have the single cover photo. */}
+        <ImageSlider
+          images={vehicle.images && vehicle.images.length > 0 ? vehicle.images : [vehicle.image]}
           alt={vehicle.name}
           sizes="(min-width: 1000px) 380px, (min-width: 640px) 45vw, 100vw"
-          className="vehicle-card__image"
         />
         <LikeButton kind="hire" targetId={vehicle.id} noun="vehicle" className="vehicle-card__save" />
         <span

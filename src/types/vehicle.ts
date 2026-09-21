@@ -47,7 +47,10 @@ export interface HireVehicle {
   fuelType: FuelType;
   seats: number;
   available: boolean;
+  /** Cover photo — always the first of `images`. */
   image: string;
+  /** Whole gallery in display order. Missing on very old data; fall back to [image]. */
+  images?: string[];
   isPublished?: boolean;
   archivedAt?: string | null;
 }

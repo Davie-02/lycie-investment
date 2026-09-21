@@ -50,7 +50,8 @@ function toFormValues(vehicle: HireVehicle | null): FormValues {
 
 export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehicleFormProps) {
   const [values, setValues] = useState<FormValues>(toFormValues(vehicle));
-  const [image, setImage] = useState<string[]>(vehicle?.image ? [vehicle.image] : []);
+  // The whole gallery (first photo = cover). Older vehicles only have a single `image`.
+  const [image, setImage] = useState<string[]>(vehicle?.images?.length ? vehicle.images : vehicle?.image ? [vehicle.image] : []);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +66,7 @@ export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehi
     setError(null);
 
     if (image.length === 0) {
-      setError("Add an image before saving.");
+      setError("Add at least one photo before saving.");
       return;
     }
 
@@ -79,6 +80,7 @@ export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehi
       seats: Number(values.seats),
       available: values.available,
       image: image[0],
+      images: image,
     };
 
     setIsSaving(true);
@@ -141,8 +143,8 @@ export default function HireVehicleForm({ vehicle, onSaved, onCancel }: HireVehi
         </FormField>
 
         <div className="form-field form-grid__full">
-          <label>Image</label>
-          <ImageUploader images={image} onChange={setImage} multiple={false} />
+          <label>Photos (the first one is the cover; visitors can swipe through all of them)</label>
+          <ImageUploader images={image} onChange={setImage} />
         </div>
       </div>
 

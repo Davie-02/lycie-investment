@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
 
 const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"];
@@ -41,7 +41,16 @@ export class CreateHireVehicleDto {
   @IsOptional()
   available?: boolean;
 
+  /** Cover photo. Optional when `images` is given (the first gallery image is used). */
   @IsString()
   @IsNotEmpty()
-  image!: string;
+  @IsOptional()
+  image?: string;
+
+  /** Full gallery in display order; the first one is the cover. */
+  @IsArray()
+  @ArrayMaxSize(12)
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
 }

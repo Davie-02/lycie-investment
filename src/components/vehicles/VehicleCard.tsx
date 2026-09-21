@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { Vehicle } from "@/types/vehicle";
 import { formatCurrency, formatMileage } from "@/utils/format";
-import Img from "@/components/common/Img";
+import ImageSlider from "@/components/common/ImageSlider";
 import SaveVehicleButton from "./SaveVehicleButton";
 import "./VehicleCard.css";
 
@@ -19,11 +19,11 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
   return (
     <article className="vehicle-card">
       <div className="vehicle-card__image-wrap">
-        <Img
-          src={vehicle.images[0]}
+        {/* Swipe / arrows / dots through every photo; a single photo shows as before. */}
+        <ImageSlider
+          images={vehicle.images}
           alt={`${vehicle.make} ${vehicle.model}, ${vehicle.year}`}
           sizes="(min-width: 1000px) 380px, (min-width: 640px) 45vw, 100vw"
-          className="vehicle-card__image"
         />
         <span className={`vehicle-card__status vehicle-card__status--${vehicle.status}`}>
           {STATUS_LABEL[vehicle.status]}
