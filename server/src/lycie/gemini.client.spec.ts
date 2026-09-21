@@ -218,10 +218,10 @@ describe("GeminiClient when every model is briefly overloaded", () => {
   });
 
   it("gives up after that single extra pass", async () => {
-    const { client, calls } = clientWith([fail(503), fail(503), fail(503), fail(503)]);
+    const { client, calls } = clientWith([fail(503), fail(503), fail(503), fail(503), fail(503), fail(503)]);
     await expect(client.generate("sys", turns)).rejects.toBeInstanceOf(GeminiUnavailableError);
-    // Pass 1 tries all three; pass 2 (all are resting) tries only the one that recovers soonest. Never a third pass.
-    expect(calls).toHaveLength(4);
+    // Pass 1 tries all three; pass 2 (all resting) races all three again. Never a third pass.
+    expect(calls).toHaveLength(6);
   });
 
   it("does NOT retry quota, missing-model or other non-overload failures", async () => {
@@ -383,5 +383,29 @@ describe("GeminiClient request settings", () => {
     // Both models hit the SEARCH quota. An ordinary chat must still start with "first" — not skip it as if it were broken.
     expect((await client.generate("sys", turns)).text).toBe("normal chat answer");
     expect(urls).toEqual(["first", "second", "first"]);
+  });
+});
+
+describe("GeminiClient.diagnose", () => {
+  it("tests every model — ignoring cooldowns — and explains each failure in plain words", async () => {
+    const fetchFn = jest.fn(async (url: string | URL | Request) => {
+      const model = /models\/([^:]+):/.exec(String(url))![1];
+      if (model === "m1") return ok("ok");
+      if (model === "m2") return fail(429);
+      return fail(503);
+    });
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, config);
+    const results = await client.diagnose();
+    expect(results.map((r) => [r.model, r.ok, r.problem])).toEqual([
+      ["m1", true, undefined],
+      ["m2", false, "quota exhausted"],
+      ["m3", false, "server error 503"],
+    ]);
+    expect(results[0].ms).toBeGreaterThanOrEqual(0);
+  });
+
+  it("says so when there is no key", async () => {
+    const results = await new GeminiClient(jest.fn() as unknown as typeof fetch, { ...config, apiKey: undefined }).diagnose();
+    expect(results).toEqual([{ model: "(none)", ok: false, ms: 0, problem: "GEMINI_API_KEY is not set." }]);
   });
 });

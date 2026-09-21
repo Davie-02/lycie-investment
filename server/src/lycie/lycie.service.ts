@@ -46,6 +46,16 @@ export class LycieService {
     return `v${this.context.version} ${question}`;
   }
 
+  /** Live check of every AI model from this server (admin "AI connection check"). */
+  diagnose() {
+    return this.gemini.diagnose();
+  }
+
+  /** The models in use and how racing is set, so an admin can see the real configuration. */
+  get aiSettings() {
+    return this.gemini.settings;
+  }
+
   get isEnabled(): boolean {
     return this.gemini.isConfigured;
   }

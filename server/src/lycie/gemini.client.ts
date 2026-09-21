@@ -56,7 +56,7 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     // customer waiting 15s+ for a chat reply is worse than a lighter model's answer.
     perAttemptTimeoutMs: 10_000,
     totalBudgetMs: 32_000,
-    firstTokenTimeoutMs: 4_000,
+    firstTokenTimeoutMs: 8_000,
     streamTimeoutMs: 40_000,
     lastResortFirstTokenTimeoutMs: 15_000,
     retryDelayMs: 1_500,
@@ -97,6 +97,8 @@ export class GeminiUnavailableError extends Error {}
 export class GeminiBlockedError extends Error {}
 
 const MINUTE = 60_000;
+/** How long a model rests after a slow or dropped request — being slow is not the same as being broken. */
+const BRIEF = 20_000;
 
 type FetchFn = typeof fetch;
 
@@ -137,8 +139,9 @@ export class GeminiClient {
     const until = (model: string) => this.cooldownUntil.get(this.cooldownKey(model, search)) ?? 0;
     const ready = this.config.models.filter((model) => until(model) <= now);
     if (ready.length > 0) return ready;
-    const soonest = [...this.config.models].sort((a, b) => until(a) - until(b))[0];
-    return soonest ? [soonest] : [];
+    // Everything is resting (a brief overload can knock out all of them at once). A customer is better served by
+    // racing them all again than by an instant "I'm having trouble" — soonest-to-recover first.
+    return [...this.config.models].sort((a, b) => until(a) - until(b));
   }
 
   /**
@@ -153,6 +156,32 @@ export class GeminiClient {
   /** "Lite" models reject the thinking setting, so it is only sent to the others. */
   private thinkingFor(model: string): { thinkingConfig: { thinkingBudget: number } } | Record<string, never> {
     return /lite/i.test(model) ? {} : { thinkingConfig: { thinkingBudget: this.config.thinkingBudget } };
+  }
+
+  /**
+   * A live health check for admins: asks EVERY configured model a tiny question, ignoring cooldowns, and
+   * reports how each one responded. Shows in plain terms whether the key works, which models are out of
+   * quota or overloaded, and how fast each is from this server.
+   */
+  async diagnose(): Promise<Array<{ model: string; ok: boolean; ms: number; problem?: string }>> {
+    if (!this.config.apiKey) return [{ model: "(none)", ok: false, ms: 0, problem: "GEMINI_API_KEY is not set." }];
+    return Promise.all(
+      this.config.models.map(async (model) => {
+        const startedAt = Date.now();
+        try {
+          await this.callModel(model, "Reply with the single word: ok", [{ role: "user", text: "ping" }], 15_000, { maxOutputTokens: 8 });
+          return { model, ok: true, ms: Date.now() - startedAt };
+        } catch (error) {
+          const problem = error instanceof ModelError ? error.message : error instanceof KeyError ? "the API key was rejected" : error instanceof GeminiBlockedError ? "declined the test message" : "unexpected error";
+          return { model, ok: false, ms: Date.now() - startedAt, problem };
+        }
+      })
+    );
+  }
+
+  /** The effective, non-secret configuration (shown in the admin check). */
+  get settings() {
+    return { models: this.config.models, raceAfterMs: this.config.hedgeDelayMs ?? 0, firstWordDeadlineMs: this.config.firstTokenTimeoutMs };
   }
 
   get isConfigured(): boolean {
@@ -284,7 +313,7 @@ export class GeminiClient {
       });
     } catch (error) {
       const aborted = error instanceof Error && error.name === "AbortError";
-      throw new ModelError(aborted ? "timed out" : "network error", MINUTE);
+      throw new ModelError(aborted ? "timed out" : "network error", BRIEF);
     } finally {
       clearTimeout(timer);
     }
@@ -432,7 +461,7 @@ export class GeminiClient {
         });
       } catch (error) {
         const aborted = error instanceof Error && error.name === "AbortError";
-        throw new ModelError(aborted ? "no first word in time" : "network error", MINUTE);
+        throw new ModelError(aborted ? "no first word in time" : "network error", BRIEF);
       }
       if (!response.ok) throw await this.classifyFailure(response);
       if (!response.body) throw new ModelError("no response body", MINUTE);
@@ -466,7 +495,7 @@ export class GeminiClient {
       } catch (error) {
         if (error instanceof GeminiBlockedError || error instanceof ModelError) throw error;
         const aborted = error instanceof Error && error.name === "AbortError";
-        throw new ModelError(aborted ? (gotText ? "stream timed out" : "no first word in time") : "stream interrupted", MINUTE);
+        throw new ModelError(aborted ? (gotText ? "stream timed out" : "no first word in time") : "stream interrupted", BRIEF);
       }
       // A trailing event without the final blank line.
       const last = this.textFromEvent(buffer, gotText);

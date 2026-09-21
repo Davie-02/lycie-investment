@@ -13,6 +13,16 @@ export class LycieController {
   constructor(private readonly lycie: LycieService) {}
 
   // Lets the widget hide itself when no API key is configured.
+  /** Admin: tests every AI model right now from the live server and reports which work and how fast. */
+  @Throttle({ default: { limit: 4, ttl: 60000 } })
+  @Post("diagnose")
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("OWNER", "MANAGER")
+  async diagnose() {
+    return { settings: this.lycie.aiSettings, results: await this.lycie.diagnose() };
+  }
+
   @Get("status")
   status() {
     return { enabled: this.lycie.isEnabled };

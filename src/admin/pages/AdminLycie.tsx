@@ -3,6 +3,7 @@
  * documents, FAQ drafts, testimonial ideas, visitor messages, plus daily usage and chat
  * analytics. Uses /api/lycie/*.
  */
+import AiConnectionCheck from "../components/AiConnectionCheck";
 import { useCallback, useState, type FormEvent } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
@@ -67,6 +68,7 @@ export default function AdminLycie() {
         here. Add anything she should know — policies, deposits, timelines, opening hours changes. She never invents
         prices or availability; when she doesn't know, she says so and it shows up under “Gaps” for you to fill.
       </p>
+      <AiConnectionCheck />
 
       <div className="insights-filters" role="tablist" aria-label="Lycie sections">
         {(Object.keys(TAB_LABELS) as Tab[]).map((value) => (
