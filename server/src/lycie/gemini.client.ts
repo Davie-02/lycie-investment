@@ -68,11 +68,19 @@ export interface GenerateOptions {
   maxOutputTokens?: number;
   temperature?: number;
   timeoutMs?: number;
+  /**
+   * Let the model search the live web (Google Search grounding) before answering. Used by the
+   * admin-only deals finder and market briefing — never by public chat. The pages it used come
+   * back in `sources`.
+   */
+  search?: boolean;
 }
 
 export interface GeminiResult {
   text: string;
   model: string;
+  /** Web pages a search-grounded answer drew on, as "site (address)". Empty for ordinary answers. */
+  sources?: string[];
 }
 
 /** Nothing could answer right now (quota, outage, timeouts, missing key). */
@@ -144,8 +152,8 @@ export class GeminiClient {
         if (remaining < 2_000) break;
 
         try {
-          const text = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
-          return { text, model };
+          const answer = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
+          return { text: answer.text, model, ...(answer.sources.length ? { sources: answer.sources } : {}) };
         } catch (error) {
           if (error instanceof GeminiBlockedError) throw error;
           if (error instanceof KeyError) {
@@ -174,7 +182,7 @@ export class GeminiClient {
     return true;
   }
 
-  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions): Promise<string> {
+  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions): Promise<{ text: string; sources: string[] }> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -212,7 +220,18 @@ export class GeminiClient {
       if (data?.candidates?.[0]?.finishReason === "SAFETY") throw new GeminiBlockedError("blocked: SAFETY");
       throw new ModelError("empty response", MINUTE);
     }
-    return text;
+    return { text, sources: this.sourcesFrom(data) };
+  }
+
+  /** The web pages a search-grounded answer used (deduplicated), for staff reference only. */
+  private sourcesFrom(data: GeminiResponse | null): string[] {
+    const chunks = data?.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
+    const seen = new Set<string>();
+    for (const chunk of chunks) {
+      const web = chunk.web;
+      if (web?.uri) seen.add(web.title ? `${web.title} (${web.uri})` : web.uri);
+    }
+    return [...seen];
   }
 
   private buildBody(system: string, turns: ChatTurn[], options?: GenerateOptions): string {
@@ -225,6 +244,7 @@ export class GeminiClient {
           { text: turn.text },
         ],
       })),
+      ...(options?.search ? { tools: [{ google_search: {} }] } : {}),
       generationConfig: {
         temperature: options?.temperature ?? 0.4,
         maxOutputTokens: options?.maxOutputTokens ?? this.config.maxOutputTokens,
@@ -423,5 +443,6 @@ interface GeminiResponse {
   candidates?: Array<{
     finishReason?: string;
     content?: { parts?: Array<{ text?: string; thought?: boolean }> };
+    groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> };
   }>;
 }

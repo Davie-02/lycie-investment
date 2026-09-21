@@ -260,3 +260,38 @@ describe("GeminiClient last-resort patience", () => {
     expect(result).toEqual({ text: "slow but fine", model: "slow" });
   });
 });
+
+describe("GeminiClient search grounding", () => {
+  const grounded = () =>
+    new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            content: { parts: [{ text: "found it" }] },
+            groundingMetadata: { groundingChunks: [{ web: { uri: "https://a.example/deal", title: "a.example" } }, { web: { uri: "https://a.example/deal", title: "a.example" } }, { web: { uri: "https://b.example/x" } }] },
+          },
+        ],
+      }),
+      { status: 200 }
+    );
+
+  it("asks Google Search to ground the answer only when requested", async () => {
+    const { client, fetchFn } = clientWith([grounded(), ok("plain")]);
+    await client.generate("sys", turns, { search: true });
+    await client.generate("sys", turns);
+    const bodies = fetchFn.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
+    expect(bodies[0].tools).toEqual([{ google_search: {} }]);
+    expect(bodies[1].tools).toBeUndefined();
+  });
+
+  it("returns the pages it used, without duplicates", async () => {
+    const { client } = clientWith([grounded()]);
+    const result = await client.generate("sys", turns, { search: true });
+    expect(result.sources).toEqual(["a.example (https://a.example/deal)", "https://b.example/x"]);
+  });
+
+  it("leaves sources off ordinary answers", async () => {
+    const { client } = clientWith([ok("plain")]);
+    expect((await client.generate("sys", turns)).sources).toBeUndefined();
+  });
+});

@@ -9,7 +9,7 @@ import { PricingModule } from "../pricing/pricing.module";
 import { LycieController } from "./lycie.controller";
 import { LycieService } from "./lycie.service";
 import { ContextService } from "./context.service";
-import { GeminiClient } from "./gemini.client";
+import { GeminiModule } from "./gemini.module";
 import { LycieLogsCron } from "./lycie-logs.cron";
 import { SuggestionsController } from "./suggestions.controller";
 import { SubmissionsService } from "./submissions.service";
@@ -22,12 +22,11 @@ import { WriterService } from "./writer.service";
 import { TestimonialIdeasService } from "./testimonial-ideas.service";
 
 @Module({
-  imports: [AuthModule, PricingModule],
+  imports: [AuthModule, PricingModule, GeminiModule],
   controllers: [LycieController, SuggestionsController, DocumentsController, WriterController],
   providers: [
     LycieService,
     ContextService,
-    GeminiClient,
     LycieLogsCron,
     SubmissionsService,
     SuggestionsService,

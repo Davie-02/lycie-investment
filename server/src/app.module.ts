@@ -32,6 +32,8 @@ import { AdminToolsModule } from "./admin-tools/admin-tools.module";
 import { InsightsModule } from "./insights/insights.module";
 import { PricingModule } from "./pricing/pricing.module";
 import { SeoModule } from "./seo/seo.module";
+import { DealsModule } from "./deals/deals.module";
+import { MarketModule } from "./market/market.module";
 
 @Module({
   imports: [
@@ -73,6 +75,8 @@ import { SeoModule } from "./seo/seo.module";
     InsightsModule,
     PricingModule,
     SeoModule,
+    DealsModule,
+    MarketModule,
   ],
   controllers: [HealthController],
   providers: [

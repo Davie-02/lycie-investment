@@ -775,3 +775,65 @@ model AdminActivity {
   @@index([createdAt])
   @@index([adminId, createdAt])
 }
+
+/// A promotion or bargain found for vehicles (by the AI deals finder, or added by hand).
+/// ADMIN-ONLY details (`howToGet`, `sources`) are never returned by any public endpoint —
+/// visitors only ever see title, summary, price and validity of PUBLISHED deals.
+model Deal {
+  id           String     @id @default(cuid())
+  title        String
+  /// Customer-facing wording. Written without company names or web addresses.
+  summary      String
+  /// Headline price in US dollars, if the deal has one.
+  priceUsd     Int?
+  vehicleLabel String?
+  validUntil   DateTime?
+  /// For staff only: who to contact and the steps to actually get this deal.
+  howToGet     String     @default("")
+  /// For staff only: the web pages the deal was found on. Never shown publicly.
+  sources      String[]   @default([])
+  status       DealStatus @default(NEW)
+  /// "ai" = found by the deals finder; "manual" = typed in by staff.
+  origin       String     @default("ai")
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([status, createdAt])
+}
+
+enum DealStatus {
+  NEW
+  PUBLISHED
+  DISMISSED
+}
+
+/// One AI-generated market briefing (what is selling, what to do about it). Latest is shown in the admin.
+model MarketReport {
+  id        String   @id @default(cuid())
+  content   Json
+  /// Web pages the briefing drew on — admin reference only.
+  sources   String[] @default([])
+  createdAt DateTime @default(now())
+}
+
+/// A post written in the admin to be sent to the company's social pages (now or scheduled).
+model SocialPost {
+  id           String    @id @default(cuid())
+  message      String
+  imageUrl     String?
+  linkUrl      String?
+  /// Which pages to send it to: "facebook", "instagram".
+  channels     String[]  @default([])
+  /// DRAFT, SCHEDULED, PUBLISHED, PARTIAL (some pages failed) or FAILED.
+  status       String    @default("DRAFT")
+  /// Per page: { ok, id, error }.
+  results      Json?
+  scheduledFor DateTime?
+  publishedAt  DateTime?
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status, scheduledFor])
+}
