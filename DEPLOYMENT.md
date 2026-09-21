@@ -294,16 +294,23 @@ real Vercel URL (e.g. `https://lycie-investment.vercel.app`), and redeploy
 the backend (Render redeploys automatically when you save an env var
 change, or trigger it manually).
 
-**Why this matters for login specifically:** admin and customer logins use
-session cookies, not tokens stored in the browser. Your frontend
-(`*.vercel.app`) and backend (`*.onrender.com`) are on different domains,
-which browsers treat as "cross-site" — by default, cookies aren't sent on
-cross-site requests at all. With `NODE_ENV=production` set correctly (step
-2), the app configures cookies with `SameSite=None; Secure`, which is the
-one combination browsers allow for this cross-domain setup. If login
-appears to succeed but every subsequent request acts logged-out, this is
-almost always the cause — double check `NODE_ENV` is actually `production`
-on Render, not left at its local-dev default.
+**Why this matters for login specifically:** your frontend (`*.vercel.app`) and backend
+(`*.onrender.com`) are on different domains, which browsers treat as "cross-site". With
+`NODE_ENV=production` the API sets its session cookie as `SameSite=None; Secure`, the one
+combination allowed for this setup. Some browsers (Safari, Firefox strict mode, in-app
+browsers) refuse such third-party cookies regardless. The site handles that automatically:
+right after sign-in it checks whether the cookie stuck, and if not it switches to a
+header-based session for that browser. So logins work everywhere with no extra setup. If
+you would rather have first-party cookies everywhere (the most secure option), see "Optional
+upgrade: serve the API from the website's own domain" in `docs/AUTH-AND-SECURITY.md`.
+If login appears to succeed but every later request acts logged-out, check `NODE_ENV` is
+`production` on Render and that `FRONTEND_URL` matches your site's address exactly.
+
+### 4a. Sign in with Google / Facebook (optional)
+
+Set `GOOGLE_CLIENT_ID` (and/or `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET`) on Render. The
+buttons appear on the customer sign-in and sign-up pages as soon as the API restarts. Step-by-step
+console instructions are in `docs/AUTH-AND-SECURITY.md`.
 
 ---
 

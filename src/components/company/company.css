@@ -9,7 +9,9 @@
   margin: 0 auto;
   padding-block: var(--space-5);
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* minmax(0, 1fr) lets a column shrink below its content's width; plain 1fr can't,
+     which pushed the strip past the edge of very narrow (320px) phones. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
   text-align: center;
 }
@@ -23,7 +25,9 @@
 .trust-strip__value {
   display: block;
   font-family: var(--font-display);
-  font-size: var(--fs-2xl);
+  /* Same size as before on anything wider than a small phone; scales down only below that. */
+  font-size: clamp(1.5rem, 8vw, var(--fs-2xl));
+  overflow-wrap: anywhere;
   font-weight: 800;
   line-height: 1.1;
   color: var(--color-accent);

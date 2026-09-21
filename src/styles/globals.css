@@ -16,6 +16,13 @@ h4 {
   color: var(--color-primary);
 }
 
+/* Long words or names must wrap rather than run past the screen edge on small phones. */
+h1,
+h2,
+h3 {
+  overflow-wrap: break-word;
+}
+
 h1 {
   font-size: var(--fs-3xl);
 }
@@ -151,7 +158,7 @@ p {
 
 .vehicle-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -213,7 +220,7 @@ p {
 
 .why-choose-us__grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
 
@@ -307,7 +314,7 @@ p {
 
 .testimonials__grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -404,7 +411,7 @@ p {
 
 .blog-list {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-6);
 }
 

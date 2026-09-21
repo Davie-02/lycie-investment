@@ -291,7 +291,7 @@
 
 .admin-dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -379,7 +379,7 @@
 
 .booking-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -443,7 +443,7 @@
 
 .booking-detail__grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   margin-top: var(--space-6);
 }

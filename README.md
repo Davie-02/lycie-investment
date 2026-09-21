@@ -1,5 +1,11 @@
 # Lycie Investments — Website
 
+> **Documentation map** — start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (how the
+> site is built and where everything lives), then [docs/FEATURES.md](docs/FEATURES.md)
+> (every feature: how it works, what it's wired to, how to fix it) and
+> [docs/AUTH-AND-SECURITY.md](docs/AUTH-AND-SECURITY.md) (sign-in, sessions, 2FA,
+> Google/Facebook). Deployment: [DEPLOYMENT.md](DEPLOYMENT.md). API details: [server/README.md](server/README.md).
+
 A corporate website for Lycie Investments, covering vehicle sourcing, importing,
 dealership, hire, and clearing services.
 
@@ -28,6 +34,20 @@ simulated.
   every form on the site (public, customer, and admin)
 - Customer registration, login, logout, forgot/reset password, balance, and
   transaction history with server-side ownership checks
+- Sign-in conveniences and security: show/hide password on every password field,
+  strong-password suggestions with a live strength meter, "Keep me signed in",
+  browser save-password prompts, email validation (typo hints + a server-side
+  mail-domain check), email confirmation, Google and Facebook sign-in (appear
+  when configured), account lockout, and optional authenticator-app two-step
+  verification for admins — see `docs/AUTH-AND-SECURITY.md`
+- Logins that work on every browser and device: if a browser blocks the
+  cross-site session cookie (Safari, strict Firefox, in-app browsers) the site
+  detects it and switches to a header-based session automatically
+- Photo sliders: vehicles, hire vehicles and the vehicle page gallery can be
+  swiped through (arrows/dots/keyboard on desktop)
+- Clickable contact details (mail, phone, WhatsApp, Google Maps), an interactive
+  map on the Contact page, and a CMS-editable footer, page headings and homepage
+  section text
 - A customer profile portal: edit name/email, change password, and a unified
   history of every inquiry/import/clearing/hire request and contact message
   submitted while signed in ("My Requests")
@@ -97,15 +117,17 @@ simulated.
   Upload real photos in `/admin/vehicles` and `/admin/hire-vehicles`.
 - Dark mode.
 
-Browser authentication uses HTTP-only session cookies. JWTs are not stored in
-local storage or exposed to frontend JavaScript. Sessions expire based on
-`JWT_EXPIRES_IN` (2 hours by default). The admin dashboard additionally
-auto-logs-out after 5 minutes of inactivity (`src/admin/components/AdminLayout.tsx`);
-the customer account area does the same after 30 minutes
-(`src/context/CustomerAuthContext.tsx`) — these are separate, shorter,
-client-side timeouts on top of the server-side session expiry, since a
-still-valid token doesn't help if someone's walked away from an unlocked
-screen.
+Browser authentication uses HTTP-only session cookies whenever the browser keeps
+them. Where a browser refuses the cross-site cookie (the website and API are on
+different domains) the site detects this right after sign-in and falls back to a
+bearer token held in browser storage for that session only — see
+`docs/AUTH-AND-SECURITY.md` for the trade-off and the optional same-domain setup that
+makes cookies first-party everywhere. Sessions last 2 hours (`JWT_EXPIRES_IN`), or 30
+days with "Keep me signed in" (`REMEMBER_ME_EXPIRES_IN`). Unless that box is ticked, the
+admin dashboard logs out after 5 minutes of inactivity
+(`src/admin/components/AdminLayout.tsx`) and the customer area after 30 minutes
+(`src/context/CustomerAuthContext.tsx`) — shorter, client-side timeouts on top of
+the server-side session expiry.
 
 ## Requirements
 
@@ -206,17 +228,21 @@ Lycie/Gemini settings) — see `server/.env.example` and `DEPLOYMENT.md`.
 ## Project structure
 
 ```
+docs/                 Architecture, features and auth/security guides
 src/
 ├── admin/                Admin dashboard — auth, layout, vehicle/hire-vehicle
 │                          CRUD forms, submitted-requests viewer (separate
 │                          from the public site's design system)
 ├── assets/            Static assets, including the Lycie Investments logo
 ├── components/
-│   ├── common/         Shared building blocks (Hero, Seo, CtaBand, etc.)
+│   ├── common/         Shared building blocks (Hero, Seo, CtaBand, ImageSlider, etc.)
 │   ├── layout/          Navbar, Footer, page Layout
 │   ├── vehicles/         Vehicle cards, gallery, specs, filters
 │   ├── services/          Service cards/section
+│   ├── company/           Team, clients, fleet, contact cards, MapEmbed
 │   └── forms/             All request/inquiry forms + shared form fields
+│                          (FormField with show/hide password, NewPasswordField,
+│                          EmailField, RememberMe, SocialSignIn)
 ├── config/               siteConfig.ts — fallback defaults only; live
 │                          content is edited via /admin and stored in the DB
 ├── context/               SiteContentContext — fetches live editable content

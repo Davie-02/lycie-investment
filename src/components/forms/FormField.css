@@ -43,7 +43,7 @@ textarea.form-field__input {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -157,7 +157,7 @@ textarea.form-field__input {
 
 .password-rules {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
   color: var(--color-muted);
 }

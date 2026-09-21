@@ -65,7 +65,7 @@
 
 .clearing-areas {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -121,7 +121,7 @@
 
 .hire-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
 }
 
@@ -139,7 +139,8 @@
 
 .contact-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, 1fr): a long email or address may wrap instead of stretching the page on narrow phones. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-7);
 }
 
@@ -159,11 +160,12 @@
 
 .contact-details__item p {
   font-size: var(--fs-md);
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 900px) {
   .contact-layout {
-    grid-template-columns: 0.8fr 1.2fr;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
   }
 }
 

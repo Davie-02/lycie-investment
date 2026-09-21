@@ -196,7 +196,16 @@ wherever MinIO serves public reads from.
 | POST   | `/api/contact-messages`   | Public             | Submit a contact form message            |
 | GET    | `/api/contact-messages`   | Any admin role     | List submitted contact messages          |
 | PATCH  | `/api/contact-messages/:id/status` | Owner/Manager | Mark new/contacted/closed           |
-| POST   | `/api/auth/login`         | Public             | Admin login, returns a JWT + user profile |
+| GET    | `/api/auth/csrf`          | Public             | A fresh signed CSRF token (send it back as `x-csrf-token`) |
+| GET    | `/api/auth/providers`     | Public             | Which social sign-in providers are configured |
+| POST   | `/api/auth/login`         | Public             | Admin login (email, password, `remember`). Returns the session, or `{requiresTwoFactor, challenge}` when 2FA is on |
+| POST   | `/api/auth/login/2fa`     | Public (challenge) | Second step: authenticator or recovery code |
+| GET    | `/api/auth/session`       | Admin              | Who is signed in (also confirms the cookie works) |
+| POST   | `/api/auth/change-password` | Admin            | Change own password; signs out other devices |
+| POST   | `/api/auth/2fa/setup`, `/2fa/enable`, `/2fa/disable` | Admin | Two-step verification management |
+| POST   | `/api/customers/social/google`, `/social/facebook` | Public | Sign in / sign up with a provider's verified proof |
+| GET    | `/api/customers/session`  | Customer           | Who is signed in (also confirms the cookie works) |
+| POST   | `/api/customers/verify-email`, `/me/resend-verification` | Public / Customer | Confirm email address |
 | POST   | `/api/customers/register` | Public             | Create a customer and account       |
 | POST   | `/api/customers/login`    | Public             | Customer login, returns a JWT + profile |
 | POST   | `/api/customers/logout`   | Public             | Clear the customer session cookie   |
@@ -456,14 +465,15 @@ production launch:
   `crossOriginResourcePolicy` is set to `cross-origin` rather than helmet's
   default, because the default would block the frontend from loading
   vehicle photos served from this API (a different origin).
-- **CSRF protection** — a double-submit-cookie pattern (`src/auth/csrf.ts`):
-  the frontend fetches a token from `GET /api/auth/csrf`, then must send it
-  back as an `x-csrf-token` header on every state-changing request. This
-  matters because admin and customer sessions use httpOnly cookies (not
-  bearer tokens), and cookies are sent automatically by browsers on
-  cross-site requests unless something stops it. Requests using a
-  `Authorization: Bearer` header are exempt, since that pattern isn't
-  vulnerable to CSRF the same way.
+- **CSRF protection** — signed, stateless tokens (`src/auth/csrf.ts`): the frontend
+  fetches a token from `GET /api/auth/csrf` and sends it back as an `x-csrf-token`
+  header on state-changing requests. The token is `nonce.expiry.HMAC(JWT_SECRET)`, so
+  the API verifies it with no cookie at all (a cookie-based scheme fails on browsers
+  that block third-party cookies). The old cookie-equals-header form is still accepted
+  for pages loaded before the change. Requests using an `Authorization: Bearer` header
+  are exempt — a forged cross-site request can't set that header.
+- **Account lockout, password policy, email checks, 2FA, social sign-in** — see
+  `../docs/AUTH-AND-SECURITY.md`; code in `src/security/` and `src/auth/`.
 - **Rate limiting** — a generous global default (100 requests/60s per IP,
   `@nestjs/throttler`) so normal browsing never hits it, plus a much
   stricter limit specifically on login/register endpoints (5 attempts/60s)
@@ -483,50 +493,35 @@ production launch:
   `whitelist: true, forbidNonWhitelisted: true` globally, so unexpected
   fields in a request body are rejected rather than silently accepted.
 
-**Known, accepted limitation:** `customers.service.ts`'s login doesn't do a
-dummy password comparison when the email doesn't exist, so there's a
-theoretical timing difference between "no such account" and "wrong
-password." This is a real, low-severity technique some threat models care
-about; for this application's scale it wasn't judged worth the added
-complexity, but it's a one-line fix if that changes.
-
 ## Login and logout — how each works
 
 Two independent login systems, both going through the same guard
-(`JwtAuthGuard`) and the same CSRF protection, but issuing separate cookies
-so an admin session and a customer session never get confused with each
-other:
+(`JwtAuthGuard`) and the same CSRF protection, issuing separate cookies so an
+admin session and a customer session never get confused with each other. The full
+explanation (cookies vs. the header fallback, "keep me signed in", lockout, 2FA,
+Google/Facebook, troubleshooting) is in [`../docs/AUTH-AND-SECURITY.md`](../docs/AUTH-AND-SECURITY.md).
+Short version:
 
-**Admin** (`/api/auth/*`): login checks the submitted email/password against
-the `AdminUser` table, and on success sets an httpOnly cookie
-(`lycie_admin_session`) containing a signed JWT. Logout clears that cookie.
-The frontend never sees or stores the token itself — `src/admin/adminApi.ts`
-relies entirely on the cookie being sent automatically (`credentials:
-"include"`) and reacts to a `401` by clearing local UI state and redirecting
-to `/admin/login`.
+- **Admin** (`/api/auth/*`): email + password → optional authenticator code → a signed
+  JWT, set as the httpOnly cookie `lycie_admin_session` and also returned in the response
+  body for the cookie-free fallback. `GET /api/auth/session` says who is signed in.
+- **Customer** (`/api/customers/*`): same shape with `lycie_customer_session`; also
+  `/social/google`, `/social/facebook`, `/verify-email`, `/session`.
+- **The guard** reads `Authorization: Bearer` first, then the admin cookie, then the
+  customer cookie; rejects tokens whose role isn't a real session role (the 2FA
+  challenge token); and re-checks the account is still active and the password hasn't
+  changed since the token was issued (`SessionService.assertStillValid`).
+- **Lifetimes:** `JWT_EXPIRES_IN` (2h, browser-session cookie) or
+  `REMEMBER_ME_EXPIRES_IN` (30d, persistent cookie) when "Keep me signed in" is ticked.
 
-**Customer** (`/api/customers/*`): same shape, different cookie
-(`lycie_customer_session`), different table (`CustomerUser`), and the JWT
-payload's `role` is fixed to `"CUSTOMER"` rather than one of the admin
-roles — this is what makes `@Roles("CUSTOMER")` vs `@Roles("OWNER",
-"MANAGER")` guards work correctly on shared route patterns like
-`/api/financial/me`.
-
-**What I verified by reading the code** (both directions of each flow):
-registering/logging in issues a valid session cookie; logging out clears it;
-`JwtAuthGuard` correctly reads the token from either an admin or a customer
-cookie (or a bearer header, for API-style access); role guards correctly
-separate what an admin token vs. a customer token can access; a wrong
-password is rejected with a generic "invalid email or password" (not
-"wrong password", which would let someone enumerate valid emails).
-
-**What I could not verify without a running database** (be sure to check
-these yourself before go-live): actually registering a customer end-to-end
-in a browser and confirming the cookie appears with the right flags in dev
-tools; confirming the CSRF flow works across your real deployed frontend
-and backend domains, not just localhost; confirming session expiry
-(`JWT_EXPIRES_IN`) actually forces a re-login rather than silently failing
-requests.
+**How this was verified:** unit tests (`npm test`) cover the guard, CSRF tokens, lockout,
+password policy, email checks, TOTP (RFC 6238 vectors) and Google token verification;
+the flows were also exercised against a real running API and database — registration
+rules, bearer-only sessions, remember-me cookie lifetimes, 2FA with recovery codes,
+the challenge token being refused as a login, and sessions ending after a password change
+or deactivation. **Still to confirm on your deployment:** the Google and Facebook
+buttons (they need your own client IDs), and sign-in from Safari/iOS against the
+live Vercel + Render domains.
 
 ## Reviews, insights and the Lycie assistant
 

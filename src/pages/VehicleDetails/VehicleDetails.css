@@ -1,6 +1,8 @@
 .vehicle-details {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, 1fr) so the column can shrink below its widest child (e.g. the thumbnail strip)
+     instead of stretching the whole page wider than a narrow phone. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-7);
   align-items: start;
 }
@@ -13,8 +15,14 @@
   margin-bottom: var(--space-5);
 }
 
+/* The text block may shrink beside the save button instead of pushing it off-screen. */
+.vehicle-details__heading > div:first-child {
+  min-width: 0;
+}
+
 .vehicle-details__heading h1 {
   margin-bottom: var(--space-2);
+  overflow-wrap: anywhere;
 }
 
 .vehicle-details__heading-meta {
@@ -42,7 +50,7 @@
 
 .vehicle-details__features {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
 }
 
@@ -88,7 +96,7 @@
 
 @media (min-width: 960px) {
   .vehicle-details {
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   }
 
   .vehicle-details__sidebar {
