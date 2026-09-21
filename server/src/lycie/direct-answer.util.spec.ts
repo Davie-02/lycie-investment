@@ -66,4 +66,8 @@ describe("directAnswer — answers stock, price and hire questions from live dat
     expect(directAnswer("x".repeat(200), vehicles, hire)).toBeNull();
     expect(directAnswer("???", vehicles, hire)).toBeNull();
   });
+
+  it("leaves 'Toyota Vitz' to the AI when we only stock other Toyotas", () => {
+    expect(directAnswer("Do you have a Toyota Vitz?", vehicles, hire)).toBeNull();
+  });
 });

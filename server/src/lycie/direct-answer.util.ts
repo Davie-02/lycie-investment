@@ -48,6 +48,17 @@ function byMake(vehicles: VehicleInfo[], tokens: Set<string>): VehicleInfo[] {
   });
 }
 
+/** Everyday words that carry no vehicle information; anything else left in a make-only question could be a model we don't stock. */
+const FILLER = new Set(("a an the any some do does you your we i me my have has had got stock stocks stocked sell selling sale for in on at of to and or is are it there " +
+  "what which how much many price prices cost costs available availability show list looking look please can could would like want need am currently now right " +
+  "vehicle vehicles car cars truck trucks bus buses van vans suv suvs pickup pickups pick-up pick-ups sedan sedans hatchback hatchbacks used new second hand secondhand " +
+  "hi hello hey thanks thank").split(" "));
+
+/** Words in the question that could still be an unrecognised model name (so a make-only match can't be trusted). */
+function unexplainedWords(tokens: Set<string>, make: string): string[] {
+  return [...tokens].filter((w) => !FILLER.has(w) && w !== make && !/^\d+$/.test(w));
+}
+
 const list = (vehicles: VehicleInfo[]) => vehicles.map((v) => `- ${v.label} — ${v.priceText}${v.mileageKm ? `, ${v.mileageKm.toLocaleString("en-US")} km` : ""}`).join("\n");
 
 export function directAnswer(question: string, vehicles: VehicleInfo[], hire: HireInfo[]): DirectAnswer | null {
@@ -68,7 +79,12 @@ export function directAnswer(question: string, vehicles: VehicleInfo[], hire: Hi
 
   // A named model is the most specific thing to go on; only fall back to the make when no model was named.
   const modelMatches = byModel(vehicles, tokens, question);
-  const named = modelMatches.length > 0 ? modelMatches : byMake(vehicles, tokens);
+  const makeMatches = modelMatches.length > 0 ? [] : byMake(vehicles, tokens);
+  // "Do you have a Toyota Vitz?" names a model we don't stock; listing every Toyota as "matching" would be wrong.
+  // If the question has any word we can't explain, leave it to the AI, which can say so honestly.
+  const unsure = makeMatches.length > 0 && unexplainedWords(tokens, makeAndModel(makeMatches[0].label).make).length > 0;
+  if (unsure) return null;
+  const named = modelMatches.length > 0 ? modelMatches : makeMatches;
   if (named.length > 0) {
     const available = named.filter((v) => v.status === "available");
     if (available.length === 0) {
