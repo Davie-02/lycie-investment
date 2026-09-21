@@ -39,6 +39,15 @@ services:
       # Lycie chat widget simply hides itself.
       - key: GEMINI_API_KEY
         sync: false
+      # Social media desk (optional — the tools stay hidden until these are set).
+      - key: META_PAGE_ID
+        sync: false
+      - key: META_PAGE_ACCESS_TOKEN
+        sync: false
+      - key: META_INSTAGRAM_ID
+        sync: false
+      - key: SITE_URL
+        sync: false # the website's public address, e.g. https://lycie-investments.vercel.app
       - key: ADMIN_NAME
         sync: false
       - key: ADMIN_EMAIL

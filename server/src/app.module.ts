@@ -34,6 +34,7 @@ import { PricingModule } from "./pricing/pricing.module";
 import { SeoModule } from "./seo/seo.module";
 import { DealsModule } from "./deals/deals.module";
 import { MarketModule } from "./market/market.module";
+import { SocialModule } from "./social/social.module";
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { MarketModule } from "./market/market.module";
     SeoModule,
     DealsModule,
     MarketModule,
+    SocialModule,
   ],
   controllers: [HealthController],
   providers: [

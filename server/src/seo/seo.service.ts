@@ -3,6 +3,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "../content-admin/content-state";
 import { PricingService } from "../pricing/pricing.service";
 import { priceText, toUsd } from "../pricing/price-format";
+import { siteUrl as configuredSiteUrl } from "../common/site-url";
 import { absoluteUrl, escapeHtml, jsonLdScript, renderDocument, sitemapXml, snippet } from "./seo-html";
 
 type Json = Record<string, unknown>;
@@ -51,7 +52,7 @@ export class SeoService {
 
   /** The public address of the website (no trailing slash). SITE_URL, else FRONTEND_URL. */
   siteUrl(): string {
-    return (process.env.SITE_URL || process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/+$/, "");
+    return configuredSiteUrl();
   }
 
   private async site(): Promise<SiteInfo> {
