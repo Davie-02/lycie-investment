@@ -17,6 +17,7 @@ import Reveal from "@/components/common/Reveal";
 import TrustStrip from "@/components/company/TrustStrip";
 import ClientsSection from "@/components/company/ClientsSection";
 import FleetSection from "@/components/company/FleetSection";
+import DealsSection from "@/components/deals/DealsSection";
 import { useSiteContent } from "@/context/SiteContentContext";
 import { organizationLd } from "@/utils/structuredData";
 
@@ -41,6 +42,7 @@ export default function Home() {
       <Reveal>
         <FeaturedVehicles />
       </Reveal>
+      <DealsSection />
       <Reveal>
         <WhyChooseUs />
       </Reveal>

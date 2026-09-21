@@ -8,10 +8,12 @@ import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import ThemeToggle from "./ThemeToggle";
+import { useAsyncData } from "@/hooks/useAsyncData";
+import { getDeals } from "@/services/deals.service";
 import "./Navbar.css";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/vehicles", label: "Vehicles" },
   { to: "/import", label: "Import" },
@@ -22,6 +24,9 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
+  // A "Deals" link appears only while at least one deal is published (updates live).
+  const { data: deals } = useAsyncData(getDeals, [], ["deals"]);
+  const NAV_LINKS = deals && deals.length > 0 ? [...BASE_NAV_LINKS.slice(0, 5), { to: "/deals", label: "Deals" }, ...BASE_NAV_LINKS.slice(5)] : BASE_NAV_LINKS;
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isAuthenticated } = useCustomerAuth();

@@ -4,6 +4,7 @@
  * admin.
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
@@ -41,7 +42,9 @@ function validate(values: FormValues) {
 }
 
 export default function ContactForm() {
-  const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
+  // Links such as /contact?subject=Deal: … (from the Deals page) start the form with that subject filled in.
+  const [searchParams] = useSearchParams();
+  const [values, setValues] = useState<FormValues>({ ...INITIAL_VALUES, subject: (searchParams.get("subject") ?? "").slice(0, 150) });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const { status, errorMessage, submit } = useFormSubmission<ContactMessage>(submitContactMessage);
 

@@ -1,0 +1,46 @@
+/* Promotion cards (DealCard.tsx) and the homepage deals strip. */
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-5);
+}
+
+.deal-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.deal-card__tag {
+  align-self: flex-start;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.deal-card__vehicle {
+  font-size: var(--fs-xs);
+}
+
+.deal-card__price {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.deal-card__until {
+  font-size: var(--fs-sm);
+}
+
+.deal-card__cta {
+  margin-top: auto;
+}

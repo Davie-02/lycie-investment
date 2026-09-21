@@ -54,6 +54,7 @@ export default function AdminLayout() {
           { to: "/admin/blog", label: "Blog" },
           { to: "/admin/reviews", label: "Reviews" },
           { to: "/admin/insights", label: "Insights" },
+          { to: "/admin/deals", label: "Deals & Market" },
           { to: "/admin/lycie", label: "Lycie AI" },
         ]
       : []),
