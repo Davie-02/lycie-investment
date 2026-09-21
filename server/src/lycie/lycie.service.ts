@@ -19,6 +19,21 @@ export interface ChatResponse {
   outcome: ChatOutcome;
   /** Lets the widget attach thumbs-up/down to this exchange. Null when nothing was logged. */
   logId: string | null;
+  /** Where this answer's time went, in milliseconds — lets a slow answer explain itself. */
+  timing?: { totalMs: number; contextMs?: number; aiMs?: number };
+}
+
+/**
+ * A hard ceiling on the AI step: whatever happens inside, a visitor is never left waiting longer than this.
+ * (The client has its own, shorter budget; this is the safety net around it.)
+ */
+const AI_CEILING_MS = 32_000;
+function withDeadline<T>(work: Promise<T>): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const ceiling = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("AI step exceeded its time ceiling")), AI_CEILING_MS);
+  });
+  return Promise.race([work, ceiling]).finally(() => clearTimeout(timer));
 }
 
 const numberFromEnv = (name: string, fallback: number) => {
@@ -67,6 +82,16 @@ export class LycieService {
    * tidied text, which the caller should treat as authoritative.
    */
   async chat(dto: ChatDto, ip: string, onDelta?: (text: string) => void): Promise<ChatResponse> {
+    const startedAt = Date.now();
+    const marks: { contextMs?: number; aiMs?: number } = {};
+    const response = await this.answer(dto, ip, onDelta, marks);
+    response.timing = { totalMs: Date.now() - startedAt, ...marks };
+    // A slow answer says why in the log, so it can be diagnosed without guessing.
+    if (response.timing.totalMs > 15_000) this.logger.warn(`Slow Lycie answer (${response.outcome}): ${JSON.stringify(response.timing)}`);
+    return response;
+  }
+
+  private async answer(dto: ChatDto, ip: string, onDelta: ((text: string) => void) | undefined, marks: { contextMs?: number; aiMs?: number }): Promise<ChatResponse> {
     const question = redactPii(dto.message.trim());
     if (!question) return this.refuse("Please type a question and I'll do my best to help.", "blocked", null);
 
@@ -116,7 +141,9 @@ export class LycieService {
       }
     }
 
+    const contextStartedAt = Date.now();
     const { context, cards } = await this.context.forQuestion(question);
+    marks.contextMs = Date.now() - contextStartedAt;
     const turns: ChatTurn[] = [
       ...(dto.history ?? []).map((turn) => ({
         role: turn.role,
@@ -127,18 +154,22 @@ export class LycieService {
 
     try {
       const system = buildSystemPrompt(context);
+      const aiStartedAt = Date.now();
       let result;
       if (onDelta) {
         const filter = new MarkerFilter();
-        result = await this.gemini.generateStream(system, turns, (delta) => {
-          const safe = filter.push(delta);
-          if (safe) onDelta(safe);
-        });
+        result = await withDeadline(
+          this.gemini.generateStream(system, turns, (delta) => {
+            const safe = filter.push(delta);
+            if (safe) onDelta(safe);
+          })
+        );
         const rest = filter.end();
         if (rest) onDelta(rest);
       } else {
-        result = await this.gemini.generate(system, turns);
+        result = await withDeadline(this.gemini.generate(system, turns));
       }
+      marks.aiMs = Date.now() - aiStartedAt;
       const { text, model } = result;
       this.today.increment();
       const parsed = parseReply(text, new Set(cards.keys()));
