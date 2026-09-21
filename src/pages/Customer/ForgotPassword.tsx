@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
+import { emailError } from "@/utils/email";
 import { forgotPassword } from "@/services/customer.service";
 import { ApiError } from "@/services/http";
 import "./customer.css";
@@ -15,8 +16,9 @@ export default function ForgotPassword() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!email.trim()) {
-      setError("Enter your email address.");
+    const problem = emailError(email);
+    if (problem) {
+      setError(problem);
       return;
     }
 

@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
+import NewPasswordField from "@/components/forms/NewPasswordField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useSavedVehicles } from "@/context/SavedVehiclesContext";
@@ -12,6 +14,7 @@ import {
   submitPayment,
   updateCustomerProfile,
   changeCustomerPassword,
+  resendVerificationEmail,
   cancelHireRequest,
   type CustomerAccount as Account,
   type CustomerCase,
@@ -19,6 +22,9 @@ import {
 } from "@/services/customer.service";
 import { ApiError } from "@/services/http";
 import { formatCurrency, formatMileage } from "@/utils/format";
+import { emailError } from "@/utils/email";
+import { checkPassword } from "@/utils/password";
+import { offerToSavePassword } from "@/utils/credentials";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import MyMessages from "@/components/customer/MyMessages";
@@ -46,11 +52,8 @@ interface PasswordFormValues {
 function validateProfileForm(values: ProfileFormValues) {
   const errors: Partial<Record<keyof ProfileFormValues, string>> = {};
   if (!values.name.trim()) errors.name = "Full name is required.";
-  if (!values.email.trim()) {
-    errors.email = "Email is required.";
-  } else if (!/^\S+@\S+\.\S+$/.test(values.email)) {
-    errors.email = "Enter a valid email address.";
-  }
+  const emailProblem = emailError(values.email);
+  if (emailProblem) errors.email = emailProblem;
   return errors;
 }
 
@@ -59,8 +62,8 @@ function validatePasswordForm(values: PasswordFormValues) {
   if (!values.currentPassword) errors.currentPassword = "Enter your current password.";
   if (!values.newPassword) {
     errors.newPassword = "Enter a new password.";
-  } else if (values.newPassword.length < 8) {
-    errors.newPassword = "New password must be at least 8 characters.";
+  } else if (!checkPassword(values.newPassword).acceptable) {
+    errors.newPassword = "Your new password doesn't meet all the requirements below.";
   }
   if (values.confirmPassword !== values.newPassword) {
     errors.confirmPassword = "Passwords do not match.";
@@ -109,6 +112,9 @@ export default function CustomerAccount() {
   const [profileStatus, setProfileStatus] = useState<"idle" | "success" | "error">("idle");
   const [profileErrorMessage, setProfileErrorMessage] = useState<string | null>(null);
   const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
+
+  // "Confirm your email" banner: shown until the emailed link has been used.
+  const [verifyNotice, setVerifyNotice] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   const [passwordValues, setPasswordValues] = useState<PasswordFormValues>({
     currentPassword: "",
@@ -210,6 +216,16 @@ export default function CustomerAccount() {
     }
   }
 
+  async function handleResendVerification() {
+    setVerifyNotice("sending");
+    try {
+      await resendVerificationEmail();
+      setVerifyNotice("sent");
+    } catch {
+      setVerifyNotice("error");
+    }
+  }
+
   function handlePasswordChange(field: keyof PasswordFormValues) {
     return (e: ChangeEvent<HTMLInputElement>) => {
       setPasswordValues((prev) => ({ ...prev, [field]: e.target.value }));
@@ -228,6 +244,8 @@ export default function CustomerAccount() {
 
     try {
       await changeCustomerPassword(passwordValues.currentPassword, passwordValues.newPassword);
+      // Lets the browser replace the saved password with the new one (see utils/credentials.ts).
+      if (currentUser) void offerToSavePassword(currentUser.email, passwordValues.newPassword, currentUser.name);
       setPasswordValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
       setPasswordStatus("success");
     } catch (error) {
@@ -253,6 +271,18 @@ export default function CustomerAccount() {
         </div>
       </section>
       <section className="section container customer-account">
+        {currentUser && !currentUser.emailVerifiedAt && (
+          <div className="form-status form-status--info" role="status">
+            <strong>Please confirm your email address.</strong> We sent a link to {currentUser.email}.{" "}
+            {verifyNotice === "sent" ? (
+              "A new link is on its way."
+            ) : (
+              <button type="button" className="link-button" onClick={handleResendVerification} disabled={verifyNotice === "sending"}>
+                {verifyNotice === "sending" ? "Sending…" : verifyNotice === "error" ? "Couldn't send — try again" : "Send the link again"}
+              </button>
+            )}
+          </div>
+        )}
         {isLoading && <p className="text-muted">Loading your account…</p>}
         {loadError && (
           <p className="text-muted" role="alert">{loadError}</p>
@@ -531,13 +561,11 @@ export default function CustomerAccount() {
                     error={profileErrors.name}
                     autoComplete="name"
                   />
-                  <FormField
+                  <EmailField
                     id="profile-email"
-                    label="Email"
-                    type="email"
-                    required
+                    name="email"
                     value={profileValues.email}
-                    onChange={handleProfileChange("email")}
+                    onChange={(email) => setProfileValues((prev) => ({ ...prev, email }))}
                     error={profileErrors.email}
                     autoComplete="username"
                   />
@@ -553,7 +581,19 @@ export default function CustomerAccount() {
 
             <div className="customer-account__history customer-account__settings">
               <h2>Change password</h2>
-              <form className="form-card customer-account__form" onSubmit={handlePasswordSubmit} noValidate>
+              <form className="form-card customer-account__form" onSubmit={handlePasswordSubmit} noValidate name="change-password">
+                {/* Tells the browser's password manager WHICH saved login this password belongs to,
+                    so it updates the right entry instead of saving a new one. */}
+                <input
+                  type="text"
+                  name="username"
+                  autoComplete="username"
+                  value={currentUser?.email ?? ""}
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="visually-hidden"
+                />
                 {passwordStatus === "success" && (
                   <FormStatusBanner
                     status="success"
@@ -568,6 +608,7 @@ export default function CustomerAccount() {
                 <div className="form-grid form-grid--2col">
                   <FormField
                     id="current-password"
+                    name="current-password"
                     label="Current Password"
                     type="password"
                     required
@@ -577,18 +618,18 @@ export default function CustomerAccount() {
                     autoComplete="current-password"
                     wrapperClassName="form-grid__full"
                   />
-                  <FormField
+                  <NewPasswordField
                     id="new-password"
                     label="New Password"
-                    type="password"
-                    required
                     value={passwordValues.newPassword}
-                    onChange={handlePasswordChange("newPassword")}
+                    onChange={(newPassword) => setPasswordValues((prev) => ({ ...prev, newPassword }))}
+                    onSuggest={(newPassword) => setPasswordValues((prev) => ({ ...prev, newPassword, confirmPassword: newPassword }))}
+                    personalData={[currentUser?.name, currentUser?.email]}
                     error={passwordErrors.newPassword}
-                    autoComplete="new-password"
                   />
                   <FormField
                     id="confirm-password"
+                    name="confirm-password"
                     label="Confirm New Password"
                     type="password"
                     required

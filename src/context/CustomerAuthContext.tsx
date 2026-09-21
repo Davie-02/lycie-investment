@@ -2,8 +2,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { ApiError } from "@/services/http";
 import {
   clearCustomerSession,
+  fetchCustomerSession,
   getStoredCustomer,
+  isCustomerRemembered,
   loginCustomer,
+  loginWithFacebook,
+  loginWithGoogle,
   logoutCustomer,
   registerCustomer,
   storeCustomerSession,
@@ -17,13 +21,19 @@ interface CustomerAuthContextValue {
   currentUser: CustomerUser | null;
   isSubmitting: boolean;
   errorMessage: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, remember?: boolean) => Promise<boolean>;
+  register: (name: string, email: string, password: string, remember?: boolean) => Promise<boolean>;
+  /** "Continue with Google" — `credential` is the ID token Google's button returns. */
+  loginGoogle: (credential: string, remember?: boolean) => Promise<boolean>;
+  /** "Continue with Facebook" — `accessToken` comes from Facebook's login dialog. */
+  loginFacebook: (accessToken: string, remember?: boolean) => Promise<boolean>;
   logout: () => void;
   updateCurrentUser: (user: CustomerUser) => void;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextValue | null>(null);
+
+/** Signed-in customers who did NOT tick "Keep me signed in" are logged out after this much inactivity. */
 const CUSTOMER_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function CustomerAuthProvider({ children }: { children: ReactNode }) {
@@ -32,8 +42,36 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // The stored user only says "someone signed in here once". Confirm with the
+  // server that the session is still alive — a browser-session cookie dies when
+  // the browser closes, and a remembered one can be revoked (password change,
+  // deactivation). Done silently: no error banner for a returning visitor.
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!getStoredCustomer()) return;
+    let cancelled = false;
+    fetchCustomerSession()
+      .then((user) => {
+        if (cancelled) return;
+        if (user) {
+          storeCustomerSession({ user });
+          setCurrentUser(user);
+        } else {
+          clearCustomerSession();
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      })
+      .catch(() => {
+        // Server unreachable: keep the last known state rather than signing them out over a bad signal.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Idle logout — skipped entirely for "Keep me signed in" sessions.
+  useEffect(() => {
+    if (!isAuthenticated || isCustomerRemembered()) return;
 
     let timeoutId: number;
     const resetTimeout = () => {
@@ -46,7 +84,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         // this browser continue making authenticated requests.
         void logoutCustomer().catch(() => {
           // Logout failing shouldn't block clearing the local session below
-          // — the cookie will still expire on its own via JWT_EXPIRES_IN.
+          // — the cookie will still expire on its own.
         });
         clearCustomerSession();
         setCurrentUser(null);
@@ -76,6 +114,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(CUSTOMER_SESSION_EXPIRED_EVENT, handleExpiredSession);
   }, []);
 
+  /** Runs any sign-in request and, on success, records the session; on failure shows the server's message. */
   async function authenticate(request: () => Promise<CustomerSession>) {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -94,13 +133,11 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function login(email: string, password: string) {
-    return authenticate(() => loginCustomer(email, password));
-  }
-
-  function register(name: string, email: string, password: string) {
-    return authenticate(() => registerCustomer(name, email, password));
-  }
+  const login = (email: string, password: string, remember = false) => authenticate(() => loginCustomer(email, password, remember));
+  const register = (name: string, email: string, password: string, remember = false) =>
+    authenticate(() => registerCustomer(name, email, password, remember));
+  const loginGoogle = (credential: string, remember = false) => authenticate(() => loginWithGoogle(credential, remember));
+  const loginFacebook = (accessToken: string, remember = false) => authenticate(() => loginWithFacebook(accessToken, remember));
 
   function logout() {
     void logoutCustomer();
@@ -126,6 +163,8 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         errorMessage,
         login,
         register,
+        loginGoogle,
+        loginFacebook,
         logout,
         updateCurrentUser,
       }}

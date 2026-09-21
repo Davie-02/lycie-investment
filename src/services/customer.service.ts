@@ -1,10 +1,13 @@
 import type { Vehicle } from "@/types/vehicle";
 import { ApiError } from "./http";
 import { clearCsrfToken, fetchWithCsrf } from "./csrf";
+import { authHeader, clearFallbackToken, settleSession } from "./sessionToken";
 import { parseErrorMessage } from "@/utils/apiError";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 const CUSTOMER_USER_KEY = "lycie_customer_user";
+/** "1" when the customer ticked "Keep me signed in" — read by the auth context to skip the idle logout. */
+const CUSTOMER_REMEMBER_KEY = "lycie_customer_remember";
 export const CUSTOMER_SESSION_EXPIRED_EVENT = "customer-session-expired";
 
 export interface CustomerUser {
@@ -14,10 +17,20 @@ export interface CustomerUser {
   isActive?: boolean;
   createdAt?: string;
   role?: "CUSTOMER";
+  /** null/absent until the customer confirms their email address. */
+  emailVerifiedAt?: string | null;
 }
 
 export interface CustomerSession {
   user: CustomerUser;
+}
+
+/** What the server returns from every successful customer sign-in. */
+interface CustomerAuthResponse {
+  user: CustomerUser;
+  /** Only used by the cookie-free fallback — see services/sessionToken.ts. */
+  token?: string;
+  expiresAt?: string;
 }
 
 export interface CustomerAccount {
@@ -100,6 +113,25 @@ export function storeCustomerSession(session: CustomerSession): void {
 
 export function clearCustomerSession(): void {
   localStorage.removeItem(CUSTOMER_USER_KEY);
+  localStorage.removeItem(CUSTOMER_REMEMBER_KEY);
+  clearFallbackToken("customer");
+}
+
+export function isCustomerRemembered(): boolean {
+  try {
+    return localStorage.getItem(CUSTOMER_REMEMBER_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setCustomerRemembered(remember: boolean): void {
+  try {
+    if (remember) localStorage.setItem(CUSTOMER_REMEMBER_KEY, "1");
+    else localStorage.removeItem(CUSTOMER_REMEMBER_KEY);
+  } catch {
+    // Storage blocked: the idle logout simply stays on, which is the safe default.
+  }
 }
 
 export function logoutCustomer() {
@@ -107,6 +139,12 @@ export function logoutCustomer() {
     clearCsrfToken
   );
 }
+
+/**
+ * Routes where a 401 means "wrong details", not "your session ended" — so they
+ * must not trigger the sign-out-and-show-"session expired" behaviour.
+ */
+const NO_EXPIRY_ROUTES = /^\/customers\/(login|register|forgot-password|reset-password|verify-email|social\/)/;
 
 async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const send = init.method && init.method !== "GET" ? fetchWithCsrf : fetch;
@@ -118,6 +156,8 @@ async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T
       credentials: "include",
       headers: {
         ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+        // Empty in normal (cookie) mode; carries the token when cookies are blocked.
+        ...authHeader("customer"),
         ...init.headers,
       },
     });
@@ -126,7 +166,7 @@ async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !NO_EXPIRY_ROUTES.test(path)) {
       clearCustomerSession();
       window.dispatchEvent(new Event(CUSTOMER_SESSION_EXPIRED_EVENT));
     }
@@ -136,18 +176,76 @@ async function customerFetch<T>(path: string, init: RequestInit = {}): Promise<T
   return response.json() as Promise<T>;
 }
 
-export function registerCustomer(name: string, email: string, password: string) {
-  return customerFetch<CustomerSession>("/customers/register", {
+/**
+ * Common ending of every way of signing in: works out whether the cookie or
+ * the header fallback carries this session, and remembers the "keep me
+ * signed in" choice.
+ */
+async function finishSignIn(response: CustomerAuthResponse, remember: boolean): Promise<CustomerSession> {
+  await settleSession("customer", response.token, remember);
+  setCustomerRemembered(remember);
+  return { user: response.user };
+}
+
+export async function registerCustomer(name: string, email: string, password: string, remember = false) {
+  const response = await customerFetch<CustomerAuthResponse>("/customers/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, remember }),
+  });
+  return finishSignIn(response, remember);
+}
+
+export async function loginCustomer(email: string, password: string, remember = false) {
+  const response = await customerFetch<CustomerAuthResponse>("/customers/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password, remember }),
+  });
+  return finishSignIn(response, remember);
+}
+
+/** "Continue with Google": `credential` is the signed ID token Google's button hands back. */
+export async function loginWithGoogle(credential: string, remember = false) {
+  const response = await customerFetch<CustomerAuthResponse>("/customers/social/google", {
+    method: "POST",
+    body: JSON.stringify({ credential, remember }),
+  });
+  return finishSignIn(response, remember);
+}
+
+/** "Continue with Facebook": `accessToken` comes from Facebook's login dialog. */
+export async function loginWithFacebook(accessToken: string, remember = false) {
+  const response = await customerFetch<CustomerAuthResponse>("/customers/social/facebook", {
+    method: "POST",
+    body: JSON.stringify({ accessToken, remember }),
+  });
+  return finishSignIn(response, remember);
+}
+
+/**
+ * Asks the server whether the remembered customer is still signed in.
+ * Returns the fresh user, or null if the session has ended. Network trouble
+ * throws, so the caller can keep showing the last known state instead of
+ * signing someone out because their phone briefly lost signal.
+ */
+export async function fetchCustomerSession(): Promise<CustomerUser | null> {
+  try {
+    const { user } = await customerFetch<{ user: CustomerUser }>("/customers/session");
+    return user;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
+export function verifyCustomerEmail(token: string) {
+  return customerFetch<{ verified: boolean }>("/customers/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
   });
 }
 
-export function loginCustomer(email: string, password: string) {
-  return customerFetch<CustomerSession>("/customers/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
+export function resendVerificationEmail() {
+  return customerFetch<{ sent: boolean }>("/customers/me/resend-verification", { method: "POST" });
 }
 
 export function getCustomerAccount() {
@@ -173,11 +271,18 @@ export function updateCustomerProfile(updates: { name?: string; email?: string }
   });
 }
 
-export function changeCustomerPassword(currentPassword: string, newPassword: string) {
-  return customerFetch<{ updated: boolean }>("/customers/me/change-password", {
+/**
+ * Changing the password signs every OTHER device out, so the server returns a
+ * fresh session for this one — it has to be re-settled or this device would be
+ * signed out too.
+ */
+export async function changeCustomerPassword(currentPassword: string, newPassword: string) {
+  const response = await customerFetch<CustomerAuthResponse & { updated: boolean }>("/customers/me/change-password", {
     method: "POST",
     body: JSON.stringify({ currentPassword, newPassword }),
   });
+  await settleSession("customer", response.token, isCustomerRemembered());
+  return { updated: response.updated };
 }
 
 export function forgotPassword(email: string) {

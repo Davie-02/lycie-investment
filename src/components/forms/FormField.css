@@ -89,3 +89,198 @@ textarea.form-field__input {
   align-items: center;
   gap: var(--space-4);
 }
+
+/* ---- Password field: input with a show/hide button inside its right edge ---- */
+
+.form-field__password {
+  position: relative;
+  display: flex;
+}
+
+.form-field__password .form-field__input {
+  flex: 1;
+  min-width: 0;
+  /* Room for the toggle button so long passwords never run underneath it. */
+  padding-right: 2.75rem;
+}
+
+.form-field__toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: color var(--transition);
+}
+
+.form-field__toggle:hover,
+.form-field__toggle[aria-pressed="true"] {
+  color: var(--color-primary);
+}
+
+/* ---- New-password helper: strength meter, checklist, suggestion ---- */
+
+.password-help {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+}
+
+.password-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-1);
+}
+
+.password-meter__segment {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background-color var(--transition);
+}
+
+/* Each strength level colours the segments up to its score. */
+.password-meter--1 .password-meter__segment:nth-child(-n + 1) { background: var(--color-error); }
+.password-meter--2 .password-meter__segment:nth-child(-n + 2) { background: var(--color-muted); }
+.password-meter--3 .password-meter__segment:nth-child(-n + 3) { background: var(--color-accent-dark); }
+.password-meter--4 .password-meter__segment:nth-child(-n + 4) { background: var(--color-success); }
+
+.password-help__strength {
+  color: var(--color-muted);
+}
+
+.password-rules {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-1);
+  color: var(--color-muted);
+}
+
+.password-rules__item::before {
+  content: "\25CB";
+  display: inline-block;
+  width: 1.2em;
+}
+
+.password-rules__item--met {
+  color: var(--color-success);
+}
+
+.password-rules__item--met::before {
+  content: "\2713";
+}
+
+.password-help__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Small text-style buttons under a field ("Suggest a strong password", "Copy"). */
+.link-button {
+  color: var(--color-accent-dark);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-button:hover {
+  color: var(--color-primary);
+}
+
+/* ---- Checkbox row ("Keep me signed in") ---- */
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.form-check input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+/* ---- "Did you mean …?" email hint ---- */
+
+.form-field__hint {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+/* ---- Divider between the email form and "Continue with Google" ---- */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.social-signin {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+}
+
+.social-signin__google {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+}
+
+.social-signin__facebook {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Visually hidden but still read by screen readers and password managers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 480px) {
+  .password-rules {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Neutral notice (e.g. "Please confirm your email") — same shape as the success/error banners. */
+.form-status--info {
+  background: #eef6fa;
+  color: var(--color-primary);
+  border: 1px solid var(--color-accent-dark);
+}

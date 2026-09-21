@@ -2,19 +2,22 @@ import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
+import RememberMe from "@/components/forms/RememberMe";
+import SocialSignIn from "@/components/forms/SocialSignIn";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { emailError } from "@/utils/email";
+import { offerToSavePassword } from "@/utils/credentials";
 import "./customer.css";
 
 type FormValues = { email: string; password: string };
 
+/** Field-level checks run before anything is sent to the server. */
 function validate(values: FormValues) {
   const errors: Partial<Record<keyof FormValues, string>> = {};
-  if (!values.email.trim()) {
-    errors.email = "Email is required.";
-  } else if (!/^\S+@\S+\.\S+$/.test(values.email)) {
-    errors.email = "Enter a valid email address.";
-  }
+  const emailProblem = emailError(values.email);
+  if (emailProblem) errors.email = emailProblem;
   if (!values.password) errors.password = "Password is required.";
   return errors;
 }
@@ -25,6 +28,8 @@ export default function CustomerLogin() {
   const location = useLocation();
   const [values, setValues] = useState<FormValues>({ email: "", password: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
+  // "Keep me signed in": a 30-day session instead of one that ends with the browser.
+  const [remember, setRemember] = useState(false);
 
   function handleChange(field: keyof FormValues) {
     return (e: ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +43,9 @@ export default function CustomerLogin() {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    if (await login(values.email, values.password)) {
+    if (await login(values.email, values.password, remember)) {
+      // Ask the browser to offer to save the password (see utils/credentials.ts).
+      void offerToSavePassword(values.email, values.password);
       const destination = (location.state as { from?: string } | null)?.from ?? "/account";
       navigate(destination, { replace: true });
     }
@@ -54,7 +61,7 @@ export default function CustomerLogin() {
         </div>
       </section>
       <section className="section container customer-auth">
-        <form className="form-card customer-auth__form" onSubmit={handleSubmit} noValidate>
+        <form className="form-card customer-auth__form" onSubmit={handleSubmit} noValidate name="customer-login">
           <h2>Sign in</h2>
 
           {errorMessage && (
@@ -62,18 +69,17 @@ export default function CustomerLogin() {
           )}
 
           <div className="form-grid">
-            <FormField
+            <EmailField
               id="customer-email"
-              label="Email"
-              type="email"
-              required
+              name="email"
               value={values.email}
-              onChange={handleChange("email")}
+              onChange={(email) => setValues((prev) => ({ ...prev, email }))}
               error={errors.email}
               autoComplete="username"
             />
             <FormField
               id="customer-password"
+              name="password"
               label="Password"
               type="password"
               required
@@ -82,6 +88,7 @@ export default function CustomerLogin() {
               error={errors.password}
               autoComplete="current-password"
             />
+            <RememberMe id="customer-remember" checked={remember} onChange={setRemember} />
           </div>
 
           <div className="form-actions">
@@ -89,6 +96,8 @@ export default function CustomerLogin() {
               {isSubmitting ? "Signing in…" : "Sign In"}
             </button>
           </div>
+
+          <SocialSignIn remember={remember} mode="signin" />
 
           <p className="text-muted customer-auth__switch">
             <Link to="/account/forgot-password">Forgot your password?</Link>

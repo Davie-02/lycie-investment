@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
+import { emailError } from "@/utils/email";
 import { ApiError } from "@/services/http";
 import { adminForgotPassword } from "../adminApi";
 import "../components/AdminLayout.css";
@@ -14,8 +15,9 @@ export default function AdminForgotPassword() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!email.trim()) {
-      setError("Enter your email address.");
+    const problem = emailError(email);
+    if (problem) {
+      setError(problem);
       return;
     }
 

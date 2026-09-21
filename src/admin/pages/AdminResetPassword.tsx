@@ -1,6 +1,8 @@
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import FormField from "@/components/forms/FormField";
+import NewPasswordField from "@/components/forms/NewPasswordField";
+import { checkPassword } from "@/utils/password";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { ApiError } from "@/services/http";
 import { adminResetPassword } from "../adminApi";
@@ -15,8 +17,8 @@ function validate(values: FormValues) {
   const errors: Partial<Record<keyof FormValues, string>> = {};
   if (!values.newPassword) {
     errors.newPassword = "Enter a new password.";
-  } else if (values.newPassword.length < 8) {
-    errors.newPassword = "Password must be at least 8 characters.";
+  } else if (!checkPassword(values.newPassword).acceptable) {
+    errors.newPassword = "Your password doesn't meet all the requirements below.";
   }
   if (values.confirmPassword !== values.newPassword) {
     errors.confirmPassword = "Passwords do not match.";
@@ -103,18 +105,17 @@ export default function AdminResetPassword() {
             )}
 
             <div className="form-grid">
-              <FormField
+              <NewPasswordField
                 id="admin-reset-new-password"
                 label="New Password"
-                type="password"
-                required
                 value={values.newPassword}
-                onChange={handleChange("newPassword")}
+                onChange={(newPassword) => setValues((prev) => ({ ...prev, newPassword }))}
+                onSuggest={(newPassword) => setValues((prev) => ({ ...prev, newPassword, confirmPassword: newPassword }))}
                 error={errors.newPassword}
-                autoComplete="new-password"
               />
               <FormField
                 id="admin-reset-confirm-password"
+                name="confirm-password"
                 label="Confirm New Password"
                 type="password"
                 required

@@ -5,6 +5,7 @@
 // src/services/customer.service.ts — those two already handle CSRF the
 // same way this file does.
 import { fetchWithCsrf } from "./csrf";
+import { authHeader } from "./sessionToken";
 import { parseErrorMessage } from "@/utils/apiError";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
@@ -19,7 +20,9 @@ export class ApiError extends Error {
 export async function apiGet<T>(path: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include" });
+    // authHeader() is empty unless this browser blocks cookies; then it lets the server
+    // still recognise a signed-in customer on public calls (e.g. attach a request to their account).
+    response = await fetch(`${API_BASE_URL}${path}`, { credentials: "include", headers: { ...authHeader("customer") } });
   } catch {
     throw new ApiError("Unable to reach the server. Please check your connection and try again.");
   }
@@ -45,6 +48,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        ...authHeader("customer"),
       },
       body: JSON.stringify(body),
     });

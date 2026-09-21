@@ -9,10 +9,11 @@ import AdminSearch from "./AdminSearch";
 // 5 minutes of no mouse/keyboard/scroll activity auto-logs-out the admin
 // dashboard — separate from the JWT's own (longer) expiry, since a valid
 // token doesn't help if someone's walked away from an unlocked screen.
+// Skipped when the admin chose "Keep me signed in" on a device they trust.
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 export default function AdminLayout() {
-  const { logout, currentUser, isAuthenticated } = useAdminAuth();
+  const { logout, currentUser, isAuthenticated, isRemembered } = useAdminAuth();
   const navigate = useNavigate();
 
   function handleLogout(reason?: "inactivity" | "expired") {
@@ -20,7 +21,7 @@ export default function AdminLayout() {
     navigate("/admin/login", { state: reason ? { reason } : undefined });
   }
 
-  useIdleTimeout(IDLE_TIMEOUT_MS, () => handleLogout("inactivity"), isAuthenticated);
+  useIdleTimeout(IDLE_TIMEOUT_MS, () => handleLogout("inactivity"), isAuthenticated && !isRemembered);
 
   // Fires the moment any admin API call gets a 401 (e.g. the token expired
   // server-side) — redirects immediately instead of leaving the user on a
@@ -40,6 +41,7 @@ export default function AdminLayout() {
     { to: "/admin/hire-vehicles", label: "Hire Vehicles" },
     { to: "/admin/requests", label: "Submitted Requests" },
     { to: "/admin/bookings", label: "Bookings" },
+    { to: "/admin/security", label: "My Security" },
     ...(currentUser?.role === "OWNER" || currentUser?.role === "MANAGER"
       ? [{ to: "/admin/payments", label: "Payments" }]
       : []),

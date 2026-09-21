@@ -1,5 +1,6 @@
 import { ApiError } from "@/services/http";
 import { clearCsrfToken, fetchWithCsrf, getCsrfToken } from "@/services/csrf";
+import { authHeader, clearFallbackToken, settleSession } from "@/services/sessionToken";
 import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
 import { parseErrorMessage } from "@/utils/apiError";
 
@@ -11,6 +12,8 @@ export const resolveUploadUrl = sharedResolveUploadUrl;
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 export const SESSION_EXPIRED_EVENT = "admin-session-expired";
 const ADMIN_USER_KEY = "lycie_admin_user";
+/** "1" when this admin ticked "Keep me signed in" — the dashboard then skips its 5-minute idle logout. */
+const ADMIN_REMEMBER_KEY = "lycie_admin_remember";
 
 export interface AdminUserSummary {
   id: string;
@@ -19,18 +22,43 @@ export interface AdminUserSummary {
   role: "OWNER" | "MANAGER" | "VIEWER";
   isActive: boolean;
   createdAt: string;
+  /** Present on the signed-in admin's own record (/auth/session). */
+  twoFactorEnabled?: boolean;
+  /** Present on records from the Admin Users list (/admin-users). */
+  totpEnabled?: boolean;
 }
 
+/** Signs out on the server (clears the cookie) and forgets any fallback token. */
 export function clearAdminToken(): void {
   void getCsrfToken()
     .then((token) =>
       fetch(`${API_BASE_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
-        headers: { "x-csrf-token": token },
+        headers: { "x-csrf-token": token, ...authHeader("admin") },
       })
     )
-    .finally(clearCsrfToken);
+    .finally(() => {
+      clearCsrfToken();
+      clearFallbackToken("admin");
+    });
+}
+
+export function isAdminRemembered(): boolean {
+  try {
+    return localStorage.getItem(ADMIN_REMEMBER_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setAdminRemembered(remember: boolean): void {
+  try {
+    if (remember) localStorage.setItem(ADMIN_REMEMBER_KEY, "1");
+    else localStorage.removeItem(ADMIN_REMEMBER_KEY);
+  } catch {
+    // Storage blocked: the idle logout stays on, the safe default.
+  }
 }
 
 export function getStoredUser(): AdminUserSummary | null {
@@ -49,6 +77,9 @@ export function setStoredUser(user: AdminUserSummary): void {
 
 export function clearStoredUser(): void {
   localStorage.removeItem(ADMIN_USER_KEY);
+  localStorage.removeItem(ADMIN_REMEMBER_KEY);
+  // A dead session must not leave its token behind to be replayed.
+  clearFallbackToken("admin");
 }
 
 async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -61,6 +92,8 @@ async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
       credentials: "include",
       headers: {
         ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
+        // Empty in normal (cookie) mode; carries the token when cookies are blocked.
+        ...authHeader("admin"),
         ...init.headers,
       },
     });
@@ -68,7 +101,9 @@ async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError("Unable to reach the server. Please check your connection and try again.");
   }
 
-  if (response.status === 401) {
+  // On these routes a 401 means "those details were wrong", not "your session ended".
+  const isCredentialCheck = /^\/auth\/(login|forgot-password|reset-password|2fa\/disable|change-password)/.test(path);
+  if (response.status === 401 && !isCredentialCheck) {
     clearStoredUser();
     window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     throw new ApiError("Your session has expired. Please log in again.", 401);
@@ -98,14 +133,72 @@ export const adminApi = {
   },
 };
 
-export async function adminLogin(
-  email: string,
-  password: string
-): Promise<{ user: AdminUserSummary }> {
-  return adminFetch<{ user: AdminUserSummary }>("/auth/login", {
+/** What the server returns from a successful admin sign-in. */
+interface AdminAuthResponse {
+  user: AdminUserSummary;
+  /** Only used by the cookie-free fallback — see services/sessionToken.ts. */
+  token?: string;
+}
+
+/** Step one of sign-in either finishes (session) or asks for an authenticator code (challenge). */
+export type AdminLoginResult = { user: AdminUserSummary } | { requiresTwoFactor: true; challenge: string };
+
+/** Settles cookie-vs-header mode and remembers the "keep me signed in" choice. */
+async function finishAdminSignIn(response: AdminAuthResponse, remember: boolean): Promise<{ user: AdminUserSummary }> {
+  await settleSession("admin", response.token, remember);
+  setAdminRemembered(remember);
+  return { user: response.user };
+}
+
+export async function adminLogin(email: string, password: string, remember = false): Promise<AdminLoginResult> {
+  const response = await adminFetch<AdminAuthResponse | { requiresTwoFactor: true; challenge: string }>("/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, remember }),
   });
+  if ("requiresTwoFactor" in response) return response;
+  return finishAdminSignIn(response, remember);
+}
+
+/** Step two: the 6-digit authenticator code (or a one-time recovery code). */
+export async function adminLoginTwoFactor(challenge: string, code: string, remember = false) {
+  const response = await adminFetch<AdminAuthResponse>("/auth/login/2fa", {
+    method: "POST",
+    body: JSON.stringify({ challenge, code }),
+  });
+  return finishAdminSignIn(response, remember);
+}
+
+/** Confirms the stored admin is still signed in. Null = session ended; network trouble throws. */
+export async function fetchAdminSession(): Promise<AdminUserSummary | null> {
+  try {
+    const { user } = await adminFetch<{ user: AdminUserSummary }>("/auth/session");
+    return user;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
+/** Changes the admin's own password; the server re-issues this device's session (other devices are signed out). */
+export async function adminChangePassword(currentPassword: string, newPassword: string) {
+  const response = await adminFetch<AdminAuthResponse>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  await settleSession("admin", response.token, isAdminRemembered());
+  return response.user;
+}
+
+export function adminBeginTwoFactor() {
+  return adminFetch<{ secret: string; otpauthUri: string }>("/auth/2fa/setup", { method: "POST", body: JSON.stringify({}) });
+}
+
+export function adminEnableTwoFactor(code: string) {
+  return adminFetch<{ recoveryCodes: string[] }>("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) });
+}
+
+export function adminDisableTwoFactor(password: string, code: string) {
+  return adminFetch<{ disabled: boolean }>("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ password, code }) });
 }
 
 export function adminForgotPassword(email: string) {
@@ -127,7 +220,10 @@ export function adminResetPassword(token: string, newPassword: string) {
 export async function downloadExport(type: string): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/admin-tools/export/${encodeURIComponent(type)}`, { credentials: "include" });
+    response = await fetch(`${API_BASE_URL}/admin-tools/export/${encodeURIComponent(type)}`, {
+      credentials: "include",
+      headers: { ...authHeader("admin") },
+    });
   } catch {
     throw new ApiError("Unable to reach the server. Please check your connection and try again.");
   }

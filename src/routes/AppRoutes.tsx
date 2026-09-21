@@ -24,10 +24,12 @@ const CustomerRegister = lazy(() => import("@/pages/Customer/CustomerRegister"))
 const CustomerAccount = lazy(() => import("@/pages/Customer/CustomerAccount"));
 const ForgotPassword = lazy(() => import("@/pages/Customer/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/Customer/ResetPassword"));
+const VerifyEmail = lazy(() => import("@/pages/Customer/VerifyEmail"));
 const AdminLayout = lazy(() => import("@/admin/components/AdminLayout"));
 const AdminLogin = lazy(() => import("@/admin/pages/AdminLogin"));
 const AdminForgotPassword = lazy(() => import("@/admin/pages/AdminForgotPassword"));
 const AdminResetPassword = lazy(() => import("@/admin/pages/AdminResetPassword"));
+const AdminSecurity = lazy(() => import("@/admin/pages/AdminSecurity"));
 const AdminDashboard = lazy(() => import("@/admin/pages/AdminDashboard"));
 const AdminVehicles = lazy(() => import("@/admin/pages/AdminVehicles"));
 const AdminHireVehicles = lazy(() => import("@/admin/pages/AdminHireVehicles"));
@@ -72,6 +74,7 @@ export default function AppRoutes() {
         <Route path="/account/register" element={<CustomerRegister />} />
         <Route path="/account/forgot-password" element={<ForgotPassword />} />
         <Route path="/account/reset-password" element={<ResetPassword />} />
+        <Route path="/account/verify-email" element={<VerifyEmail />} />
         <Route path="/account" element={<CustomerAccountRoute />} />
         </Route>
 
@@ -93,6 +96,8 @@ export default function AppRoutes() {
                   <Route path="requests" element={<AdminRequests />} />
                   <Route path="bookings" element={<AdminBookings />} />
                   <Route path="bookings/:id" element={<AdminBookingDetail />} />
+                  {/* Every signed-in admin manages their own password and two-factor here. */}
+                  <Route path="security" element={<AdminSecurity />} />
                   <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
                     <Route path="payments" element={<AdminPayments />} />
                     <Route path="site-content" element={<AdminSiteContent />} />
