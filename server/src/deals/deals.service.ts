@@ -1,7 +1,8 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Deal, DealStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { GeminiBlockedError, GeminiClient, GeminiUnavailableError } from "../lycie/gemini.client";
+import { GeminiBlockedError, GeminiUnavailableError } from "../lycie/gemini.client";
+import { ResearchService, type ResearchMode } from "../research/research.service";
 import { parseDeals } from "./deals.parser";
 import { CreateDealDto, UpdateDealDto } from "./dto/deal.dto";
 
@@ -27,7 +28,7 @@ export function toPublicDeal(deal: Deal): PublicDeal {
 }
 
 const SYSTEM_PROMPT = `You are a market researcher for Lycie Investments, a company in Malawi that imports, sells, hires and clears vehicles.
-Use Google Search to find CURRENT (not old) deals that could help the company or its customers get vehicles for less: manufacturer or dealer promotions, exporter clearance sales, auction bargains, shipping or import promotions, and price drops on popular vehicles for the Malawian / Southern African market (typically exported from Japan, the UK, South Africa or the UAE).
+Find CURRENT (not old) deals that could help the company or its customers get vehicles for less: manufacturer or dealer promotions, exporter clearance sales, auction bargains, shipping or import promotions, and price drops on popular vehicles for the Malawian / Southern African market (typically exported from Japan, the UK, South Africa or the UAE).
 
 Reply with ONLY a JSON array (no other text) of up to 8 objects, each with:
 - "title": short headline, max 80 characters
@@ -55,11 +56,11 @@ export class DealsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly gemini: GeminiClient
+    private readonly research: ResearchService
   ) {}
 
   get aiAvailable(): boolean {
-    return this.gemini.isConfigured;
+    return this.research.available;
   }
 
   /** Public list: published and not yet expired, newest first. */
@@ -98,17 +99,21 @@ export class DealsService {
   }
 
   /** Searches the web for current deals and saves new ones for review. Returns what was found. */
-  async scan(): Promise<{ found: number; added: number }> {
-    if (!this.gemini.isConfigured) throw new BadRequestException("The AI search isn't set up yet (GEMINI_API_KEY is missing).");
+  async scan(): Promise<{ found: number; added: number; mode: ResearchMode }> {
+    if (!this.research.available) throw new BadRequestException("The AI search isn't set up yet (GEMINI_API_KEY is missing).");
     this.allowScan();
 
     let reply;
     try {
-      reply = await this.gemini.generate(
-        SYSTEM_PROMPT,
-        [{ role: "user", text: `Today is ${new Date().toISOString().slice(0, 10)}. Find current vehicle deals now.` }],
-        { search: true, maxOutputTokens: 2500, temperature: 0.3, timeoutMs: 40_000 }
-      );
+      // Live web search when the Google plan has it; otherwise recent news headlines. Deals are NEVER invented:
+      // with neither source the request is refused (see ResearchService).
+      reply = await this.research.ask({
+        system: SYSTEM_PROMPT,
+        prompt: `Today is ${new Date().toISOString().slice(0, 10)}. Find current vehicle deals now.`,
+        headlineQuery: '("used cars" OR Toyota OR Hilux OR "vehicle imports" OR Isuzu OR Honda) (discount OR promotion OR clearance OR "price cut" OR sale OR offer)',
+        allowKnowledge: false,
+        maxOutputTokens: 1800,
+      });
     } catch (error) {
       if (error instanceof GeminiBlockedError) throw new BadRequestException("The search was declined by the AI provider. Try again later.");
       if (error instanceof GeminiUnavailableError) throw new HttpException("The AI search is busy right now. Please try again in a few minutes.", HttpStatus.SERVICE_UNAVAILABLE);
@@ -124,8 +129,8 @@ export class DealsService {
         data: fresh.map((candidate) => ({ ...candidate, sources: reply.sources ?? [], origin: "ai", status: "NEW" as const })),
       });
     }
-    this.logger.log(`Deal search: ${candidates.length} found, ${fresh.length} new.`);
-    return { found: candidates.length, added: fresh.length };
+    this.logger.log(`Deal search (${reply.mode}): ${candidates.length} found, ${fresh.length} new.`);
+    return { found: candidates.length, added: fresh.length, mode: reply.mode };
   }
 
   create(dto: CreateDealDto) {

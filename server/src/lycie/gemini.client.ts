@@ -24,12 +24,19 @@ export interface GeminiConfig {
   lastResortFirstTokenTimeoutMs?: number;
   /** Pause before one more pass when every model just failed with a brief server overload. Default 1.5s. */
   retryDelayMs?: number;
+  /**
+   * "Racing": if the current model hasn't answered after this long, the NEXT model is started too and
+   * whichever answers first wins (the others are cancelled). Gemini's response time swings from 1s to
+   * 12s on the very same model, so racing cuts the worst waits dramatically. 0/undefined = one at a time.
+   */
+  hedgeDelayMs?: number;
 }
 
-// Order matters: measured first-word times were ~2.5s (3.8-flash, when not overloaded), ~2.2s
-// (3.1-flash-lite) and ~13s (3.5-flash — kept only as a last resort). 3.5-flash-lite rejects
-// our request settings (HTTP 400), so it is not in the default chain.
-const DEFAULT_MODELS = ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
+// Order matters: fastest first. Measured on a real key (typical answer, 3 runs each):
+//   gemini-flash-lite-latest ~1.2s · 3.1-flash-lite ~2-4s · 3.6-flash ~2-5s · 3.8-flash 4-12s (slowest, most erratic).
+// The "lite" models reject the `thinkingBudget: 0` setting (HTTP 400), so it is simply not sent to them
+// (see thinkingFor). Override the whole list with LYCIE_CHAT_MODELS.
+const DEFAULT_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.8-flash"];
 
 export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiConfig {
   const models = (env.LYCIE_CHAT_MODELS ?? "")
@@ -49,10 +56,11 @@ export function readGeminiConfig(env: NodeJS.ProcessEnv = process.env): GeminiCo
     // customer waiting 15s+ for a chat reply is worse than a lighter model's answer.
     perAttemptTimeoutMs: 10_000,
     totalBudgetMs: 32_000,
-    firstTokenTimeoutMs: 6_000,
+    firstTokenTimeoutMs: 4_000,
     streamTimeoutMs: 40_000,
     lastResortFirstTokenTimeoutMs: 15_000,
     retryDelayMs: 1_500,
+    hedgeDelayMs: number(env.LYCIE_HEDGE_MS, 1_200),
   };
 }
 
@@ -124,12 +132,27 @@ export class GeminiClient {
    * recovers soonest — a customer is better served by one more attempt than by an
    * instant "I'm having trouble" for the rest of the cooldown.
    */
-  private candidates(): string[] {
+  private candidates(search = false): string[] {
     const now = this.now();
-    const ready = this.config.models.filter((model) => (this.cooldownUntil.get(model) ?? 0) <= now);
+    const until = (model: string) => this.cooldownUntil.get(this.cooldownKey(model, search)) ?? 0;
+    const ready = this.config.models.filter((model) => until(model) <= now);
     if (ready.length > 0) return ready;
-    const soonest = [...this.config.models].sort((a, b) => (this.cooldownUntil.get(a) ?? 0) - (this.cooldownUntil.get(b) ?? 0))[0];
+    const soonest = [...this.config.models].sort((a, b) => until(a) - until(b))[0];
     return soonest ? [soonest] : [];
+  }
+
+  /**
+   * Cooldowns are remembered per model, and separately for search-grounded requests: Google's search
+   * quota is different from (and much smaller than) its normal quota, so "search is out of quota"
+   * must never take a model out of service for Lycie's everyday chat.
+   */
+  private cooldownKey(model: string, search: boolean): string {
+    return search ? `${model}|search` : model;
+  }
+
+  /** "Lite" models reject the thinking setting, so it is only sent to the others. */
+  private thinkingFor(model: string): { thinkingConfig: { thinkingBudget: number } } | Record<string, never> {
+    return /lite/i.test(model) ? {} : { thinkingConfig: { thinkingBudget: this.config.thinkingBudget } };
   }
 
   get isConfigured(): boolean {
@@ -139,36 +162,29 @@ export class GeminiClient {
   async generate(system: string, turns: ChatTurn[], options?: GenerateOptions): Promise<GeminiResult> {
     if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
 
+    const search = Boolean(options?.search);
     const startedAt = this.now();
     let lastError = "no model available";
 
-    // Two passes at most: a second one only when every model failed with a BRIEF overload (5xx),
+    // Up to two passes: the second only when every model just failed with a BRIEF overload (5xx),
     // which is usually over within a second or two. Quota, key and blocked errors never retry.
     for (let pass = 0; pass < 2; pass++) {
-      let overloaded = false;
+      const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
+      if (remaining < 2_000) break;
 
-      for (const model of this.candidates()) {
-        const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
-        if (remaining < 2_000) break;
-
-        try {
-          const answer = await this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options);
-          return { text: answer.text, model, ...(answer.sources.length ? { sources: answer.sources } : {}) };
-        } catch (error) {
-          if (error instanceof GeminiBlockedError) throw error;
-          if (error instanceof KeyError) {
-            this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
-            throw new GeminiUnavailableError("The AI provider rejected the API key.");
-          }
-          const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
-          this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
-          lastError = `${model}: ${failure.message}`;
-          overloaded = failure.message.startsWith("server error");
-          this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
-        }
+      try {
+        const { value, model } = await this.race(
+          this.candidates(search),
+          (model, controller) => this.callModel(model, system, turns, Math.min(options?.timeoutMs ?? this.config.perAttemptTimeoutMs, remaining), options, controller.signal),
+          search,
+          remaining
+        );
+        return { text: value.text, model, ...(value.sources.length ? { sources: value.sources } : {}) };
+      } catch (error) {
+        if (!(error instanceof RaceFailure)) throw error;
+        lastError = error.message;
+        if (!error.overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
       }
-
-      if (!overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
     }
 
     throw new GeminiUnavailableError(lastError);
@@ -182,17 +198,88 @@ export class GeminiClient {
     return true;
   }
 
-  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions): Promise<{ text: string; sources: string[] }> {
+  /**
+   * Tries the models in order and returns the first good answer.
+   *
+   * A model is abandoned and the next started when it FAILS (immediately) or, with racing on, when it
+   * is still silent after `hedgeDelayMs` — but a slow model is not cancelled: it keeps running, and
+   * whichever answers first wins while the rest are cancelled. Cancelled models are never blamed
+   * (no cooldown). Blocked prompts and rejected keys end the whole race at once.
+   */
+  private race<T>(
+    chain: string[],
+    attempt: (model: string, controller: AbortController, all: Map<string, AbortController>) => Promise<T>,
+    search: boolean,
+    deadlineMs: number
+  ): Promise<{ value: T; model: string }> {
+    return new Promise((resolve, reject) => {
+      if (chain.length === 0) return reject(new RaceFailure("no model available", false));
+
+      const controllers = new Map<string, AbortController>();
+      const timers: NodeJS.Timeout[] = [];
+      const hedgeMs = this.config.hedgeDelayMs ?? 0;
+      let launched = 0;
+      let failed = 0;
+      let settled = false;
+      let lastError = "no model available";
+      let overloaded = false;
+
+      const settle = (finish: () => void) => {
+        if (settled) return;
+        settled = true;
+        timers.forEach(clearTimeout);
+        controllers.forEach((controller) => controller.abort());
+        finish();
+      };
+
+      const launch = () => {
+        if (settled || launched >= chain.length) return;
+        const model = chain[launched++];
+        const controller = new AbortController();
+        controllers.set(model, controller);
+        // If this model is slow, start the next one alongside it.
+        if (hedgeMs > 0 && launched < chain.length) timers.push(setTimeout(launch, hedgeMs));
+
+        attempt(model, controller, controllers).then(
+          (value) => settle(() => resolve({ value, model })),
+          (error) => {
+            // Cancelled because another model already won (or the race ended): not this model's fault.
+            if (settled || controller.signal.aborted) return;
+            if (error instanceof GeminiBlockedError) return settle(() => reject(error));
+            if (error instanceof KeyError) {
+              this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
+              return settle(() => reject(new GeminiUnavailableError("The AI provider rejected the API key.")));
+            }
+            const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
+            this.cooldownUntil.set(this.cooldownKey(model, search), this.now() + failure.cooldownMs);
+            lastError = `${model}: ${failure.message}`;
+            overloaded = failure.message.startsWith("server error");
+            this.logger.warn(`Gemini model ${model}${search ? " (search)" : ""} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
+            failed += 1;
+            if (failed >= chain.length) return settle(() => reject(new RaceFailure(lastError, overloaded)));
+            launch(); // don't wait for the timer: move straight on to the next model
+          }
+        );
+      };
+
+      timers.push(setTimeout(() => settle(() => reject(new RaceFailure(lastError === "no model available" ? "timed out" : lastError, overloaded))), deadlineMs));
+      launch();
+    });
+  }
+
+  private async callModel(model: string, system: string, turns: ChatTurn[], timeoutMs: number, options?: GenerateOptions, signal?: AbortSignal): Promise<{ text: string; sources: string[] }> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
+    // Also stop if the race was won by another model.
+    signal?.addEventListener("abort", () => controller.abort(), { once: true });
 
     let response: Response;
     try {
       response = await this.fetchFn(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey as string },
-        body: this.buildBody(system, turns, options),
+        body: this.buildBody(system, turns, options, model),
         signal: controller.signal,
       });
     } catch (error) {
@@ -234,7 +321,7 @@ export class GeminiClient {
     return [...seen];
   }
 
-  private buildBody(system: string, turns: ChatTurn[], options?: GenerateOptions): string {
+  private buildBody(system: string, turns: ChatTurn[], options: GenerateOptions | undefined, model: string): string {
     return JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: turns.map((turn) => ({
@@ -248,7 +335,7 @@ export class GeminiClient {
       generationConfig: {
         temperature: options?.temperature ?? 0.4,
         maxOutputTokens: options?.maxOutputTokens ?? this.config.maxOutputTokens,
-        thinkingConfig: { thinkingBudget: this.config.thinkingBudget },
+        ...this.thinkingFor(model),
       },
     });
   }
@@ -258,10 +345,9 @@ export class GeminiClient {
    * Google produces it, so the customer sees words appear in real time
    * instead of waiting for the whole reply.
    *
-   * Fallback works until the first word: a model that errors or stays silent
-   * for firstTokenTimeoutMs is skipped for the next one. Once words have been
-   * shown we stay with that model — if it then breaks off, the customer keeps
-   * the (partial) answer rather than seeing it restart.
+   * Models race for the FIRST WORD (see race()): the first to produce text wins, the others are
+   * cancelled, and only the winner's words are ever shown. Once words are on screen we stay with
+   * that model — if it then breaks off, the customer keeps the (partial) answer.
    */
   async generateStream(system: string, turns: ChatTurn[], onText: (delta: string) => void): Promise<GeminiResult> {
     if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
@@ -270,55 +356,69 @@ export class GeminiClient {
     let lastError = "no model available";
 
     for (let pass = 0; pass < 2; pass++) {
-      let overloaded = false;
+      const remaining = this.config.totalBudgetMs - (this.now() - startedAt);
+      if (remaining < 2_000) break;
+
       const chain = this.candidates();
+      let winner: string | null = null;
+      let text = "";
 
-      for (const [index, model] of chain.entries()) {
-        if (this.config.totalBudgetMs - (this.now() - startedAt) < 2_000) break;
+      try {
+        const { value, model } = await this.race(
+          chain,
+          async (model, controller, all) => {
+            // The final model in the chain gets longer to say its first word (see the config note).
+            const isLastResort = chain.length > 1 && chain.indexOf(model) === chain.length - 1;
+            const firstWordMs = isLastResort ? Math.max(this.config.firstTokenTimeoutMs, this.config.lastResortFirstTokenTimeoutMs ?? 0) : this.config.firstTokenTimeoutMs;
 
-        // The final model in the chain gets longer to say its first word (see the config note).
-        const isLastResort = chain.length > 1 && index === chain.length - 1;
-        const firstWordMs = isLastResort
-          ? Math.max(this.config.firstTokenTimeoutMs, this.config.lastResortFirstTokenTimeoutMs ?? 0)
-          : this.config.firstTokenTimeoutMs;
-
-        let started = false;
-        let text = "";
-        try {
-          await this.streamModel(model, system, turns, (delta) => {
-            started = true;
-            text += delta;
-            onText(delta);
-          }, firstWordMs);
-          return { text, model };
-        } catch (error) {
-          if (started && text) {
-            // Words are already on the customer's screen — keep them.
-            this.logger.warn(`Gemini model ${model} stopped mid-answer (${error instanceof Error ? error.message : error}).`);
-            return { text, model };
-          }
-          if (error instanceof GeminiBlockedError) throw error;
-          if (error instanceof KeyError) {
-            this.logger.error(`Gemini rejected the API key (${error.message}). Check GEMINI_API_KEY.`);
-            throw new GeminiUnavailableError("The AI provider rejected the API key.");
-          }
-          const failure = error instanceof ModelError ? error : new ModelError(String(error), MINUTE);
-          this.cooldownUntil.set(model, this.now() + failure.cooldownMs);
-          lastError = `${model}: ${failure.message}`;
-          overloaded = failure.message.startsWith("server error");
-          this.logger.warn(`Gemini model ${model} failed (${failure.message}); cooling down ${Math.round(failure.cooldownMs / 1000)}s.`);
-        }
+            let mine = "";
+            try {
+              await this.streamModel(
+                model,
+                system,
+                turns,
+                (delta) => {
+                  if (winner === null) {
+                    // First word of the race: this model wins; stop the others.
+                    winner = model;
+                    all.forEach((other, name) => name !== model && other.abort());
+                  }
+                  if (winner !== model) return; // a slower model that lost — its words are discarded
+                  mine += delta;
+                  text += delta;
+                  onText(delta);
+                },
+                firstWordMs,
+                controller.signal
+              );
+              return mine;
+            } catch (error) {
+              if (winner === model && mine) {
+                // Words are already on the customer's screen — keep them.
+                this.logger.warn(`Gemini model ${model} stopped mid-answer (${error instanceof Error ? error.message : error}).`);
+                return mine;
+              }
+              throw error;
+            }
+          },
+          false,
+          remaining
+        );
+        return { text: value || text, model };
+      } catch (error) {
+        if (!(error instanceof RaceFailure)) throw error;
+        lastError = error.message;
+        if (!error.overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
       }
-
-      if (!overloaded || !(await this.pauseBeforeRetry(startedAt))) break;
     }
     throw new GeminiUnavailableError(lastError);
   }
 
-  private async streamModel(model: string, system: string, turns: ChatTurn[], onDelta: (delta: string) => void, firstTokenTimeoutMs = this.config.firstTokenTimeoutMs): Promise<void> {
+  private async streamModel(model: string, system: string, turns: ChatTurn[], onDelta: (delta: string) => void, firstTokenTimeoutMs = this.config.firstTokenTimeoutMs, signal?: AbortSignal): Promise<void> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`;
     const controller = new AbortController();
     let timer = setTimeout(() => controller.abort(), firstTokenTimeoutMs);
+    signal?.addEventListener("abort", () => controller.abort(), { once: true });
     const overall = setTimeout(() => controller.abort(), this.config.streamTimeoutMs);
 
     try {
@@ -327,7 +427,7 @@ export class GeminiClient {
         response = await this.fetchFn(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": this.config.apiKey as string },
-          body: this.buildBody(system, turns),
+          body: this.buildBody(system, turns, undefined, model),
           signal: controller.signal,
         });
       } catch (error) {
@@ -437,6 +537,16 @@ class ModelError extends Error {
 }
 
 class KeyError extends Error {}
+
+/** Every model in a race failed. `overloaded` = the last failure was a brief server-side overload, worth one more pass. */
+class RaceFailure extends Error {
+  constructor(
+    message: string,
+    readonly overloaded: boolean
+  ) {
+    super(message);
+  }
+}
 
 interface GeminiResponse {
   promptFeedback?: { blockReason?: string };

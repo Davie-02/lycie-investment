@@ -401,6 +401,15 @@ weekly job — Mondays 7am unless `DEALS_AUTO_SCAN=false`), `server/src/market/`
 briefing), `lycie/gemini.client.ts` (search grounding), `src/admin/pages/AdminDeals.tsx`, public
 `pages/Deals/` and `components/deals/`. Tables `Deal`, `MarketReport`. Needs `GEMINI_API_KEY`.
 
+**How the research works (and what your Google plan needs):** the finder tries Google's live web search first.
+That feature is **not included in Google's free AI tier** (Google answers "quota exceeded"), so on a free key it
+falls back to recent news headlines, which are often too thin to yield real deals — it will tell you so rather
+than invent anything. **For real deal discovery, enable billing on your Google AI (Gemini) project**
+(<https://aistudio.google.com> → your project → set up billing); search then works automatically, with a daily
+free allowance. The market briefing still works without it, labelled "based on the AI's general knowledge".
+Code: `server/src/research/research.service.ts` (search → headlines → knowledge). `GEMINI_SEARCH_GROUNDING=false`
+skips the search attempt.
+
 **Important:** AI-found deals are **unverified** — confirm price, dates and availability with the seller before
 publishing. Searches are capped (`DEALS_DAILY_SCANS`, default 6/day) to protect the free AI quota.
 
@@ -456,3 +465,23 @@ from the app code; the Lycie chat downloads only after the page is idle; built f
 about 310 KB).
 **Keeping it light:** avoid adding large libraries to the entry bundle (lazy-load with `import()` like the
 admin pages and the QR library); compress new images before use; check `npm run build` output sizes.
+
+---
+
+## 25. AI speed (Lycie, the writing helper, deals and briefings)
+
+**What changed:** Google's models vary wildly in speed — the *same* model answered in 2 seconds one moment and 12
+the next, and the model we used first was the slowest. Now:
+1. **Fastest models first** (`gemini-flash-lite-latest`, `3.1-flash-lite`, `3.6-flash`, then `3.8-flash`). The "lite"
+   models were being skipped because they reject a setting we sent; it's no longer sent to them.
+2. **Racing:** if the first model hasn't answered within ~1.2 seconds, the next is started alongside it and whichever
+   answers first wins (the loser is cancelled and never marked as broken). Tune with `LYCIE_HEDGE_MS`.
+3. **Instant repeat answers:** Lycie remembers answers to standalone questions for 5 minutes (any admin change to
+   vehicles, prices or knowledge starts fresh) — a repeated question is answered in about 0.02 seconds and uses no AI quota.
+4. **Search quota can't break chat:** search-related failures are tracked separately from ordinary chat.
+Measured on the real key: fresh answers 2.6–5 s (previously 4–12 s for the model alone); repeats 0.02 s; streamed
+answers finish in about 2.3 s and start showing words sooner.
+**Where:** `server/src/lycie/gemini.client.ts` (`race`, `thinkingFor`), `lycie/answer-cache.util.ts`, `lycie/lycie.service.ts`.
+**If it's slow:** check `GEMINI` warnings in the API log — a line like "model X failed (quota exhausted)" means that model's
+daily free quota is used up (it rests and the others carry on). Free-tier limits are the usual cause of slowness; a paid
+Google AI plan removes them.

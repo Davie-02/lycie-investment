@@ -57,7 +57,15 @@ export class ContextService {
     private readonly pricing: PricingService
   ) {}
 
+  /** Bumps every time admin content that Lycie learns from changes; used to discard cached answers. */
+  private invalidations = 0;
+
+  get version(): number {
+    return this.invalidations;
+  }
+
   invalidate(): void {
+    this.invalidations += 1;
     this.snapshot = null;
   }
 

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { ContextService, VehicleCard } from "./context.service";
 import { ChatTurn, GeminiBlockedError, GeminiClient } from "./gemini.client";
+import { AnswerCache } from "./answer-cache.util";
 import { MarkerFilter } from "./marker-filter.util";
 import { buildSystemPrompt, wrapCustomerMessage } from "./prompt.builder";
 import { redactPii } from "./pii.util";
@@ -37,6 +38,14 @@ export class LycieService {
     private readonly gemini: GeminiClient
   ) {}
 
+  /** Answers to recent standalone questions, so repeats are instant and free (see answer-cache.util.ts). */
+  private readonly answers = new AnswerCache<{ text: string; vehicles: VehicleCard[] }>(5 * 60 * 1000);
+
+  /** Cache key: the question plus the knowledge version, so any admin change starts a fresh set of answers. */
+  private cacheKey(question: string): string {
+    return `v${this.context.version} ${question}`;
+  }
+
   get isEnabled(): boolean {
     return this.gemini.isConfigured;
   }
@@ -70,6 +79,16 @@ export class LycieService {
       return this.log(question, fallback(), null, "unavailable");
     }
 
+    // A standalone question we answered a moment ago: reply instantly, no AI call, no quota used.
+    const isStandalone = !dto.history || dto.history.length === 0;
+    if (isStandalone) {
+      const cached = this.answers.get(this.cacheKey(question));
+      if (cached) {
+        onDelta?.(cached.text);
+        return this.log(question, cached.text, "cache", "answered", cached.vehicles);
+      }
+    }
+
     const { context, cards } = await this.context.forQuestion(question);
     const turns: ChatTurn[] = [
       ...(dto.history ?? []).map((turn) => ({
@@ -97,6 +116,8 @@ export class LycieService {
       this.today.increment();
       const parsed = parseReply(text, new Set(cards.keys()));
       const vehicles = parsed.vehicleSlugs.map((slug) => cards.get(slug)).filter((c): c is VehicleCard => Boolean(c));
+      // Remember good, standalone answers (never fallbacks or "I don't know") for the next visitor.
+      if (isStandalone && parsed.text && !parsed.noInfo) this.answers.set(this.cacheKey(question), { text: parsed.text, vehicles });
       return this.log(question, parsed.text || fallback(), model, parsed.noInfo ? "no_info" : "answered", vehicles);
     } catch (error) {
       if (error instanceof GeminiBlockedError) {

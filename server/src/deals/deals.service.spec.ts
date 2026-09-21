@@ -1,7 +1,7 @@
 import { BadRequestException, HttpException } from "@nestjs/common";
 import type { Deal } from "@prisma/client";
 import type { PrismaService } from "../prisma/prisma.service";
-import type { GeminiClient } from "../lycie/gemini.client";
+import type { ResearchService } from "../research/research.service";
 import { DealsService, toPublicDeal } from "./deals.service";
 
 const deal = (overrides: Partial<Deal> = {}): Deal => ({
@@ -47,12 +47,12 @@ function build(geminiReply?: { text: string; sources?: string[] }) {
       groupBy: jest.fn(async () => []),
     },
   };
-  const gemini = {
-    isConfigured: true,
-    generate: jest.fn(async () => ({ text: geminiReply?.text ?? "[]", model: "m", sources: geminiReply?.sources })),
+  const research = {
+    available: true,
+    ask: jest.fn(async (..._args: unknown[]) => ({ text: geminiReply?.text ?? "[]", sources: geminiReply?.sources ?? [], mode: "web-search" as const })),
   };
-  const service = new DealsService(prisma as unknown as PrismaService, gemini as unknown as GeminiClient);
-  return { service, store, prisma, gemini };
+  const service = new DealsService(prisma as unknown as PrismaService, research as unknown as ResearchService);
+  return { service, store, prisma, gemini: research };
 }
 
 const reply = JSON.stringify([
@@ -62,7 +62,7 @@ const reply = JSON.stringify([
 describe("DealsService.scan", () => {
   it("saves found deals as NEW (never published) with sources kept for staff", async () => {
     const { service, store } = build({ text: reply, sources: ["shipper.example (https://shipper.example/promo)"] });
-    expect(await service.scan()).toEqual({ found: 1, added: 1 });
+    expect(await service.scan()).toEqual({ found: 1, added: 1, mode: "web-search" });
     expect(store[0]).toMatchObject({ status: "NEW", origin: "ai", sources: ["shipper.example (https://shipper.example/promo)"] });
   });
 
@@ -70,13 +70,13 @@ describe("DealsService.scan", () => {
     const { service } = build({ text: reply });
     await service.scan();
     (service as unknown as { scans: { last: number } }).scans.last = 0; // skip the one-minute gap for the test
-    expect(await service.scan()).toEqual({ found: 1, added: 0 });
+    expect(await service.scan()).toEqual({ found: 1, added: 0, mode: "web-search" });
   });
 
-  it("asks the AI to search the web", async () => {
+  it("researches with real sources only — deals are never invented from general knowledge", async () => {
     const { service, gemini } = build({ text: reply });
     await service.scan();
-    expect((gemini.generate.mock.calls[0] as unknown[])[2]).toMatchObject({ search: true });
+    expect(gemini.ask.mock.calls[0][0]).toMatchObject({ allowKnowledge: false });
   });
 
   it("refuses to run again within a minute, and past the daily cap", async () => {
@@ -87,7 +87,7 @@ describe("DealsService.scan", () => {
 
   it("explains when the AI isn't configured", async () => {
     const { service, gemini } = build();
-    gemini.isConfigured = false;
+    gemini.available = false;
     await expect(service.scan()).rejects.toBeInstanceOf(BadRequestException);
   });
 });

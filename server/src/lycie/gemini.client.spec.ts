@@ -295,3 +295,93 @@ describe("GeminiClient search grounding", () => {
     expect((await client.generate("sys", turns)).sources).toBeUndefined();
   });
 });
+
+describe("GeminiClient racing", () => {
+  const raceConfig: GeminiConfig = { ...config, models: ["slow", "fast"], hedgeDelayMs: 40, perAttemptTimeoutMs: 3_000, firstTokenTimeoutMs: 3_000 };
+  const sse = (text: string) => new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })}\n\n`, { status: 200 });
+
+  /** A fetch whose response time depends on which model is asked; cancelled requests reject like a real abort. */
+  function fetchWithDelays(delays: Record<string, number>, make: (model: string) => Response) {
+    const started: string[] = [];
+    const cancelled: string[] = [];
+    const fetchFn = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const model = /models\/([^:]+):/.exec(String(url))![1];
+      started.push(model);
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delays[model]);
+        init?.signal?.addEventListener("abort", () => {
+          clearTimeout(timer);
+          cancelled.push(model);
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+        });
+      });
+      return make(model);
+    });
+    return { fetchFn, started, cancelled };
+  }
+
+  it("starts the next model when the first is slow, and returns whichever answers first", async () => {
+    const { fetchFn, started, cancelled } = fetchWithDelays({ slow: 1_500, fast: 20 }, (model) => ok(`from ${model}`));
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, raceConfig);
+    const started_at = Date.now();
+    const result = await client.generate("sys", turns);
+    expect(result).toMatchObject({ text: "from fast", model: "fast" });
+    expect(Date.now() - started_at).toBeLessThan(600); // did not wait for the slow model
+    expect(started).toEqual(["slow", "fast"]);
+    expect(cancelled).toContain("slow");
+  });
+
+  it("does not blame or cool down a model that was only cancelled because another won", async () => {
+    const { fetchFn } = fetchWithDelays({ slow: 1_500, fast: 20 }, (model) => ok(`from ${model}`));
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, raceConfig);
+    await client.generate("sys", turns);
+    // "slow" was cancelled, not failed — so it must still be first in line next time.
+    const second = fetchWithDelays({ slow: 10, fast: 10 }, (model) => ok(`from ${model}`));
+    (client as unknown as { fetchFn: typeof fetch }).fetchFn = second.fetchFn as unknown as typeof fetch;
+    expect((await client.generate("sys", turns)).model).toBe("slow");
+  });
+
+  it("does not start a second model at all when the first is quick", async () => {
+    const { fetchFn, started } = fetchWithDelays({ slow: 5, fast: 5 }, (model) => ok(`from ${model}`));
+    await new GeminiClient(fetchFn as unknown as typeof fetch, raceConfig).generate("sys", turns);
+    expect(started).toEqual(["slow"]);
+  });
+
+  it("streams the first model to speak, and shows only that model's words", async () => {
+    const { fetchFn } = fetchWithDelays({ slow: 300, fast: 20 }, (model) => sse(`words from ${model}`));
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, raceConfig);
+    const seen: string[] = [];
+    const result = await client.generateStream("sys", turns, (delta) => seen.push(delta));
+    expect(result.model).toBe("fast");
+    expect(seen.join("")).toBe("words from fast");
+  });
+});
+
+describe("GeminiClient request settings", () => {
+  it("leaves the thinking setting out for 'lite' models (they reject it) and sends it to the others", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const fetchFn = jest.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return ok("fine");
+    });
+    for (const model of ["gemini-flash-lite-latest", "gemini-3.6-flash"]) {
+      await new GeminiClient(fetchFn as unknown as typeof fetch, { ...config, models: [model] }).generate("sys", turns);
+    }
+    expect((bodies[0].generationConfig as Record<string, unknown>).thinkingConfig).toBeUndefined();
+    expect((bodies[1].generationConfig as Record<string, unknown>).thinkingConfig).toEqual({ thinkingBudget: 0 });
+  });
+
+  it("a search-quota failure never takes a model out of service for normal chat", async () => {
+    const urls: string[] = [];
+    const responses = [fail(429), fail(429), ok("normal chat answer")];
+    const fetchFn = jest.fn(async (url: string | URL | Request) => {
+      urls.push(/models\/([^:]+):/.exec(String(url))![1]);
+      return responses.shift() as Response;
+    });
+    const client = new GeminiClient(fetchFn as unknown as typeof fetch, { ...config, models: ["first", "second"] });
+    await expect(client.generate("sys", turns, { search: true })).rejects.toBeInstanceOf(GeminiUnavailableError);
+    // Both models hit the SEARCH quota. An ordinary chat must still start with "first" — not skip it as if it were broken.
+    expect((await client.generate("sys", turns)).text).toBe("normal chat answer");
+    expect(urls).toEqual(["first", "second", "first"]);
+  });
+});

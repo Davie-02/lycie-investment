@@ -70,8 +70,9 @@ function DealsTab() {
     setBusy(true);
     setNotice(null);
     try {
-      const result = await adminApi.post<{ found: number; added: number }>("/deal-admin/scan", {});
-      setNotice({ kind: "success", text: result.added > 0 ? `Found ${result.added} new deal(s) for you to review.` : result.found > 0 ? "Everything found was already in your list." : "No solid deals found this time." });
+      const result = await adminApi.post<{ found: number; added: number; mode: "web-search" | "headlines" }>("/deal-admin/scan", {});
+      const how = result.mode === "headlines" ? " These came from recent news headlines, so check each one carefully." : "";
+      setNotice({ kind: "success", text: how && result.added > 0 ? `Found ${result.added} lead(s) for you to review.${how}` : result.added > 0 ? `Found ${result.added} new deal(s) for you to review.` : result.found > 0 ? "Everything found was already in your list." : "No solid deals found this time." });
       setStatus("NEW");
       load();
     } catch (err) {
@@ -308,7 +309,14 @@ interface Report {
   };
   sources: string[];
   createdAt: string;
+  /** How it was researched: live web search, recent news headlines, or the AI's general knowledge. */
+  basis?: "web-search" | "headlines" | "knowledge" | null;
 }
+
+const BASIS_NOTE: Record<string, string> = {
+  headlines: "Based on recent news headlines, not a full web search — treat it as a starting point.",
+  knowledge: "Based on the AI's general knowledge, not live research. Live web search isn't included in your current Google AI plan (see Deals & Market in the docs to turn it on).",
+};
 
 function BriefingTab() {
   const [report, setReport] = useState<Report | null>(null);
@@ -341,6 +349,7 @@ function BriefingTab() {
         <button className="btn btn-primary" onClick={generate} disabled={busy || !aiAvailable}>{busy ? "Researching… this can take a minute" : report ? "Refresh the briefing" : "Create a briefing"}</button>
         {report && <span className="text-muted">Last updated {new Date(report.createdAt).toLocaleString()}</span>}
       </div>
+      {report?.basis && BASIS_NOTE[report.basis] && <p className="form-status form-status--info" role="note">{BASIS_NOTE[report.basis]}</p>}
       {report && (
         <div style={{ marginTop: "var(--space-5)", display: "grid", gap: "var(--space-5)" }}>
           <p><strong>{report.content.headline}</strong></p>

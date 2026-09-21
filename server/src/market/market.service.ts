@@ -1,7 +1,8 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { GeminiBlockedError, GeminiClient, GeminiUnavailableError } from "../lycie/gemini.client";
+import { GeminiBlockedError, GeminiUnavailableError } from "../lycie/gemini.client";
+import { ResearchService, type ResearchMode } from "../research/research.service";
 import { buildDemand, type DemandRow } from "./demand";
 import { parseReport, type MarketReportContent } from "./report.parser";
 
@@ -10,7 +11,7 @@ const DEMAND_WINDOW_DAYS = 90;
 const REPORT_MIN_GAP_MS = 30 * 60 * 1000;
 
 const SYSTEM_PROMPT = `You are a strategy analyst for Lycie Investments, a company in Malawi that imports, sells, hires and clears vehicles.
-Use Google Search to research, right now: which used vehicles (makes, models, body types) are most in demand and being bought in Malawi and Southern Africa, their typical prices in US dollars, what competing importers and dealers usually offer, and where they tend to fall short (price transparency, delivery time, after-sales, financing, communication).
+Research (using the web results if you have them): which used vehicles (makes, models, body types) are most in demand and being bought in Malawi and Southern Africa, their typical prices in US dollars, what competing importers and dealers usually offer, and where they tend to fall short (price transparency, delivery time, after-sales, financing, communication).
 Combine that with the company's own demand data supplied by the user, and give practical advice to help the company win more customers than its competitors.
 
 Reply with ONLY one JSON object (no other text):
@@ -29,7 +30,7 @@ export class MarketService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly gemini: GeminiClient
+    private readonly research: ResearchService
   ) {}
 
   /** Ranked demand from the company's own data over the last 90 days. */
@@ -58,19 +59,20 @@ export class MarketService {
   }
 
   /** The most recent AI briefing, if any has been generated. */
-  async latestReport(): Promise<{ content: MarketReportContent; sources: string[]; createdAt: string } | null> {
+  async latestReport(): Promise<{ content: MarketReportContent; sources: string[]; createdAt: string; basis: ResearchMode | null } | null> {
     const report = await this.prisma.marketReport.findFirst({ orderBy: { createdAt: "desc" } });
     if (!report) return null;
-    return { content: report.content as unknown as MarketReportContent, sources: report.sources, createdAt: report.createdAt.toISOString() };
+    const content = report.content as unknown as MarketReportContent & { basis?: ResearchMode };
+    return { content, sources: report.sources, createdAt: report.createdAt.toISOString(), basis: content.basis ?? null };
   }
 
   get aiAvailable(): boolean {
-    return this.gemini.isConfigured;
+    return this.research.available;
   }
 
   /** Researches the market on the web, blends in the company's own demand, and saves a fresh briefing. */
   async generateReport() {
-    if (!this.gemini.isConfigured) throw new BadRequestException("The AI research isn't set up yet (GEMINI_API_KEY is missing).");
+    if (!this.research.available) throw new BadRequestException("The AI research isn't set up yet (GEMINI_API_KEY is missing).");
     if (Date.now() - this.lastReportAt < REPORT_MIN_GAP_MS) {
       throw new HttpException("A briefing was generated a few minutes ago. Give it a while before asking again.", HttpStatus.TOO_MANY_REQUESTS);
     }
@@ -83,11 +85,14 @@ export class MarketService {
 
     let reply;
     try {
-      reply = await this.gemini.generate(
-        SYSTEM_PROMPT,
-        [{ role: "user", text: `Today is ${new Date().toISOString().slice(0, 10)}.\nThe company's own demand over the last ${DEMAND_WINDOW_DAYS} days:\n${ownData}\n\nWrite the market briefing now.` }],
-        { search: true, maxOutputTokens: 2500, temperature: 0.3, timeoutMs: 45_000 }
-      );
+      // Live search if available, else recent headlines, else the model's general knowledge (labelled as such).
+      reply = await this.research.ask({
+        system: SYSTEM_PROMPT,
+        prompt: `Today is ${new Date().toISOString().slice(0, 10)}.\nThe company's own demand over the last ${DEMAND_WINDOW_DAYS} days:\n${ownData}\n\nWrite the market briefing now.`,
+        headlineQuery: '("used cars" OR "vehicle imports" OR Toyota OR "car market") (Africa OR Malawi OR "South Africa" OR Zambia OR Mozambique) (demand OR sales OR prices OR imports)',
+        allowKnowledge: true,
+        maxOutputTokens: 1800,
+      });
     } catch (error) {
       this.lastReportAt = 0; // a failed attempt shouldn't lock the button
       if (error instanceof GeminiBlockedError) throw new BadRequestException("The request was declined by the AI provider. Try again later.");
@@ -101,9 +106,11 @@ export class MarketService {
       throw new HttpException("The AI answered in a format we couldn't read. Please try again.", HttpStatus.BAD_GATEWAY);
     }
 
+    // Remember how it was researched, so the admin can see how far to trust it.
+    const stored = { ...content, basis: reply.mode };
     const saved = await this.prisma.marketReport.create({
-      data: { content: content as unknown as Prisma.InputJsonValue, sources: reply.sources ?? [] },
+      data: { content: stored as unknown as Prisma.InputJsonValue, sources: reply.sources },
     });
-    return { content, sources: saved.sources, createdAt: saved.createdAt.toISOString() };
+    return { content: stored, sources: saved.sources, createdAt: saved.createdAt.toISOString(), basis: reply.mode };
   }
 }
