@@ -6,6 +6,11 @@ import { join } from "path";
 import { promises as fs } from "fs";
 import sharp from "sharp";
 
+// Resizing photos is heavy work for a small server. Keep sharp lean: one job at a time inside the library, and
+// no internal cache of decoded images (it would hold on to memory this instance does not have).
+sharp.concurrency(1);
+sharp.cache(false);
+
 /**
  * Two storage strategies, selected automatically based on env config:
  *
@@ -111,6 +116,57 @@ export class UploadsService {
    * After the first visit each old photo therefore downloads at a fraction of its size.
    */
   createMissingVariant(variantName: string): Promise<Buffer | null> {
+    return this.runVariantWork(variantName);
+  }
+
+  /**
+   * Missing smaller copies are made GENTLY, in the background, one at a time.
+   *
+   * The visitor is never made to wait for this — the media route hands them the original photo straight away — and a
+   * small server is never flooded: one photo per pass, a pause between passes, at most a few hundred waiting, and
+   * nothing at all while memory is tight. (Doing them all at once when a page with many photos loaded starved the
+   * whole API on a small instance.) Turn off with BACKFILL_PHOTO_SIZES=false.
+   */
+  private readonly variantQueue: string[] = [];
+  private variantWorkerRunning = false;
+  /** The copy being made right now (so asking for it again meanwhile doesn't queue it a second time). */
+  private variantInProgress: string | null = null;
+  static readonly VARIANT_PAUSE_MS = 1500;
+  static readonly VARIANT_QUEUE_MAX = 300;
+  /** Skip background work when the process is using more than this much memory (bytes). */
+  static readonly VARIANT_MEMORY_LIMIT = 380 * 1024 * 1024;
+
+  scheduleVariant(variantName: string): void {
+    if (process.env.BACKFILL_PHOTO_SIZES === "false") return;
+    if (this.variantInProgress === variantName || this.variantQueue.includes(variantName) || this.pendingVariants.has(variantName)) return;
+    if (this.variantQueue.length >= UploadsService.VARIANT_QUEUE_MAX) return;
+    this.variantQueue.push(variantName);
+    void this.runVariantWorker();
+  }
+
+  private async runVariantWorker(): Promise<void> {
+    if (this.variantWorkerRunning) return;
+    this.variantWorkerRunning = true;
+    try {
+      while (this.variantQueue.length > 0) {
+        const next = this.variantQueue.shift() as string;
+        if (process.memoryUsage().rss < UploadsService.VARIANT_MEMORY_LIMIT) {
+          this.variantInProgress = next;
+          await this.runVariantWork(next)
+            .catch((error) => this.logger.warn(`Background resize of ${next} failed: ${error instanceof Error ? error.message : error}`))
+            .finally(() => {
+              this.variantInProgress = null;
+            });
+        }
+        // Breathe between photos so real visitors always get the CPU first.
+        await new Promise((resolve) => setTimeout(resolve, UploadsService.VARIANT_PAUSE_MS));
+      }
+    } finally {
+      this.variantWorkerRunning = false;
+    }
+  }
+
+  private runVariantWork(variantName: string): Promise<Buffer | null> {
     const existing = this.pendingVariants.get(variantName);
     if (existing) return existing;
 

@@ -1,5 +1,4 @@
 import { Controller, Get, NotFoundException, Param, Res } from "@nestjs/common";
-import { Readable } from "stream";
 import { SkipThrottle } from "@nestjs/throttler";
 import type { Response } from "express";
 import { UploadsService } from "./uploads.service";
@@ -30,15 +29,22 @@ export class MediaController {
     const isResizedCopy = /-w\d+\.webp$/.test(filename);
     let file = await this.uploads.readPrivateObject(filename, isResizedCopy);
 
-    // An older photo has no resized copy yet: create it from the original (and keep it) instead of 404ing.
+    // An older photo has no resized copy yet. Give the visitor the ORIGINAL right now (one request, no waiting) and
+    // queue the smaller copy to be made gently in the background, so the next visitor gets the small file.
+    let servedOriginal = false;
     if (!file && isResizedCopy) {
-      const created = await this.uploads.createMissingVariant(filename);
-      if (created) file = { body: Readable.from(created), contentType: "image/webp", contentLength: created.length };
+      const originalName = filename.replace(/-w\d+\.webp$/, ".webp");
+      file = await this.uploads.readPrivateObject(originalName, true);
+      if (file) {
+        servedOriginal = true;
+        this.uploads.scheduleVariant(filename);
+      }
     }
     if (!file) throw new NotFoundException();
 
     response.setHeader("Content-Type", file.contentType);
-    response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    // The original stands in for a missing small copy only for now, so browsers should ask again soon.
+    response.setHeader("Cache-Control", servedOriginal ? "public, max-age=600" : "public, max-age=31536000, immutable");
     response.setHeader("X-Content-Type-Options", "nosniff");
     if (file.contentLength !== undefined) response.setHeader("Content-Length", String(file.contentLength));
 
