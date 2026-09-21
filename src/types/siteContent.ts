@@ -12,6 +12,34 @@ export interface ContactContent {
   mapQuery: string | null;
 }
 
+export interface ImportOrigin {
+  name: string;
+  /** Typical shipping cost to Malawi for one vehicle from this country, in US dollars. */
+  shippingUsd: number;
+}
+
+/**
+ * The public "Import cost estimator" on the Import page. Off until an admin has checked the rates and
+ * switched it on — the default numbers are placeholders, not real duty rates.
+ */
+export interface ImportCalculatorContent {
+  enabled: boolean;
+  heading: string;
+  intro: string;
+  disclaimer: string;
+  origins: ImportOrigin[];
+  /** Import duty as a percent of the vehicle price plus shipping. */
+  dutyPercent: number;
+  /** VAT and similar taxes as a percent of (vehicle + shipping + duty). */
+  vatPercent: number;
+  /** Flat clearing and documentation fee, in US dollars. */
+  clearingFeeUsd: number;
+  /** The company's service fee as a percent of the vehicle price. */
+  serviceFeePercent: number;
+  /** Delivery inside Malawi, in US dollars. */
+  deliveryUsd: number;
+}
+
 export type ThemeName = "classic" | "ocean" | "warm" | "dark";
 
 /**
@@ -224,6 +252,7 @@ export interface SiteContent {
   contact: ContactContent;
   footer: FooterContent;
   theme: ThemeContent;
+  importCalculator: ImportCalculatorContent;
   pageHeadings: PageHeadingsContent;
   homeSections: HomeSectionsContent;
   social: SocialContent;

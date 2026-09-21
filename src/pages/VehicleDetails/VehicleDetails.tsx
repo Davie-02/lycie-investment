@@ -22,6 +22,8 @@ import ShareButtons from "@/components/common/ShareButtons";
 import { useSiteContent } from "@/context/SiteContentContext";
 import { usePricing } from "@/context/PricingContext";
 import { vehicleLd } from "@/utils/structuredData";
+import WhatsAppIcon from "@/components/common/WhatsAppIcon";
+import { whatsappUrl } from "@/utils/contactLinks";
 
 export default function VehicleDetails() {
   const { content } = useSiteContent();
@@ -71,6 +73,8 @@ export default function VehicleDetails() {
   }
 
   const vehicleLabel = `${vehicle.make} ${vehicle.model} (${vehicle.year})`;
+  // Pre-writes the chat with the vehicle's name and page, so the customer only has to press send.
+  const whatsappLink = content.contact.whatsappNumber ? whatsappUrl(content.contact.whatsappNumber, `Hello, I'm interested in the ${vehicleLabel}: ${window.location.href}`) : null;
 
   return (
     <>
@@ -102,6 +106,14 @@ export default function VehicleDetails() {
             altBase={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
           />
           <ShareButtons text={`${vehicleLabel} — ${content.seo.siteName}`} />
+          {whatsappLink && (
+            <p style={{ marginTop: "var(--space-4)" }}>
+              <a className="btn btn-whatsapp" href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                <WhatsAppIcon size={18} />
+                Ask about this vehicle on WhatsApp
+              </a>
+            </p>
+          )}
 
           <Reveal>
             <div className="vehicle-details__description">

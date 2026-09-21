@@ -45,6 +45,14 @@ simulated.
   detects it and switches to a header-based session automatically
 - Photo sliders: vehicles, hire vehicles and the vehicle page gallery can be
   swiped through (arrows/dots/keyboard on desktop)
+- Prices in US dollars with the kwacha equivalent at a live exchange rate (admin can set a manual rate,
+  margin and rounding); four site themes (Classic, Ocean, Warm, Dark) that always keep the brand
+- Admin-only **Deals & Market**: finds current vehicle deals on the internet for review and publishing (sources
+  never shown publicly), ranks what customers want most, and writes a market briefing
+- Admin-only **Social Media** desk: post to Facebook and Instagram now or scheduled, read and answer comments and
+  messages
+- Search-engine and social visibility: crawler-ready pages, sitemap, robots.txt, structured data, share buttons
+- An import cost estimator (off until an admin sets the rates) and a WhatsApp enquiry button on every vehicle
 - Clickable contact details (mail, phone, WhatsApp, Google Maps), an interactive
   map on the Contact page, and a CMS-editable footer, page headings and homepage
   section text

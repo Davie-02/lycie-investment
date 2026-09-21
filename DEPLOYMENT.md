@@ -264,6 +264,36 @@ the message says why (key rejected, sender not verified, …). Then try
 
 ---
 
+## 2e. Social media (Facebook + Instagram) — optional
+
+Lets you post to your pages and answer comments/messages from Admin → Social Media.
+
+1. Have a **Facebook Page** for the company (and, for Instagram, an Instagram *Business* account linked to that Page).
+2. <https://developers.facebook.com> → *My Apps* → *Create app* (type **Business**). Add the **Facebook Login for Business**
+   / Pages products as offered.
+3. Open the *Graph API Explorer*, choose your app, *Get Page Access Token*, and grant: `pages_manage_posts`,
+   `pages_read_engagement`, `pages_manage_engagement`, `pages_messaging`, `instagram_basic`,
+   `instagram_content_publish`, `instagram_manage_comments`.
+4. Turn the short token into a **long-lived** one (Access Token Debugger → *Extend Access Token*, then request the Page
+   token again with it — Page tokens made from a long-lived user token don't expire).
+5. Find the ids: your Page id (Page → About), and the Instagram id from
+   `GET /me/accounts?fields=instagram_business_account` in the Explorer.
+6. In Render set `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN`, `META_INSTAGRAM_ID` (Instagram is optional), redeploy.
+7. Admin → Social Media should no longer say "not connected". Post a test.
+
+While the Meta app is in *Development* mode, posting to your own Page works for you as its admin; to let other
+staff or read messages at scale Meta may ask for App Review. Keep the access token secret — anyone with it can post as you.
+
+## 2f. Search engines and social previews
+
+Set `SITE_URL` on Render to your website address (e.g. `https://lycie-investments.vercel.app`), then follow the
+"Get listed" checklist in `docs/FEATURES.md` §17 (Google Search Console, Bing, submit `sitemap.xml`).
+
+## 2g. Deals finder and market briefing
+
+Uses the same `GEMINI_API_KEY` as Lycie. Optional: `DEALS_DAILY_SCANS` (default 6), `DEALS_AUTO_SCAN=false` to stop the
+Monday-morning search. Results are unverified — always check before publishing (Admin → Deals & Market).
+
 ## 3. Frontend — Vercel
 
 1. Sign up at [vercel.com](https://vercel.com), connect GitHub.

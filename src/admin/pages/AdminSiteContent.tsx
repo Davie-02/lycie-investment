@@ -23,6 +23,7 @@ import "../components/AdminLayout.css";
 import AiWriteButton from "../components/AiWriteButton";
 import PricingSettings from "../components/PricingSettings";
 import ThemeSettings from "../components/ThemeSettings";
+import ImportCalculatorSettings from "../components/ImportCalculatorSettings";
 import ImageUploader from "../components/ImageUploader";
 import { ClientsSectionEditor, CompanySection, FleetSectionEditor, LoadProfileButton, TeamSectionEditor } from "../components/CompanySections";
 
@@ -36,6 +37,7 @@ const SECTION_LINKS = [
   { id: "site-content-hirePage", label: "Hire Page" },
   { id: "site-content-pricing", label: "Currency & Prices" },
   { id: "site-content-theme", label: "Theme" },
+  { id: "site-content-importCalculator", label: "Import Estimator" },
   { id: "site-content-contact", label: "Contact Info" },
   { id: "site-content-footer", label: "Footer" },
   { id: "site-content-pageHeadings", label: "Page Headings" },
@@ -109,6 +111,7 @@ export default function AdminSiteContent() {
             <HirePageSection initial={content.hirePage} onSaved={refresh} />
             <PricingSettings />
             <ThemeSettings initial={content.theme} onSaved={refresh} />
+            <ImportCalculatorSettings initial={content.importCalculator} onSaved={refresh} />
             <ContactSection initial={content.contact} onSaved={refresh} />
             <FooterSection initial={content.footer} onSaved={refresh} />
             <PageHeadingsSection initial={content.pageHeadings} onSaved={refresh} />

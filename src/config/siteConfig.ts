@@ -27,6 +27,24 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     whatsappNumber: null,
     mapQuery: null,
   },
+  // Off by default: these numbers are placeholders to edit, NOT real duty rates. An admin reviews and enables it.
+  importCalculator: {
+    enabled: false,
+    heading: "Estimate your import cost",
+    intro: "Get a rough idea of what a vehicle will cost by the time it's cleared and delivered.",
+    disclaimer: "This is an estimate only. Duties and taxes are set by the tax authority and can change; freight varies with the vehicle. Contact us for a firm quotation.",
+    origins: [
+      { name: "Japan", shippingUsd: 1800 },
+      { name: "United Kingdom", shippingUsd: 2200 },
+      { name: "South Africa", shippingUsd: 900 },
+      { name: "United Arab Emirates", shippingUsd: 1900 },
+    ],
+    dutyPercent: 25,
+    vatPercent: 16.5,
+    clearingFeeUsd: 400,
+    serviceFeePercent: 5,
+    deliveryUsd: 250,
+  },
   theme: { defaultTheme: "classic", allowVisitorSwitch: true, followDeviceDarkMode: false },
   footer: {
     tagline: "Vehicle imports, dealership, hire, transport and clearing services.",

@@ -158,6 +158,13 @@ textarea {
   background: #1ebe57;
 }
 
+/* Long WhatsApp labels wrap onto two lines instead of pushing past the edge of a narrow phone. */
+.btn-whatsapp {
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--color-ink);

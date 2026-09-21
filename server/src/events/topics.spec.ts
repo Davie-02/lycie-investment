@@ -24,4 +24,13 @@ describe("topicsForWrite", () => {
     expect(topicsForWrite("/api/auth/login")).toEqual([]);
     expect(topicsForWrite("/api/lycie/chat")).toEqual([]);
   });
+
+  it("refreshes every price on open pages when the currency settings change", () => {
+    expect(topicsForWrite("/api/pricing/settings")).toEqual(["pricing", "vehicles", "hire-vehicles"]);
+  });
+
+  it("refreshes the public deals when the deals desk publishes or removes one", () => {
+    expect(topicsForWrite("/api/deal-admin/abc123/publish")).toEqual(["deals"]);
+    expect(topicsForWrite("/api/deal-admin")).toEqual(["deals"]);
+  });
 });

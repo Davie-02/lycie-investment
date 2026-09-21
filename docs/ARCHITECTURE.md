@@ -56,6 +56,10 @@ lycie-investment/
 │   ├── src/app.module.ts    lists every feature module
 │   ├── src/<feature>/       one folder per feature (controller = URLs, service = logic, dto = allowed input)
 │   ├── src/security/        password policy, email checks, lockout, two-factor codes
+│   ├── src/pricing/         USD prices + live kwacha exchange rate
+│   ├── src/seo/             crawler-ready pages, sitemap.xml, robots.txt
+│   ├── src/deals/, market/  admin deals finder and market recommendations (AI + web search)
+│   ├── src/social/          Facebook/Instagram posting, comments and messages
 │   └── prisma/              database: schema.prisma, migrations/, seed.ts
 ├── docs/                    ← these guides
 ├── DEPLOYMENT.md            how to put everything online
@@ -68,7 +72,8 @@ lycie-investment/
 | Folder | Contains |
 | --- | --- |
 | `layout/` | `Layout` (page frame), `Navbar`, `Footer` |
-| `common/` | Hero, the homepage `VehicleCarousel`, **`ImageSlider`** (swipeable photos), `Img` (responsive images), `Seo`, `Reveal` (scroll animation), notices, FAQ/testimonial sections |
+| `common/` | Hero, the homepage `VehicleCarousel`, **`ImageSlider`** (swipeable photos), `Img` (responsive images), `Price` (USD + kwacha), `Seo`, `ShareButtons`, `Reveal` (scroll animation), notices, FAQ/testimonial sections |
+| `deals/`, `import/` | Deal cards and the homepage deals strip; the import cost estimator |
 | `vehicles/` | `VehicleCard`, `HireVehicleCard`, `VehicleGallery`, filters, save button |
 | `forms/` | `FormField` (all inputs, incl. password show/hide), `NewPasswordField`, `EmailField`, `RememberMe`, `SocialSignIn`, the request/inquiry/contact forms |
 | `company/` | Team, clients, fleet, trust strip, contact cards, **`MapEmbed`** |
@@ -130,6 +135,7 @@ Defined in `server/prisma/schema.prisma`; each change is a folder in
 | Customer requests | `Inquiry`, `ImportRequest`, `ClearingRequest`, `HireRequest`, `ContactMessage`, `CustomerCase(+Update)`, `CustomerMessage` |
 | Money | `Account`, `FinancialTransaction`, `PaymentSubmission` |
 | Content | `SiteContent`, `Notice`, `Testimonial`, `Faq`, `BlogPost`, `Review` |
+| Growth | `Deal`, `MarketReport`, `SocialPost` |
 | Lycie AI | `KnowledgeEntry`, `KnowledgeDocument`, `LycieChatLog`, `VisitorSubmission`, `FaqSuggestion`, `TestimonialIdea` |
 | Admin | `AuditLog`, `AdminActivity`, `ContactLog`, `VehicleViewStat` |
 

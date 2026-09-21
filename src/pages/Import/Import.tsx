@@ -7,6 +7,7 @@ import JourneySection from "@/components/common/JourneySection";
 import ImportRequestForm from "@/components/forms/ImportRequestForm";
 import Reveal from "@/components/common/Reveal";
 import { useSiteContent } from "@/context/SiteContentContext";
+import ImportCostEstimator from "@/components/import/ImportCostEstimator";
 
 export default function Import() {
   const { content } = useSiteContent();
@@ -29,6 +30,8 @@ export default function Import() {
       <Reveal>
         <JourneySection />
       </Reveal>
+
+      <ImportCostEstimator />
 
       <Reveal>
         <section className="section container" id="request">

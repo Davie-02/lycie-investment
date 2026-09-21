@@ -230,6 +230,9 @@ function DealEditor({ deal, onChanged }: { deal: AdminDeal; onChanged: () => voi
         <button className="btn btn-secondary" onClick={() => act()}>Save changes</button>
         {deal.status !== "PUBLISHED" && <button className="btn btn-primary" onClick={() => act("publish")}>Publish to the site</button>}
         {deal.status === "PUBLISHED" && <button className="btn btn-secondary" onClick={() => act("unpublish")}>Take off the site</button>}
+        {deal.status === "PUBLISHED" && (
+          <a className="btn btn-ghost" href={`/admin/social?text=${encodeURIComponent(`${deal.title} — ${deal.summary}`)}&link=${encodeURIComponent(`${window.location.origin}/deals`)}`}>Post to social media</a>
+        )}
         {deal.status === "NEW" && <button className="btn btn-ghost" onClick={() => act("dismiss")}>Dismiss</button>}
         {confirmDelete ? (
           <button className="btn btn-ghost" onClick={remove}>Really delete</button>

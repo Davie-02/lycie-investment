@@ -54,6 +54,7 @@ const AdminReviews = lazy(() => import("@/admin/pages/AdminReviews"));
 const AdminInsights = lazy(() => import("@/admin/pages/AdminInsights"));
 const AdminLycie = lazy(() => import("@/admin/pages/AdminLycie"));
 const AdminDeals = lazy(() => import("@/admin/pages/AdminDeals"));
+const AdminSocial = lazy(() => import("@/admin/pages/AdminSocial"));
 const AdminActivity = lazy(() => import("@/admin/pages/AdminActivity"));
 
 function CustomerAccountRoute() {
@@ -118,6 +119,7 @@ export default function AppRoutes() {
                     <Route path="insights" element={<AdminInsights />} />
                     <Route path="lycie" element={<AdminLycie />} />
                     <Route path="deals" element={<AdminDeals />} />
+                    <Route path="social" element={<AdminSocial />} />
                   </Route>
                   <Route element={<RequireRole roles={["OWNER"]} />}>
                     <Route path="users" element={<AdminUsers />} />

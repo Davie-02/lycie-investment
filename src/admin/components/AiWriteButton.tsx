@@ -11,6 +11,7 @@ export type WriterKind =
   | "faq-answer"
   | "notice"
   | "seo-description"
+  | "social-post"
   | "site-text";
 
 type Tone = "friendly" | "professional" | "persuasive" | "concise";

@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.webp";
 import ThemeToggle from "./ThemeToggle";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getDeals } from "@/services/deals.service";
@@ -44,7 +44,7 @@ export default function Navbar() {
     <header className={isScrolled ? "navbar navbar--scrolled" : "navbar"}>
       <div className="container navbar__row">
         <NavLink to="/" className="navbar__brand" onClick={() => setIsOpen(false)}>
-          <img src={logo} alt="Lycie Investments" className="navbar__logo" />
+          <img src={logo} alt="Lycie Investments" className="navbar__logo" width="58" height="48" />
         </NavLink>
 
         <nav className="navbar__links navbar__links--desktop" aria-label="Primary">

@@ -45,6 +45,15 @@ export default defineConfig(({ mode }) => {
         "import.meta.env.VITE_STREAM_BASE_URL": JSON.stringify(directApi),
       }
     : {},
+  build: {
+    rollupOptions: {
+      output: {
+        // React and the router change rarely, so they live in their own file: returning visitors keep
+        // it cached across deploys and only re-download the (much smaller) app code.
+        manualChunks: { "vendor-react": ["react", "react-dom", "react-router-dom"] },
+      },
+    },
+  },
   plugins: [react(), preconnectApi(sameDomain ? directApi : env.VITE_API_BASE_URL ?? "http://localhost:3001/api")],
   resolve: {
     alias: {

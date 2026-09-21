@@ -191,6 +191,12 @@ export const WRITER_KINDS = {
     instruction: "Write a search-engine description of 140-155 characters that accurately summarises the page and invites a click.",
     maxTokens: 100,
   },
+  "social-post": {
+    label: "Social media post",
+    instruction:
+      "Write a short, engaging social media post of at most 350 characters for Facebook and Instagram. Open with the most appealing fact, keep it friendly and easy to read, end with a simple call to action (for example asking people to message us), and add at most two relevant hashtags. Use only the facts given. Do not include web addresses.",
+    maxTokens: 200,
+  },
   "site-text": {
     label: "Website text",
     instruction: "Write website copy for the section described. Match the length of the current text if one is given, otherwise keep it to 2-4 sentences.",

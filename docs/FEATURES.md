@@ -275,10 +275,43 @@ Sends but not delivered → the sending address/domain isn't verified with the p
 
 ---
 
-## 17. SEO and sharing
+## 17. Search engines and social sharing
 
-**What:** each page sets its title and description; site-wide defaults are editable.
-**Where:** `src/components/common/Seo.tsx`; SiteContent key `seo`; static fallbacks in `index.html`.
+**What:** every public page can be found by Google/Bing and looks good when shared on WhatsApp,
+Facebook, X or LinkedIn: a proper title and description, a preview picture, a canonical address,
+structured data (so Google can show a car's price and a business's phone/address), a sitemap and a
+robots.txt. Visitors can also share vehicles and posts with one tap.
+
+**Why it needed special handling:** the site is a single-page app, so its own HTML is nearly empty until
+JavaScript runs. Social networks and some search bots never run it and would see the same generic page
+for every address. So:
+
+1. `server/src/seo/` builds a complete HTML page for every public address (vehicles, blog posts, FAQ…)
+   from the live database — `GET /api/seo/render?path=/vehicles/toyota-hilux-2022`.
+2. `vercel.json` sends **only crawler user-agents** (Googlebot, Bing, Facebook, WhatsApp, X, LinkedIn,
+   Telegram…) to that page. Real visitors always get the normal site. `/sitemap.xml` and `/robots.txt`
+   are served from the API too, so the sitemap always lists the vehicles and posts that are live today.
+3. In the browser `src/components/common/Seo.tsx` keeps the same tags up to date as visitors navigate
+   (also used by Google's JavaScript-running crawler), and `src/utils/structuredData.ts` adds the JSON-LD.
+
+**Managed in the CMS:** Site Content → SEO: site name, default description, sharing picture, X handle,
+Google Search Console and Bing verification codes. Vehicle pages use their first photo; blog posts their
+cover; private pages (sign-in, account) are marked `noindex`.
+
+**Get listed (one-time, ~10 minutes):**
+1. Set `SITE_URL` on Render to your website address, redeploy.
+2. Google Search Console → Add property → URL prefix → choose the *HTML tag* method → paste the code into
+   Site Content → SEO → "Google Search Console verification code" → Save → click Verify in Google.
+3. In Search Console → Sitemaps → submit `sitemap.xml`. Repeat with Bing Webmaster Tools (you can import
+   the site from Google in one click).
+4. Add your Facebook Page / Instagram / X links in Site Content → Social Links (they feed the business
+   structured data). Put the site address in each profile's "website" field.
+5. Test a share: paste a vehicle link into WhatsApp or <https://developers.facebook.com/tools/debug/>.
+
+**If it breaks:** a share shows the wrong picture → Facebook caches; use the Sharing Debugger's "Scrape
+again". A page isn't in Google → Search Console → URL Inspection → "Request indexing". Check what crawlers
+see with `curl -A Googlebot https://<site>/vehicles/<slug>` (should show the vehicle's title). If that shows
+the generic page, the `vercel.json` rewrites or `SITE_URL` aren't in place.
 
 ---
 
@@ -293,3 +326,133 @@ screens (no sideways scrolling anywhere).
 **If a page scrolls sideways on a phone:** in dev tools' device mode, find the element that
 sticks out (the box that ends past the right edge); usually a grid using plain `1fr`
 columns, a long unbroken word (`overflow-wrap: anywhere`), or a fixed width.
+
+
+---
+
+## 19. Prices in US dollars, with the kwacha equivalent
+
+**What:** every vehicle and hire price is stored and shown in **US dollars**, with the Malawi kwacha
+equivalent beside it ("$26,000 ≈ MWK 45,500,000") at the current exchange rate. Older listings entered in
+kwacha display correctly too (converted with the same rate) until they're edited or bulk-converted.
+
+**Where:** rate logic `server/src/pricing/` — `rate-providers.ts` (two free public sources, tried in
+order, sanity-checked), `pricing.service.ts` (30-minute cache, remembered in the database, manual override,
+margin, rounding, the bulk converter). Public endpoint `GET /api/pricing`. Browser: `PricingContext.tsx`
+(refreshes every 10 minutes and instantly when an admin changes settings), `utils/price.ts`, and the
+`<Price>` component used by every card, page and table. Lycie quotes the same format
+(`pricing/price-format.ts`).
+
+**Managed in the CMS:** Site Content → Currency & Prices — automatic (live rate) or manual rate, a margin %
+(when the everyday market rate is higher than the published one), rounding ("nearest 1,000"), a "refresh now"
+button, and (Owner) "Convert kwacha listings to USD" for old data. Vehicle and hire forms take USD and show
+the kwacha equivalent as you type.
+
+**Honest limits:** the free rate sources publish about once a day, so "live" means "as fresh as the
+published rate". For the everyday Malawi rate set a manual rate or a margin. The customer money ledger
+(balances, payment proofs) deliberately stays in kwacha.
+
+**If it breaks:** no kwacha shown → no rate yet; set a manual rate, or check the API can reach the internet.
+A price looks 10× off → the listing's currency field: edit and save it in USD. Rate not updating → admin
+"Refresh live rate now" shows the source and time.
+
+---
+
+## 20. Themes
+
+**What:** four looks — Classic (the original), Ocean, Warm and Dark. Every theme keeps the brand navy and
+sky blue, the logo, and the header/footer/button colours; only page and card tones change (in Dark the logo
+sits on a white chip, text-navy becomes light blue). Visitors get a sun/moon switch in the header, remembered
+per device; an admin can hide it or make dark mode follow the visitor's device setting. The admin
+dashboard always stays Classic.
+
+**Where:** colours are variables in `src/styles/variables.css` (`:root[data-theme="…"]` blocks);
+`--color-ink` is the brand navy used as *text*, `--color-primary` the brand navy used as *background* (never
+changes). `context/ThemeContext.tsx` picks the theme (`utils/theme.ts`), `components/layout/ThemeToggle.tsx`
+is the switch, and a tiny script in `index.html` applies the theme before the page paints (no flash).
+
+**Managed in the CMS:** Site Content → Theme.
+
+**Adding a theme:** add a `:root[data-theme="name"]` block overriding the surface tokens, add the name to
+`THEME_NAMES`/`THEME_LABELS` in `utils/theme.ts` and a swatch in `ThemeSettings.tsx`.
+
+**If a component looks wrong in a theme:** it is probably using a hard-coded colour; replace it with a token
+(`--color-surface`, `--color-tint`, `--color-ink`…).
+
+---
+
+## 21. Deals finder and market recommendations (admin only)
+
+**What:** Admin → **Deals & Market**.
+- **Deals:** "Search the internet for deals" asks the AI (with live Google Search) for current promotions and
+  bargains on vehicles that suit the Malawian market and saves them as *To review*. You edit the wording,
+  then **Publish** or **Dismiss**. Nothing publishes itself. Each deal keeps staff-only notes — *how to get
+  it* and *where it was found* — that visitors never see; the public sees only title, description, price,
+  end date. Deals can also be added by hand. Published deals appear on the homepage, a `/deals` page and a
+  "Deals" menu link (only while one exists).
+- **What customers want:** a ranking built from your own numbers (import requests, inquiries, saves, likes,
+  views over 90 days), with a plain-language next step for each ("customers keep asking, none in stock —
+  source some").
+- **Market briefing:** an AI-researched summary of what's selling in Malawi/Southern Africa, opportunities,
+  and ways to stand out from other importers, blended with your demand numbers.
+
+**Where:** `server/src/deals/` (parser that scrubs web addresses/attributions from customer text, service,
+weekly job — Mondays 7am unless `DEALS_AUTO_SCAN=false`), `server/src/market/` (`demand.ts` scoring,
+briefing), `lycie/gemini.client.ts` (search grounding), `src/admin/pages/AdminDeals.tsx`, public
+`pages/Deals/` and `components/deals/`. Tables `Deal`, `MarketReport`. Needs `GEMINI_API_KEY`.
+
+**Important:** AI-found deals are **unverified** — confirm price, dates and availability with the seller before
+publishing. Searches are capped (`DEALS_DAILY_SCANS`, default 6/day) to protect the free AI quota.
+
+**If it breaks:** "AI search isn't set up" → `GEMINI_API_KEY`. "Busy" → Gemini overload; retry in a few
+minutes. A deal shows a source publicly → it can't via the API (`toPublicDeal` whitelists fields, tested); check
+the summary text you typed yourself.
+
+---
+
+## 22. Social media desk (admin only)
+
+**What:** Admin → **Social Media**. Write a post (the AI can draft it), attach a picture and link, choose
+Facebook and/or Instagram, then **Post now**, **Schedule** or **Save draft**. A retry re-sends only the page that
+failed, never one that already worked. The **Comments & messages** tab shows what people wrote on your posts and
+their private Facebook messages, with a reply box on each. Published deals have a "Post to social media"
+shortcut.
+
+**Where:** `server/src/social/` — `meta.client.ts` (Meta Graph API: posting, comments, Messenger, replies),
+`social.service.ts` (drafts, scheduling, retries, inbox), `social.cron.ts` (sends due posts every 5 minutes);
+`src/admin/pages/AdminSocial.tsx`. Table `SocialPost`.
+
+**Set up (Facebook + Instagram):** see DEPLOYMENT.md → "Social media". Without the three `META_*` variables the
+page shows "not connected" and you can still write drafts.
+
+**Limits to know:** Instagram posts need a picture and Instagram *private messages* can't be answered through
+Meta's API (reply in the app; comments work). Facebook allows replying to a message only within 24 hours.
+X (Twitter) and LinkedIn aren't connected — their APIs need separate approval; the share buttons on vehicle
+pages work for them.
+
+**If it breaks:** the message under the post says why in plain words. "connection has expired" → create a new
+long-lived Page token and update `META_PAGE_ACCESS_TOKEN` on Render. "permission" → the Meta app needs
+`pages_manage_posts`, `pages_read_engagement`, `pages_messaging` (and Instagram equivalents).
+
+---
+
+## 23. Import cost estimator
+
+**What:** a calculator on the Import page: enter a vehicle's price abroad and where it ships from, see the
+estimated landed cost (shipping, duty, VAT, clearing, your fee, delivery) in USD with kwacha.
+**Off until an admin turns it on** — the default rates are placeholders.
+**Where:** `components/import/ImportCostEstimator.tsx`, maths in `utils/importCost.ts` (tested), settings in
+Site Content → Import Cost Estimator (`ImportCalculatorSettings.tsx`, SiteContent key `importCalculator`).
+
+---
+
+## 24. Speed
+
+**What was done and why it matters on mobile data:** the logo shrank from 233 KB to 6 KB (WebP at 3× its
+display size; the favicon likewise); the app is split so the framework (`vendor-react`) is cached separately
+from the app code; the Lycie chat downloads only after the page is idle; built files are cached for a year
+(`vercel.json`); photos use responsive sizes (and missing sizes are created on demand — see
+`uploads.service.ts`). Result: a first visit to the homepage loads about 90 KB of code and logo (previously
+about 310 KB).
+**Keeping it light:** avoid adding large libraries to the entry bundle (lazy-load with `import()` like the
+admin pages and the QR library); compress new images before use; check `npm run build` output sizes.
