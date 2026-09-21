@@ -1,3 +1,6 @@
+/**
+ * The 'Why choose us' grid on the homepage, from Site Content → Why Choose Us (Admin).
+ */
 import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function WhyChooseUs() {

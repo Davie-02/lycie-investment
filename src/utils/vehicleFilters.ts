@@ -1,3 +1,9 @@
+/**
+ * Pure functions behind the Vehicles page filters: the filter shape, an empty default,
+ * applyFilters() (search text, make, body type, fuel, transmission, status, max price)
+ * and getUniqueValues() for the dropdown options. Runs in the browser on the already-
+ * loaded list.
+ */
 import type { Vehicle } from "@/types/vehicle";
 
 export interface VehicleFilters {

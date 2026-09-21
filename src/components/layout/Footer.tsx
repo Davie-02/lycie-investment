@@ -1,3 +1,9 @@
+/**
+ * The site footer on every public page. Everything in it comes from Site Content
+ * (Admin): tagline, phone numbers (tap to call), email (tap to write), address (tap to
+ * open Google Maps), WhatsApp and social links, and the copyright line. Page links are
+ * fixed here.
+ */
 import { Link } from "react-router-dom";
 import { companyName } from "@/config/siteConfig";
 import { mailtoLink, mapQueryFor, mapsSearchUrl } from "@/utils/contactLinks";

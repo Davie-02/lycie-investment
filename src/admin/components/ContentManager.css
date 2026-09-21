@@ -1,3 +1,8 @@
+/*
+ Styles for the shared admin content list: search box, status filter, bulk-action bar,
+ row checkboxes and status badges (ContentManager.tsx).
+*/
+
 .cm-controls {
   display: flex;
   flex-wrap: wrap;

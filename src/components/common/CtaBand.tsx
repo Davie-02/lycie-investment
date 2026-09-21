@@ -1,3 +1,7 @@
+/**
+ * A full-width call-to-action band: a heading, a line of text and one or two buttons.
+ * The homepage and About page pass in their own wording.
+ */
 import { Link } from "react-router-dom";
 
 interface CtaBandProps {

@@ -1,3 +1,7 @@
+/**
+ * Allowed body for a clearing request: contact details (deliverable email), the vehicle
+ * and shipment details, and optional notes.
+ */
 import { IsDateString, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { IsDeliverableEmail } from "../../security/email-check";
 import { Type } from "class-transformer";

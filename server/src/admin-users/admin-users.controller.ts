@@ -1,3 +1,7 @@
+/**
+ * Admin account management API — Owner only: list, create, edit (name, role, active,
+ * password, reset 2FA) and delete. The service protects the last active Owner.
+ */
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { AdminUsersService } from "./admin-users.service";
 import { CreateAdminUserDto } from "./dto/create-admin-user.dto";

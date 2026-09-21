@@ -1,3 +1,7 @@
+/**
+ * Database access for blog posts: the public list and single post by slug (published
+ * only), the admin list of everything, and create/edit/delete with unique slugs.
+ */
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "../content-admin/content-state";

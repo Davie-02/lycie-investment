@@ -1,3 +1,7 @@
+/**
+ * The Reviews page: banner (text editable in Site Content → Page Headings) and the
+ * company-wide ReviewsSection.
+ */
 import Seo from "@/components/common/Seo";
 import { useSiteContent } from "@/context/SiteContentContext";
 import ReviewsSection from "@/components/reviews/ReviewsSection";

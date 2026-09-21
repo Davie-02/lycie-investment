@@ -1,3 +1,7 @@
+/**
+ * Database access for FAQ entries; the public list returns only published, non-archived
+ * ones.
+ */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "../content-admin/content-state";

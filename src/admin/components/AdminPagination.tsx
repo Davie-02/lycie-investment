@@ -1,3 +1,7 @@
+/**
+ * Previous / Next page controls shown under the admin tables. Purely presentational: the
+ * parent owns the page number and fetches the data.
+ */
 interface AdminPaginationProps {
   page: number;
   pageSize: number;

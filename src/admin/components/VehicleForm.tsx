@@ -1,3 +1,8 @@
+/**
+ * The main form for adding or editing a vehicle for sale: make, model, year, price,
+ * mileage, fuel, transmission, body type, description, features, status and photos.
+ * Saves via POST/PATCH /api/vehicles and refuses to save without at least one photo.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

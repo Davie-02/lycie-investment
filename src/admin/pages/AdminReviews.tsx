@@ -1,3 +1,8 @@
+/**
+ * Admin → Reviews. Customer reviews stay hidden until approved: filter by status,
+ * approve or reject each, delete, and see the automatically worked-out sentiment. Uses
+ * /api/reviews.
+ */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";

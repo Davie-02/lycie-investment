@@ -1,3 +1,7 @@
+/**
+ * The 'Featured vehicles' grid on the homepage: the first few available vehicles from
+ * GET /api/vehicles, drawn with VehicleCard.
+ */
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFeaturedVehicles } from "@/services/vehicles.service";

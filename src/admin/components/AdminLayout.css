@@ -1,3 +1,10 @@
+/*
+ Styles for the whole admin dashboard: header and navigation, page toolbar, tables
+ (scroll inside their own box on phones), dashboard cards, booking cards and
+ pagination. Colours and spacing come from the shared variables in
+ styles/variables.css.
+*/
+
 .admin-shell {
   min-height: 100vh;
   background: var(--color-background);

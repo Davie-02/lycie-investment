@@ -1,3 +1,7 @@
+/**
+ * Allowed bodies for the visitor 'Ask us' form and for admins changing a submission's
+ * status or editing an FAQ suggestion.
+ */
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 
 export const SUBMISSION_KINDS = ["question", "comment"] as const;

@@ -1,3 +1,8 @@
+/**
+ * Allowed body for creating a vehicle: make, model, year, price, mileage, fuel,
+ * transmission, body type, description, features and the list of photo addresses. Every
+ * field is validated; unknown fields are rejected.
+ */
 import { IsArray, IsBoolean, IsIn, IsOptional, IsInt, IsNotEmpty, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
 

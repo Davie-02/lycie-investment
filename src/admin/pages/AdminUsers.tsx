@@ -1,3 +1,8 @@
+/**
+ * Admin → Admin Users (Owner only). List, add, edit, deactivate and delete admin
+ * accounts through /api/admin-users. The server refuses to remove or demote the last
+ * active Owner.
+ */
 import { useCallback, useState } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi, type AdminUserSummary } from "../adminApi";

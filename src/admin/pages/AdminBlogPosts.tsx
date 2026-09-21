@@ -1,3 +1,7 @@
+/**
+ * Admin → Blog. Thin page that plugs the blog post form and endpoints into the shared
+ * ContentManager list (search, publish/archive, bulk actions, pagination).
+ */
 import ContentManager from "../components/ContentManager";
 import BlogPostForm from "../components/BlogPostForm";
 import { useAdminAuth } from "../context/AdminAuthContext";

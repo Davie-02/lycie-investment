@@ -1,3 +1,7 @@
+/**
+ * The Import page: intro and the request-an-imported-vehicle form. Intro comes from Site
+ * Content → Import Page (Admin).
+ */
 import Seo from "@/components/common/Seo";
 import JourneySection from "@/components/common/JourneySection";
 import ImportRequestForm from "@/components/forms/ImportRequestForm";

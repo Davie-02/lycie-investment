@@ -1,3 +1,7 @@
+/**
+ * Admin list of the questions and comments visitors left through the anonymous 'Ask us'
+ * form, with actions to mark handled or delete. Uses /api/lycie/submissions.
+ */
 import { useState } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

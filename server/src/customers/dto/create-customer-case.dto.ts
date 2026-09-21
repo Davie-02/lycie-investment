@@ -1,3 +1,7 @@
+/**
+ * Allowed body for creating a customer case: which customer, a title, optional details
+ * and the vehicle it concerns. Anything else in the request is rejected.
+ */
 import { IsEnum, IsOptional, IsString, IsUUID, MinLength } from "class-validator";
 import { CustomerCaseStatus } from "@prisma/client";
 

@@ -1,3 +1,8 @@
+/**
+ * Admin 'Forgot your password?' page. Asks for an email and calls POST /api/auth/forgot-
+ * password, always showing the same 'check your email' message so it can't be used to
+ * discover which emails are admin accounts.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import FormField from "@/components/forms/FormField";

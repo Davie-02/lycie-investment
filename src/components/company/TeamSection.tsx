@@ -1,3 +1,7 @@
+/**
+ * The team section, from Site Content → Team (Admin): groups of people with role and
+ * optional photo. Renders nothing until members are added.
+ */
 import { useSiteContent } from "@/context/SiteContentContext";
 import Reveal from "@/components/common/Reveal";
 import Img from "@/components/common/Img";

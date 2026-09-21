@@ -1,3 +1,8 @@
+/**
+ * Form to create or edit a blog post (title, slug, excerpt, body, cover image, publish
+ * state). Saves via POST/PATCH /api/blog-posts; shown inside the shared ContentManager
+ * list.
+ */
 import { useState, type FormEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

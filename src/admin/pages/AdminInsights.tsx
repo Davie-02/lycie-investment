@@ -1,3 +1,10 @@
+/**
+ * Admin → Insights. What customers are saying and doing, built from reviews, contact
+ * messages, inquiries, saved vehicles and vehicle page views: key figures (reviews,
+ * feedback analysed, views in the last 30 days), customer sentiment charts, and
+ * recommendations that come from clear rules (e.g. many views but no inquiries). Reads
+ * GET /api/insights/overview.
+ */
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";

@@ -1,3 +1,8 @@
+/*
+ Styles for the customer pages: the narrow sign-in/register card, the account page
+ sections, vehicle updates and saved vehicles.
+*/
+
 .customer-auth {
   display: flex;
   justify-content: center;

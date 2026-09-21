@@ -1,3 +1,9 @@
+/*
+ Styles for the 'Contact' button on each admin request and the popup that lets staff
+ reply the way the customer asked (WhatsApp, call, email, in-app message). See
+ ContactCell.tsx.
+*/
+
 .contact-cell {
   display: grid;
   gap: var(--space-2);

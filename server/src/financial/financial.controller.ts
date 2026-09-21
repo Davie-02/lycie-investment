@@ -1,3 +1,8 @@
+/**
+ * Money endpoints. Customers see their own account and submit proof of payment; only
+ * Owner/Manager can list payments and approve or reject them. Who 'me' is always comes
+ * from the verified sign-in, never from the request.
+ */
 import {
   BadRequestException,
   Body,

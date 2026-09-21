@@ -1,3 +1,7 @@
+/**
+ * Testimonials API. Reading the published list is public; creating, editing and deleting
+ * is Owner/Manager only.
+ */
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { TestimonialsService } from "./testimonials.service";
 import { CreateTestimonialDto } from "./dto/create-testimonial.dto";

@@ -1,3 +1,8 @@
+/**
+ * The 'What we do' section on the homepage. Titles and descriptions come from Site
+ * Content → Services (Admin); the four slots' icons and links (Import, Vehicles, Hire,
+ * Clearing) are fixed here.
+ */
 import ServiceCard from "./ServiceCard";
 import { useSiteContent } from "@/context/SiteContentContext";
 import "./ServicesSection.css";

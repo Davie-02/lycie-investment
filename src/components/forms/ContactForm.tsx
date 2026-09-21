@@ -1,3 +1,8 @@
+/**
+ * The Contact page message form. Validates in the browser, then POST /api/contact-
+ * messages. The visitor can say how they'd like to be contacted; staff see that in the
+ * admin.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

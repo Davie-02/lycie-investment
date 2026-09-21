@@ -1,3 +1,8 @@
+/**
+ * Form to add an admin account or edit one (name, role, new password, and an Owner-only
+ * 'reset two-step verification'). Saves through POST/PATCH /api/admin-users; passwords
+ * are checked against the same rules the server enforces.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import EmailField from "@/components/forms/EmailField";

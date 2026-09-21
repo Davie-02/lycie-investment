@@ -1,3 +1,7 @@
+/**
+ * Database access for notices; the public list returns only notices that are currently
+ * live (rules in content-admin/content-state.ts).
+ */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "../content-admin/content-state";

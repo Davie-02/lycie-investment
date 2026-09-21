@@ -1,3 +1,7 @@
+/**
+ * Small inline SVG icons used by the company sections and contact cards. Drawn in code
+ * so they take their colour from the surrounding text and need no image files.
+ */
 const base = { width: 26, height: 26, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
 
 export const SchoolIcon = () => (

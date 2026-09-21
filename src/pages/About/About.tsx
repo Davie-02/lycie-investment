@@ -1,3 +1,7 @@
+/**
+ * The About page: company story, what we do, how we work, why work with us, vision and
+ * mission, team, clients and fleet. Every piece of text comes from Site Content (Admin).
+ */
 import Seo from "@/components/common/Seo";
 import CtaBand from "@/components/common/CtaBand";
 import Reveal from "@/components/common/Reveal";

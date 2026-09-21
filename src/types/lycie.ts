@@ -1,3 +1,8 @@
+/**
+ * Shapes for the Lycie assistant: chat replies, vehicle cards she can show, knowledge
+ * notes, documents, visitor submissions, FAQ drafts and testimonial ideas. Mirrors
+ * server/src/lycie/.
+ */
 export type ChatOutcome = "answered" | "no_info" | "unavailable" | "blocked" | "limited";
 
 export interface LycieVehicleCard {

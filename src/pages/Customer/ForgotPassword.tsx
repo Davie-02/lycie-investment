@@ -1,3 +1,8 @@
+/**
+ * 'Forgot your password?' page: asks for an email and calls POST /api/customers/forgot-
+ * password. It always shows the same 'check your email' message, so it can't be used to
+ * discover which emails have accounts.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";

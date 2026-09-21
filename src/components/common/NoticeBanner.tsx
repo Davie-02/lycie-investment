@@ -1,3 +1,7 @@
+/**
+ * Shows the active notices that an admin set to display as a banner (Admin → Notices)
+ * above the navigation. Visitors can dismiss a notice; it stays dismissed for them.
+ */
 import { useState } from "react";
 import { useNotices } from "@/context/NoticesContext";
 import { NOTICE_TYPE_STYLES } from "@/types/notice";

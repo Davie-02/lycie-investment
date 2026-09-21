@@ -1,3 +1,8 @@
+/**
+ * One vehicle's page: photo gallery (swipeable), price and specs, description, features,
+ * reviews for that vehicle and the inquiry form. Loaded by slug from GET
+ * /api/vehicles/:slug; shows 'Vehicle not found' for sold, archived or mistyped links.
+ */
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";

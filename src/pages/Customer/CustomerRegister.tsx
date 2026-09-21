@@ -1,3 +1,8 @@
+/**
+ * Customer sign-up page: name, email (with typo hints), a strong-password helper with
+ * strength meter and suggestion, confirm password, 'Keep me signed in' and
+ * Google/Facebook buttons (when configured). The server re-checks every rule.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";

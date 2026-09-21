@@ -1,3 +1,7 @@
+/**
+ * Reads vehicles from the public API: the full list, one by slug, the featured few, and
+ * hire vehicles.
+ */
 import { apiGet, ApiError } from "./http";
 import type { Vehicle, HireVehicle } from "@/types/vehicle";
 

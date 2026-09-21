@@ -1,3 +1,9 @@
+/**
+ * Admin panel for Lycie's FAQ suggestions: the most-asked topics of the last 30 days and
+ * the draft answers Lycie wrote from company data. An admin edits then publishes or
+ * rejects each; nothing is published automatically. Uses /api/lycie/suggestions and
+ * /top-questions.
+ */
 import { useState } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

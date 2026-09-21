@@ -1,3 +1,6 @@
+/**
+ * Saves import requests, emails the team, and lists or updates them for the admin.
+ */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";

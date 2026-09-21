@@ -1,3 +1,8 @@
+/*
+ Styles for the top navigation bar: desktop links, the mobile hamburger menu and its
+ slide-down panel, and the sign-in / account buttons.
+*/
+
 .navbar {
   position: sticky;
   top: 0;

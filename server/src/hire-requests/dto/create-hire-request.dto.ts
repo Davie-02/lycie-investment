@@ -1,3 +1,7 @@
+/**
+ * Allowed body for a hire request: contact details (deliverable email), which hire
+ * vehicle, and pickup/return dates. The server recalculates the price itself.
+ */
 import { IsDateString, IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { IsDeliverableEmail } from "../../security/email-check";
 import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";

@@ -1,3 +1,7 @@
+/**
+ * Admin → Vehicles. Plugs the vehicle form and endpoints into the shared ContentManager
+ * list.
+ */
 import ContentManager from "../components/ContentManager";
 import VehicleForm from "../components/VehicleForm";
 import { adminApi } from "../adminApi";

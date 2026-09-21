@@ -1,3 +1,8 @@
+/**
+ * Admin → Payments. Lists customers' proof-of-payment submissions; an Owner/Manager
+ * approves (credits the customer's balance) or rejects with a note via POST
+ * /api/financial/payments/:id/approve|reject.
+ */
 import { useEffect, useState } from "react";
 import { adminApi, resolveUploadUrl } from "../adminApi";
 

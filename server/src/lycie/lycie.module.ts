@@ -1,3 +1,8 @@
+/**
+ * Wires the Lycie assistant together: chat, knowledge notes, uploaded documents, FAQ
+ * suggestions, testimonial ideas, the AI writing helper, the Gemini client and the
+ * scheduled clean-up/suggestion jobs.
+ */
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { LycieController } from "./lycie.controller";

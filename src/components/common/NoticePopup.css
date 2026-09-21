@@ -1,3 +1,7 @@
+/*
+ Styles for notices shown as a popup dialog over the page (NoticePopup.tsx).
+*/
+
 .notice-popup-overlay {
   position: fixed;
   inset: 0;

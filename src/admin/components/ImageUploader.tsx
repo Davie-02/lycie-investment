@@ -1,3 +1,8 @@
+/**
+ * Photo picker used by the vehicle, hire vehicle, blog, testimonial and team forms.
+ * Uploads each file to POST /api/uploads (the server converts it to web-friendly sizes)
+ * and keeps the returned addresses in order; the first is treated as the cover.
+ */
 import { useRef, useState, type ChangeEvent } from "react";
 import { adminApi, resolveUploadUrl } from "../adminApi";
 import { ApiError } from "@/services/http";

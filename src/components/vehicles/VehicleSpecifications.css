@@ -1,3 +1,7 @@
+/*
+ Styles for the specifications table on a vehicle's page.
+*/
+
 .vehicle-specs {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

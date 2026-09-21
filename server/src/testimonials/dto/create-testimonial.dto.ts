@@ -1,3 +1,7 @@
+/**
+ * Allowed body for a testimonial: quote, author, rating, optional photo. Anything else
+ * is rejected.
+ */
 import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from "class-validator";
 
 export class CreateTestimonialDto {

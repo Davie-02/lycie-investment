@@ -1,3 +1,7 @@
+/**
+ * Form to create or edit an FAQ entry (question, answer, category, order). Saves via
+ * POST/PATCH /api/faq.
+ */
 import { useState, type FormEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

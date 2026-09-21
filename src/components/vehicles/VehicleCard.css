@@ -1,3 +1,9 @@
+/*
+ Styles for the vehicle / hire vehicle card: photo area, status badge, heart button,
+ details and the button. The photo area is a fixed 3:2 box so every card is the same
+ size whatever shape the photo is.
+*/
+
 .vehicle-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

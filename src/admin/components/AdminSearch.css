@@ -1,3 +1,7 @@
+/*
+ Styles for the admin's global search box and its results dropdown (AdminSearch.tsx).
+*/
+
 .admin-search {
   position: relative;
   flex: 0 1 260px;

@@ -1,3 +1,7 @@
+/**
+ * Admin → Hire Vehicles. Plugs the hire vehicle form and endpoints into the shared
+ * ContentManager list.
+ */
 import ContentManager from "../components/ContentManager";
 import HireVehicleForm from "../components/HireVehicleForm";
 import { useAdminAuth } from "../context/AdminAuthContext";

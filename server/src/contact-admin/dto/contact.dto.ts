@@ -1,3 +1,7 @@
+/**
+ * Allowed bodies for the admin's customer-contact tools: which kind of request it is,
+ * logging a contact attempt, and sending a message to the customer.
+ */
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 import { PREFERRED_CONTACTS, type PreferredContact } from "../../common/preferred-contact";
 

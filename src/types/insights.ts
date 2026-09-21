@@ -1,3 +1,8 @@
+/**
+ * Shapes of the data returned by GET /api/insights/overview (review sentiment counts,
+ * demand per vehicle, recommendations) for the admin Insights page. Mirrors
+ * server/src/insights/.
+ */
 export interface SentimentCounts {
   positive: number;
   neutral: number;

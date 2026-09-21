@@ -1,3 +1,9 @@
+/**
+ * The Contact page: tap-to-call phone numbers, tap-to-write email, tap-to-navigate
+ * address, business hours, an optional WhatsApp button, the message form and the map.
+ * All details come from Site Content → Contact Info (Admin); the map is hidden if both
+ * the map location and address are empty.
+ */
 import Seo from "@/components/common/Seo";
 import ContactForm from "@/components/forms/ContactForm";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";

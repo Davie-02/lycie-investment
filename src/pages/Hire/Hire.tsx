@@ -1,3 +1,7 @@
+/**
+ * The Hire page: available hire vehicles as cards; choosing one opens the hire request
+ * form for it. Intro comes from Site Content → Hire Page (Admin).
+ */
 import { useState } from "react";
 import Seo from "@/components/common/Seo";
 import HireVehicleCard from "@/components/vehicles/HireVehicleCard";

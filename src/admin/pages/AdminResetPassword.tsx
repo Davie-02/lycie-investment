@@ -1,3 +1,8 @@
+/**
+ * Page opened from the admin reset-password email (?token=…). Lets the admin choose a
+ * new password, checked against the strength rules, then calls POST /api/auth/reset-
+ * password.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import FormField from "@/components/forms/FormField";

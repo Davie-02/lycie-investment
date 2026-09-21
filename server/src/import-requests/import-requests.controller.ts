@@ -1,3 +1,7 @@
+/**
+ * POST /api/import-requests is public (10 a minute, links to the customer if signed in).
+ * Listing and changing status is Owner/Manager only.
+ */
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ImportRequestsService } from "./import-requests.service";

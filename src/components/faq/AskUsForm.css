@@ -1,3 +1,7 @@
+/*
+ Styles for the anonymous 'Ask us a question' box on the FAQ page (AskUsForm.tsx).
+*/
+
 .ask-us {
   max-width: 640px;
   margin-top: var(--space-7);

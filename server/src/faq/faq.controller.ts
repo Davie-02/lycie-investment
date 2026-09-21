@@ -1,3 +1,7 @@
+/**
+ * FAQ API. Reading the published questions is public; creating, editing and deleting is
+ * Owner/Manager only.
+ */
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { FaqService } from "./faq.service";
 import { CreateFaqDto } from "./dto/create-faq.dto";

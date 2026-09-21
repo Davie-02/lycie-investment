@@ -1,3 +1,7 @@
+/**
+ * Notices API. Reading the live notices is public; the full list (including inactive)
+ * and all changes are Owner/Manager only.
+ */
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { NoticesService } from "./notices.service";
 import { CreateNoticeDto } from "./dto/create-notice.dto";

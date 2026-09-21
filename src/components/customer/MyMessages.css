@@ -1,3 +1,7 @@
+/*
+ Styles for the customer's Messages inbox on their account page (MyMessages.tsx).
+*/
+
 .my-messages {
   list-style: none;
   padding: 0;

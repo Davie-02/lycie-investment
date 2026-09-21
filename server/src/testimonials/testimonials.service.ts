@@ -1,3 +1,7 @@
+/**
+ * Database access for testimonials. The public list only returns items that are
+ * published and not archived (rules in content-admin/content-state.ts).
+ */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "../content-admin/content-state";

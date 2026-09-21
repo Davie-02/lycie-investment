@@ -1,3 +1,7 @@
+/**
+ * Finds positive approved reviews worth turning into testimonials (scan), then lets an
+ * admin publish one as a real testimonial or dismiss it.
+ */
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 import { PrismaService } from "../prisma/prisma.service";

@@ -1,3 +1,8 @@
+/**
+ * Public form to ask Lycie to source and import a vehicle (make, model, year range,
+ * budget, timeline and contact details). Validated in the browser, then POST
+ * /api/import-requests through services/inquiries.service.ts.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

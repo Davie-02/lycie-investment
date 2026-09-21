@@ -1,3 +1,8 @@
+/**
+ * Shows approved customer reviews (company-wide, or for one vehicle) with a form to add
+ * one. New reviews wait for admin approval, and the list refreshes live when an admin
+ * approves one. Uses services/reviews.service.ts (/api/reviews).
+ */
 import { useEffect, useState, type FormEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

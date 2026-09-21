@@ -1,3 +1,8 @@
+/**
+ * POST /api/contact-messages is public (rate limited to 10 a minute; links the message
+ * to the customer if they're signed in). Listing messages and changing their status is
+ * Owner/Manager only.
+ */
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { ContactService } from "./contact.service";

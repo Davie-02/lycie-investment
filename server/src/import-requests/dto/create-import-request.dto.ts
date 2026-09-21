@@ -1,3 +1,7 @@
+/**
+ * Allowed body for an import request: contact details (deliverable email), the vehicle
+ * wanted, budget and timeline.
+ */
 import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
 import { IsDeliverableEmail } from "../../security/email-check";
 import { Type } from "class-transformer";

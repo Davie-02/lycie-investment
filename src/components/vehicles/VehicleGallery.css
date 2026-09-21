@@ -1,3 +1,8 @@
+/*
+ Styles for the vehicle page gallery: the big photo box and the thumbnail strip (the
+ slider itself is styled in common/ImageSlider.css).
+*/
+
 .vehicle-gallery__main {
   position: relative;
   border-radius: var(--radius-md);

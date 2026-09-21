@@ -1,3 +1,8 @@
+/**
+ * Public form to request vehicle clearing support. Validates in the browser, then sends
+ * through submitClearingRequest() (services/inquiries.service.ts) to POST /api/clearing-
+ * requests, which validates again.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

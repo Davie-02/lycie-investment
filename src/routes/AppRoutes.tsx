@@ -1,3 +1,9 @@
+/**
+ * Every page address on the site. Public pages sit inside the shared Layout (navigation
+ * + footer); /admin/* has its own auth provider and layout and is split by role (Owner-
+ * only, Owner/Manager, everyone signed in). Pages load on demand (lazy) so the first
+ * visit downloads less. To add a page: create it, add a <Route> here, and link to it.
+ */
 import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import Layout from "@/components/layout/Layout";

@@ -1,3 +1,7 @@
+/**
+ * Hire vehicles API. Reading the published list is public; creating, editing and
+ * deleting is Owner/Manager only.
+ */
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { HireVehiclesService } from "./hire-vehicles.service";
 import { CreateHireVehicleDto } from "./dto/create-hire-vehicle.dto";

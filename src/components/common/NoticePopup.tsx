@@ -1,3 +1,7 @@
+/**
+ * Shows the active notice an admin set to display as a popup (Admin → Notices). It can
+ * be closed, and is not shown again to the same visitor once dismissed.
+ */
 import { useEffect, useState } from "react";
 import { useNotices } from "@/context/NoticesContext";
 import { NOTICE_TYPE_STYLES } from "@/types/notice";

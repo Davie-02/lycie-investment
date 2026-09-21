@@ -1,3 +1,6 @@
+/**
+ * The 'How it works' steps on the homepage, from Site Content → How It Works (Admin).
+ */
 import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function JourneySection() {

@@ -1,3 +1,7 @@
+/**
+ * The green success / red error message box shown at the top of forms. Pass status
+ * 'success' or 'error' and the matching message; renders nothing otherwise.
+ */
 interface FormStatusBannerProps {
   status: "success" | "error";
   successMessage: string;

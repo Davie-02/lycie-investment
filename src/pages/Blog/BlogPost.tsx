@@ -1,3 +1,7 @@
+/**
+ * A single blog post (GET /api/blog-posts/:slug). Shows a friendly 'Post not found' page
+ * for unpublished or wrong links.
+ */
 import { useParams, Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import { useAsyncData } from "@/hooks/useAsyncData";

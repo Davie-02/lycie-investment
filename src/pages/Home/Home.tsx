@@ -1,3 +1,8 @@
+/**
+ * The homepage: hero, vehicle carousel, trust strip, services, how it works, featured
+ * vehicles, why choose us, fleet, clients, testimonials, FAQ and the closing call-to-
+ * action. Each section reads its own wording from Site Content.
+ */
 import Seo from "@/components/common/Seo";
 import Hero from "@/components/common/Hero";
 import VehicleCarousel from "@/components/common/VehicleCarousel";

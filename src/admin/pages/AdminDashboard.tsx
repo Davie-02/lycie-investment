@@ -1,3 +1,7 @@
+/**
+ * Admin home: for Owners and Managers the 'needs your attention' panel, then shortcut
+ * cards to each area the signed-in role is allowed to use.
+ */
 import { Link } from "react-router-dom";
 import "../components/AdminLayout.css";
 import { useAdminAuth } from "../context/AdminAuthContext";

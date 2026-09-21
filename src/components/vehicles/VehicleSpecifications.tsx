@@ -1,3 +1,7 @@
+/**
+ * The specifications list on a vehicle's page (year, mileage, fuel, transmission, body
+ * type, colour, etc.) drawn from the vehicle record.
+ */
 import type { Vehicle } from "@/types/vehicle";
 import { formatCurrency, formatMileage } from "@/utils/format";
 import "./VehicleSpecifications.css";

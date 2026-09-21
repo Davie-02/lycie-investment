@@ -1,3 +1,7 @@
+/**
+ * Allowed body for a notice: optional title, message, type, banner/popup and active
+ * flag.
+ */
 import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 const TYPES = ["info", "warning", "success", "promo"];

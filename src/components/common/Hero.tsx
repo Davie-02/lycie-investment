@@ -1,3 +1,8 @@
+/**
+ * The homepage hero. Heading, text, button labels and the rotating highlight cards all
+ * come from Site Content → Homepage Hero (Admin); the buttons link to Vehicles and
+ * Import.
+ */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteContent } from "@/context/SiteContentContext";

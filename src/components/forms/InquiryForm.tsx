@@ -1,3 +1,7 @@
+/**
+ * 'Interested in this vehicle?' form on a vehicle's page. Validated in the browser, then
+ * POST /api/inquiries with the vehicle's id so staff know which vehicle was asked about.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

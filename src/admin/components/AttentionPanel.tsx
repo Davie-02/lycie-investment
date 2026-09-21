@@ -1,3 +1,10 @@
+/**
+ * 'Needs your attention' panel on the admin dashboard: counts of things waiting on a
+ * person (new requests, pending payments, messages, reviews to moderate) with links to
+ * them, plus setup warnings such as email sending not being configured, from GET
+ * /api/admin-tools/overview. Refreshes every 30 seconds while open, and has a button to
+ * send a test email (POST /api/contact-admin/test-email).
+ */
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminApi } from "../adminApi";

@@ -1,3 +1,8 @@
+/**
+ * Form to add or edit a hire vehicle: name, slug, daily/weekly rate, transmission, fuel,
+ * seats, availability and its photos (the first photo is the cover; visitors can swipe
+ * through all of them). Saves via POST/PATCH /api/hire-vehicles.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

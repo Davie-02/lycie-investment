@@ -1,3 +1,8 @@
+/**
+ * The search box and dropdowns (make, body type, fuel, transmission, status, max price)
+ * on the Vehicles page. It only edits the filter values; the page applies them with
+ * utils/vehicleFilters.ts.
+ */
 import type { Vehicle } from "@/types/vehicle";
 import type { VehicleFilters } from "@/utils/vehicleFilters";
 import { getUniqueValues } from "@/utils/vehicleFilters";

@@ -1,3 +1,7 @@
+/*
+ Styles for the reviews list, star ratings and the review form.
+*/
+
 .reviews {
   display: grid;
   gap: var(--space-5);

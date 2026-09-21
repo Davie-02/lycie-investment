@@ -1,3 +1,8 @@
+/**
+ * Customer sign-in page: email + password with show/hide, 'Keep me signed in',
+ * Google/Facebook buttons (when configured) and links to reset or register. Also what
+ * /account shows to visitors who aren't signed in.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";

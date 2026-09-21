@@ -1,3 +1,7 @@
+/**
+ * POST /api/inquiries is public (10 a minute, links to the customer if signed in).
+ * Listing inquiries and changing their status is Owner/Manager only.
+ */
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { InquiriesService } from "./inquiries.service";

@@ -1,3 +1,7 @@
+/**
+ * Admin → Testimonials. Plugs the testimonial form and endpoints into the shared
+ * ContentManager list.
+ */
 import ContentManager from "../components/ContentManager";
 import TestimonialForm from "../components/TestimonialForm";
 import { resolveUploadUrl } from "../adminApi";

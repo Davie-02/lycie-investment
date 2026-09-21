@@ -1,3 +1,7 @@
+/*
+ Styles for the heart button that saves a vehicle to the customer's account.
+*/
+
 .save-vehicle-btn {
   display: inline-flex;
   align-items: center;

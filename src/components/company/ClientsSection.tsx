@@ -1,3 +1,7 @@
+/**
+ * The 'clients we serve' section, from Site Content → Clients (Admin). Renders nothing
+ * until at least one client is added.
+ */
 import { useSiteContent } from "@/context/SiteContentContext";
 import Reveal from "@/components/common/Reveal";
 import { GovernmentIcon, HospitalIcon, SchoolIcon } from "./icons";

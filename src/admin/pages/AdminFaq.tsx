@@ -1,3 +1,6 @@
+/**
+ * Admin → FAQ. Plugs the FAQ form and endpoints into the shared ContentManager list.
+ */
 import ContentManager from "../components/ContentManager";
 import FaqForm from "../components/FaqForm";
 import { useAdminAuth } from "../context/AdminAuthContext";

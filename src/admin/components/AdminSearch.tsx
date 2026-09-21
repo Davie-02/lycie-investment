@@ -1,3 +1,8 @@
+/**
+ * Global search in the admin header (also opens with Ctrl/Cmd + K). Sends what is typed
+ * to GET /api/admin-tools/search and lists matching vehicles, requests, customers and
+ * content, each linking to its admin page.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi } from "../adminApi";

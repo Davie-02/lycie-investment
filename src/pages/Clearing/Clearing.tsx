@@ -1,3 +1,7 @@
+/**
+ * The Clearing page: intro, areas of support, disclaimer and the clearing request form.
+ * Wording comes from Site Content → Clearing Page (Admin).
+ */
 import Seo from "@/components/common/Seo";
 import ClearingRequestForm from "@/components/forms/ClearingRequestForm";
 import Reveal from "@/components/common/Reveal";

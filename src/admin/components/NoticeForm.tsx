@@ -1,3 +1,8 @@
+/**
+ * Form to create or edit a site notice: optional title, message, type (sets the colour),
+ * whether it shows as a banner or a popup, and active/inactive status. Saves via
+ * POST/PATCH /api/notices.
+ */
 import { useState, type FormEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

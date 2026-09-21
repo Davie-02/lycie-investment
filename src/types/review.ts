@@ -1,3 +1,7 @@
+/**
+ * Shapes of customer reviews: the public list (approved only) and the admin version with
+ * moderation status and sentiment. Mirrors server/src/reviews/.
+ */
 export interface PublicReview {
   id: string;
   authorName: string;

@@ -1,3 +1,7 @@
+/**
+ * Form to create or edit a testimonial (quote, author, rating, optional photo). Saves
+ * via POST/PATCH /api/testimonials.
+ */
 import { useState, type FormEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

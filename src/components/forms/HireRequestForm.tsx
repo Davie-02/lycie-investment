@@ -1,3 +1,9 @@
+/**
+ * Public form to request a hire vehicle: the customer's details, pickup/return dates and
+ * a live price estimate (utils/hirePricing.ts). Validated in the browser, then sent
+ * through services/inquiries.service.ts to POST /api/hire-requests, where the server
+ * recalculates the price.
+ */
 import { useMemo, useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";

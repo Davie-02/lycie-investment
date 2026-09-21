@@ -1,3 +1,8 @@
+/**
+ * Staff-only endpoints (Owner/Manager) to add a vehicle/order 'case' to a customer's
+ * account and post progress updates on it. The customer sees these on their account
+ * page.
+ */
 import { Body, Controller, Param, Post, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";

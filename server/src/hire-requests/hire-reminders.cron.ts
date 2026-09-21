@@ -1,3 +1,8 @@
+/**
+ * Scheduled job that runs every day at 8am and emails customers whose hire is due back
+ * tomorrow or overdue. Each booking is emailed at most once for each reminder (tracked
+ * on the record).
+ */
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../prisma/prisma.service";

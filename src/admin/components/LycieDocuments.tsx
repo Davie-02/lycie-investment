@@ -1,3 +1,8 @@
+/**
+ * Admin panel to upload files (PDF, Word, text, images) that Lycie reads and learns
+ * from. Talks to /api/lycie/documents; shows each file's extraction status and lets
+ * staff edit or delete it.
+ */
 import { useRef, useState, type DragEvent } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

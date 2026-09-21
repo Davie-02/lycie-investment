@@ -1,3 +1,8 @@
+/**
+ * Database access for vehicles for sale: the public list (published, non-archived;
+ * featured first, then newest), one by slug, the featured available few, and
+ * create/edit/delete.
+ */
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { PUBLIC } from "./../content-admin/content-state";

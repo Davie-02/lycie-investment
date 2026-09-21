@@ -1,3 +1,7 @@
+/**
+ * Admin → Bookings. Card list of hire bookings from GET /api/hire-requests/bookings,
+ * each linking to its detail page.
+ */
 import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

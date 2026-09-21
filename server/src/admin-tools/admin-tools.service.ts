@@ -1,3 +1,8 @@
+/**
+ * Logic behind the admin extras: the 'needs your attention' counts and setup warnings,
+ * global search (vehicles, hire vehicles, the request types, contact messages, blog
+ * posts and FAQ), CSV export of requests and reviews, and the activity log.
+ */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";

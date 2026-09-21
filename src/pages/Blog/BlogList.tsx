@@ -1,3 +1,7 @@
+/**
+ * The blog index: published posts from GET /api/blog-posts as cards with their like
+ * buttons. Banner text is editable in Site Content → Page Headings.
+ */
 import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";

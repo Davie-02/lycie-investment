@@ -1,3 +1,8 @@
+/**
+ * One hire booking in full: customer details, vehicle, dates, price breakdown and
+ * status. Staff confirm, cancel or complete it here (PATCH /api/hire-
+ * requests/:id/status); the customer is emailed on confirm/cancel.
+ */
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";

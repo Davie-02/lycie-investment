@@ -1,3 +1,8 @@
+/**
+ * Admin → Lycie AI. Manage what the assistant knows: knowledge notes, uploaded
+ * documents, FAQ drafts, testimonial ideas, visitor messages, plus daily usage and chat
+ * analytics. Uses /api/lycie/*.
+ */
 import { useCallback, useState, type FormEvent } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

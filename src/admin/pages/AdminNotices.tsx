@@ -1,3 +1,7 @@
+/**
+ * Admin → Notices. Plugs the notice form and endpoints into the shared ContentManager
+ * list.
+ */
 import ContentManager from "../components/ContentManager";
 import NoticeForm from "../components/NoticeForm";
 import { useAdminAuth } from "../context/AdminAuthContext";

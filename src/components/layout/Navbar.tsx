@@ -1,3 +1,9 @@
+/**
+ * Top navigation on every public page: logo, page links, 'Get a Quote', and the
+ * customer's account link (shows 'Sign in' or 'My account' depending on whether they are
+ * signed in). On phones the links collapse into a hamburger menu that closes when a link
+ * is chosen.
+ */
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "@/assets/logo.png";

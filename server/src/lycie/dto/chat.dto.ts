@@ -1,3 +1,7 @@
+/**
+ * Allowed body for a chat message to Lycie: the message and a short recent history, with
+ * hard length limits so a visitor can't send huge prompts.
+ */
 import { Type } from "class-transformer";
 import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength, ValidateNested } from "class-validator";
 

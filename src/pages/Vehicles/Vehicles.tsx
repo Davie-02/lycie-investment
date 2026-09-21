@@ -1,3 +1,7 @@
+/**
+ * The Vehicles page: loads every published vehicle once, then filters and searches in
+ * the browser (utils/vehicleFilters.ts) so filtering feels instant.
+ */
 import { useMemo, useState } from "react";
 import Seo from "@/components/common/Seo";
 import VehicleCard from "@/components/vehicles/VehicleCard";

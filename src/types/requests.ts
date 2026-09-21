@@ -1,3 +1,8 @@
+/**
+ * Shapes of the request records visitors submit (vehicle inquiry, import, clearing,
+ * hire, contact message) as the admin Submitted Requests page receives them. Mirrors the
+ * Prisma models in server/prisma/schema.prisma.
+ */
 export interface InquiryRequest {
   preferredContact?: "whatsapp" | "call" | "email" | "message";
   fullName: string;

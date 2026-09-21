@@ -1,3 +1,7 @@
+/**
+ * Vision, mission, mission points and values on the About page, from Site Content →
+ * Company Story (Admin). Shows only the parts that have text.
+ */
 import { useSiteContent } from "@/context/SiteContentContext";
 import Reveal from "@/components/common/Reveal";
 import { ClockIcon, HandshakeIcon, LeafIcon, ShieldIcon } from "./icons";

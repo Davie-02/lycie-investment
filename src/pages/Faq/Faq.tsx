@@ -1,3 +1,7 @@
+/**
+ * The FAQ page: published questions grouped by category (from GET /api/faq) plus the
+ * anonymous 'Ask us' form. The banner text is editable in Site Content → Page Headings.
+ */
 import { useMemo } from "react";
 import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";

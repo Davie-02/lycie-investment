@@ -1,3 +1,8 @@
+/**
+ * One small function per public form (inquiry, import, clearing, hire, contact message).
+ * Each POSTs to its API endpoint through http.ts, which adds the CSRF token and, if the
+ * visitor is signed in, their identity.
+ */
 import { apiPost } from "./http";
 import type {
   InquiryRequest,

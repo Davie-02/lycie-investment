@@ -1,3 +1,9 @@
+/**
+ * Keeps the signed-in customer's saved (bookmarked) vehicles in one place so every heart
+ * button on the site agrees. Loads from /api/customers/me/saved-vehicles when someone
+ * signs in, updates instantly on save/unsave, and is empty for visitors who aren't
+ * signed in.
+ */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { getSavedVehicles, saveVehicle, unsaveVehicle, type SavedVehicle } from "@/services/customer.service";

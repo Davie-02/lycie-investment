@@ -1,3 +1,8 @@
+/**
+ * Admin panel listing positive reviews Lycie spotted as good testimonials. Staff can
+ * publish one as a testimonial or dismiss it, or trigger a new scan. Uses
+ * /api/lycie/testimonial-ideas.
+ */
 import { useState } from "react";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";

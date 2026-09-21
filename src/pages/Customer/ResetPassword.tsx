@@ -1,3 +1,9 @@
+/**
+ * Page opened from the customer reset-password email (?token=…). Lets the customer
+ * choose a new password (strength meter, suggestion and show/hide included), then calls
+ * POST /api/customers/reset-password. A reset also unlocks the account and signs out
+ * other devices.
+ */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Seo from "@/components/common/Seo";

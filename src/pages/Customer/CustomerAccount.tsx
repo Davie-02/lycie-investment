@@ -1,3 +1,10 @@
+/**
+ * The signed-in customer's account page: balance and transaction history, payment
+ * submissions, their requests, saved vehicles, staff updates on their vehicles,
+ * messages, profile settings and change password. Data loads from /api/financial/me and
+ * /api/customers/me/*; the 'confirm your email' banner shows until the emailed link is
+ * used.
+ */
 import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";

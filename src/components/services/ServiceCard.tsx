@@ -1,3 +1,7 @@
+/**
+ * One card in the services section: an icon, a title and a description, linking to the
+ * service's page.
+ */
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import "./ServiceCard.css";
