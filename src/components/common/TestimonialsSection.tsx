@@ -1,3 +1,4 @@
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getTestimonials } from "@/services/testimonials.service";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";
@@ -17,6 +18,7 @@ function Stars({ rating }: { rating: number }) {
  * yet doesn't show an empty/broken section.
  */
 export default function TestimonialsSection() {
+  const { content } = useSiteContent();
   const { data: testimonials, isLoading, error } = useAsyncData(getTestimonials, [], ["testimonials"]);
 
   if (isLoading || error || !testimonials || testimonials.length === 0) {
@@ -26,8 +28,8 @@ export default function TestimonialsSection() {
   return (
     <section className="section container testimonials">
       <div className="section-heading">
-        <span className="eyebrow">What Customers Say</span>
-        <h2>Trusted by buyers across Malawi</h2>
+        <span className="eyebrow">{content.homeSections.testimonials.eyebrow}</span>
+        <h2>{content.homeSections.testimonials.heading}</h2>
       </div>
       <div className="testimonials__grid">
         {testimonials.map((testimonial) => (

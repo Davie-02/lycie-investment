@@ -7,6 +7,7 @@ import NewPasswordField from "@/components/forms/NewPasswordField";
 import RememberMe from "@/components/forms/RememberMe";
 import SocialSignIn from "@/components/forms/SocialSignIn";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { emailError } from "@/utils/email";
 import { checkPassword } from "@/utils/password";
@@ -32,6 +33,7 @@ function validate(values: FormValues) {
 
 export default function CustomerRegister() {
   const { register, isSubmitting, errorMessage } = useCustomerAuth();
+  const { content } = useSiteContent();
   const navigate = useNavigate();
   const [values, setValues] = useState<FormValues>({ name: "", email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
@@ -61,8 +63,8 @@ export default function CustomerRegister() {
       <Seo title="Create Customer Account" description="Create a Lycie Investments customer account." />
       <section className="service-hero">
         <div className="container">
-          <h1>Open an account</h1>
-          <p>Create a secure customer account to keep track of your transactions.</p>
+          <h1>{content.pageHeadings.register.heading}</h1>
+          <p>{content.pageHeadings.register.body}</p>
         </div>
       </section>
       <section className="section container customer-auth">

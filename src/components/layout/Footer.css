@@ -84,6 +84,11 @@
   font-size: var(--fs-sm);
 }
 
+/* Overflow-safe: long emails/addresses wrap instead of pushing the footer wider than a phone screen. */
+.footer__list li {
+  overflow-wrap: anywhere;
+}
+
 .footer__bottom {
   border-top: 1px solid rgba(255, 255, 255, 0.12);
   padding-block: var(--space-5);
@@ -92,6 +97,11 @@
 .footer__bottom .text-muted {
   color: #8b93a3;
   font-size: var(--fs-xs);
+}
+
+/* Copyright line sits in the middle of the footer's bottom bar. */
+.footer__copyright {
+  text-align: center;
 }
 
 @media (min-width: 700px) {

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFaqs } from "@/services/faq.service";
 
@@ -9,6 +10,7 @@ const HOMEPAGE_LIMIT = 5;
  * accordion for free — no custom ARIA state management needed.
  */
 export default function FaqSection() {
+  const { content } = useSiteContent();
   const { data: faqs, isLoading, error } = useAsyncData(getFaqs, [], ["faq"]);
 
   if (isLoading || error || !faqs || faqs.length === 0) {
@@ -20,8 +22,8 @@ export default function FaqSection() {
   return (
     <section className="section container faq-section">
       <div className="section-heading">
-        <span className="eyebrow">Common Questions</span>
-        <h2>Frequently asked questions</h2>
+        <span className="eyebrow">{content.homeSections.faq.eyebrow}</span>
+        <h2>{content.homeSections.faq.heading}</h2>
       </div>
       <div className="faq-section__list">
         {shown.map((faq) => (

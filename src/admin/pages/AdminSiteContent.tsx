@@ -6,6 +6,9 @@ import { useSiteContent } from "@/context/SiteContentContext";
 import { ApiError } from "@/services/http";
 import type {
   ContactContent,
+  FooterContent,
+  PageHeadingsContent,
+  HomeSectionsContent,
   SocialContent,
   AboutContent,
   SeoContent,
@@ -29,6 +32,9 @@ const SECTION_LINKS = [
   { id: "site-content-clearingPage", label: "Clearing Page" },
   { id: "site-content-hirePage", label: "Hire Page" },
   { id: "site-content-contact", label: "Contact Info" },
+  { id: "site-content-footer", label: "Footer" },
+  { id: "site-content-pageHeadings", label: "Page Headings" },
+  { id: "site-content-homeSections", label: "Homepage Sections" },
   { id: "site-content-social", label: "Social Links" },
   { id: "site-content-about", label: "About Page" },
   { id: "site-content-company", label: "Company Story" },
@@ -97,6 +103,9 @@ export default function AdminSiteContent() {
             <ClearingPageSection initial={content.clearingPage} onSaved={refresh} />
             <HirePageSection initial={content.hirePage} onSaved={refresh} />
             <ContactSection initial={content.contact} onSaved={refresh} />
+            <FooterSection initial={content.footer} onSaved={refresh} />
+            <PageHeadingsSection initial={content.pageHeadings} onSaved={refresh} />
+            <HomeSectionsSection initial={content.homeSections} onSaved={refresh} />
             <SocialSection initial={content.social} onSaved={refresh} />
             <AboutSection initial={content.about} onSaved={refresh} />
             <CompanySection initial={content.company} onSaved={refresh} />
@@ -549,6 +558,14 @@ function ContactSection({ initial, onSaved }: { initial: ContactContent; onSaved
           placeholder="+265..."
           wrapperClassName="form-grid__full"
         />
+        <FormField
+          id="contact-map"
+          label="Map location (optional — leave blank to use the address above; clear the address too to hide the map)"
+          value={values.mapQuery ?? ""}
+          onChange={(e) => setValues({ ...values, mapQuery: e.target.value || null })}
+          placeholder="e.g. Lilongwe City Mall, Lilongwe   or   -13.9626, 33.7741"
+          wrapperClassName="form-grid__full"
+        />
       </div>
 
       <div className="form-actions">
@@ -974,6 +991,157 @@ function HirePageSection({ initial, onSaved }: { initial: ServicePageContent; on
       <div className="form-actions">
         <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
           {status === "saving" ? "Saving…" : "Save Hire Page"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+
+/** Small helper: every section editor below saves the same way (PATCH /site-content/<key>) and shows the same banners. */
+function useSectionSave<T>(sectionKey: string, values: T, onSaved: () => void, failureText: string) {
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setStatus("saving");
+    setError(null);
+    try {
+      await adminApi.patch(`/site-content/${sectionKey}`, { value: values });
+      setStatus("success");
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : failureText);
+      setStatus("error");
+    }
+  }
+  return { status, error, save };
+}
+
+/** Footer: the line under the logo and the wording after the © year. */
+function FooterSection({ initial, onSaved }: { initial: FooterContent; onSaved: () => void }) {
+  const [values, setValues] = useState<FooterContent>(initial);
+  const { status, error, save } = useSectionSave("footer", values, onSaved, "Failed to save the footer.");
+
+  return (
+    <form id="site-content-footer" className="form-card" onSubmit={save} noValidate>
+      <h2>Footer</h2>
+      <p className="text-muted">The copyright line always reads "© (this year) Lycie Investments." followed by the text below.</p>
+      {status === "success" && <FormStatusBanner status="success" successMessage="Footer updated." errorMessage={null} />}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+      <div className="form-grid form-grid--2col">
+        <FormField id="footer-tagline" label="Tagline under the logo" value={values.tagline} onChange={(e) => setValues({ ...values, tagline: e.target.value })} />
+        <FormField id="footer-rights" label="Text after the copyright" value={values.rightsText} onChange={(e) => setValues({ ...values, rightsText: e.target.value })} />
+      </div>
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Footer"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const PAGE_HEADING_LABELS: Record<keyof PageHeadingsContent, string> = {
+  vehicles: "Vehicles page",
+  contact: "Contact page",
+  faq: "FAQ page",
+  blog: "Blog page",
+  reviews: "Reviews page",
+  login: "Customer sign-in page",
+  register: "Customer sign-up page",
+};
+
+/** The big title + intro line at the top of pages that don't have an editor of their own. */
+function PageHeadingsSection({ initial, onSaved }: { initial: PageHeadingsContent; onSaved: () => void }) {
+  const [values, setValues] = useState<PageHeadingsContent>(initial);
+  const { status, error, save } = useSectionSave("pageHeadings", values, onSaved, "Failed to save the page headings.");
+
+  return (
+    <form id="site-content-pageHeadings" className="form-card" onSubmit={save} noValidate>
+      <h2>Page Headings</h2>
+      <p className="text-muted">The title and intro line shown in the blue banner at the top of each page.</p>
+      {status === "success" && <FormStatusBanner status="success" successMessage="Page headings updated." errorMessage={null} />}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+      {(Object.keys(PAGE_HEADING_LABELS) as Array<keyof PageHeadingsContent>).map((key) => (
+        <fieldset className="site-content-fieldset" key={key}>
+          <legend>{PAGE_HEADING_LABELS[key]}</legend>
+          <div className="form-grid form-grid--2col">
+            <FormField
+              id={`pageHeadings-${key}-heading`}
+              label="Heading"
+              value={values[key].heading}
+              onChange={(e) => setValues({ ...values, [key]: { ...values[key], heading: e.target.value } })}
+            />
+            <FormField
+              id={`pageHeadings-${key}-body`}
+              label="Intro line"
+              value={values[key].body}
+              onChange={(e) => setValues({ ...values, [key]: { ...values[key], body: e.target.value } })}
+            />
+          </div>
+        </fieldset>
+      ))}
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Page Headings"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Headings of homepage sections whose content lives elsewhere (FAQ list, testimonials) plus the closing call-to-action. */
+function HomeSectionsSection({ initial, onSaved }: { initial: HomeSectionsContent; onSaved: () => void }) {
+  const [values, setValues] = useState<HomeSectionsContent>(initial);
+  const { status, error, save } = useSectionSave("homeSections", values, onSaved, "Failed to save the homepage sections.");
+
+  return (
+    <form id="site-content-homeSections" className="form-card" onSubmit={save} noValidate>
+      <h2>Homepage Sections</h2>
+      <p className="text-muted">Headings above the FAQ, testimonials and contact cards, and the closing call-to-action banner.</p>
+      {status === "success" && <FormStatusBanner status="success" successMessage="Homepage sections updated." errorMessage={null} />}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
+
+      <fieldset className="site-content-fieldset">
+        <legend>FAQ</legend>
+        <div className="form-grid form-grid--2col">
+          <FormField id="home-faq-eyebrow" label="Eyebrow" value={values.faq.eyebrow} onChange={(e) => setValues({ ...values, faq: { ...values.faq, eyebrow: e.target.value } })} />
+          <FormField id="home-faq-heading" label="Heading" value={values.faq.heading} onChange={(e) => setValues({ ...values, faq: { ...values.faq, heading: e.target.value } })} />
+        </div>
+      </fieldset>
+
+      <fieldset className="site-content-fieldset">
+        <legend>Testimonials</legend>
+        <div className="form-grid form-grid--2col">
+          <FormField id="home-testimonials-eyebrow" label="Eyebrow" value={values.testimonials.eyebrow} onChange={(e) => setValues({ ...values, testimonials: { ...values.testimonials, eyebrow: e.target.value } })} />
+          <FormField id="home-testimonials-heading" label="Heading" value={values.testimonials.heading} onChange={(e) => setValues({ ...values, testimonials: { ...values.testimonials, heading: e.target.value } })} />
+        </div>
+      </fieldset>
+
+      <fieldset className="site-content-fieldset">
+        <legend>Contact cards (call / email / visit)</legend>
+        <div className="form-grid form-grid--2col">
+          <FormField id="home-cards-eyebrow" label="Eyebrow" value={values.contactCards.eyebrow} onChange={(e) => setValues({ ...values, contactCards: { ...values.contactCards, eyebrow: e.target.value } })} />
+          <FormField id="home-cards-heading" label="Heading" value={values.contactCards.heading} onChange={(e) => setValues({ ...values, contactCards: { ...values.contactCards, heading: e.target.value } })} />
+          <FormField id="home-cards-body" label="Intro" wrapperClassName="form-grid__full" value={values.contactCards.body} onChange={(e) => setValues({ ...values, contactCards: { ...values.contactCards, body: e.target.value } })} />
+        </div>
+      </fieldset>
+
+      <fieldset className="site-content-fieldset">
+        <legend>Closing call-to-action banner</legend>
+        <div className="form-grid form-grid--2col">
+          <FormField id="home-cta-heading" label="Heading" value={values.cta.heading} onChange={(e) => setValues({ ...values, cta: { ...values.cta, heading: e.target.value } })} />
+          <FormField id="home-cta-body" label="Text" value={values.cta.body} onChange={(e) => setValues({ ...values, cta: { ...values.cta, body: e.target.value } })} />
+          <FormField id="home-cta-primary" label="Main button label (goes to Vehicles)" value={values.cta.primaryLabel} onChange={(e) => setValues({ ...values, cta: { ...values.cta, primaryLabel: e.target.value } })} />
+          <FormField id="home-cta-secondary" label="Second button label (goes to Contact)" value={values.cta.secondaryLabel} onChange={(e) => setValues({ ...values, cta: { ...values.cta, secondaryLabel: e.target.value } })} />
+        </div>
+      </fieldset>
+
+      <div className="form-actions">
+        <button type="submit" className="btn btn-primary" disabled={status === "saving"}>
+          {status === "saving" ? "Saving…" : "Save Homepage Sections"}
         </button>
       </div>
     </form>

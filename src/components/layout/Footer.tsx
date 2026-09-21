@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { companyName } from "@/config/siteConfig";
+import { mailtoLink, mapQueryFor, mapsSearchUrl } from "@/utils/contactLinks";
 import { useSiteContent } from "@/context/SiteContentContext";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 import PhoneLinks from "@/components/company/PhoneLinks";
@@ -21,6 +22,10 @@ export default function Footer() {
     string,
   ][];
   const whatsappNumber = content.contact.whatsappNumber;
+  // Email and address become tappable: mail app / Google Maps. Placeholder text
+  // that isn't a real email or address stays plain text.
+  const emailHref = mailtoLink(content.contact.email);
+  const mapQuery = mapQueryFor(content.contact.mapQuery, content.contact.address);
 
   return (
     <footer className="footer">
@@ -29,9 +34,7 @@ export default function Footer() {
           <p className="footer__brand">
             Lycie <span>Investments</span>
           </p>
-          <p className="text-muted">
-            Vehicle imports, dealership, hire, transport and clearing services.
-          </p>
+          <p className="text-muted">{content.footer.tagline}</p>
           {(socialLinks.length > 0 || whatsappNumber) && (
             <ul className="footer__social">
               {whatsappNumber && whatsappNumber.trim() && (
@@ -87,14 +90,24 @@ export default function Footer() {
             <li>
               <PhoneLinks value={content.contact.phone} separator=" · " />
             </li>
-            <li>{content.contact.email}</li>
-            <li>{content.contact.address}</li>
+            <li>{emailHref ? <a href={emailHref}>{content.contact.email}</a> : content.contact.email}</li>
+            <li>
+              {mapQuery ? (
+                <a href={mapsSearchUrl(mapQuery)} target="_blank" rel="noopener noreferrer">
+                  {content.contact.address}
+                </a>
+              ) : (
+                content.contact.address
+              )}
+            </li>
           </ul>
         </div>
       </div>
 
       <div className="container footer__bottom">
-        <p className="text-muted">&copy; {year} {companyName}. All rights reserved.</p>
+        <p className="text-muted footer__copyright">
+          &copy; {year} {companyName}. {content.footer.rightsText}
+        </p>
       </div>
     </footer>
   );

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getBlogPosts } from "@/services/blog.service";
 import Img from "@/components/common/Img";
@@ -16,6 +17,7 @@ function formatDate(iso: string | null): string | null {
 }
 
 export default function BlogList() {
+  const { content } = useSiteContent();
   const { data: posts, isLoading, error } = useAsyncData(getBlogPosts, [], ["blog-posts"]);
 
   return (
@@ -24,8 +26,8 @@ export default function BlogList() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>Blog</h1>
-          <p>News, guides and updates from the Lycie Investments team.</p>
+          <h1>{content.pageHeadings.blog.heading}</h1>
+          <p>{content.pageHeadings.blog.body}</p>
         </div>
       </section>
 

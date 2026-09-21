@@ -12,6 +12,21 @@ interface SiteContentContextValue {
 
 const SiteContentContext = createContext<SiteContentContextValue | null>(null);
 
+/**
+ * Merges saved values over the defaults for a section made of several
+ * sub-sections (pageHeadings, homeSections). Each sub-section is merged
+ * separately, so saving only "faq" doesn't wipe the defaults for the rest.
+ */
+function mergeNested<T extends object>(defaults: T, saved: unknown): T {
+  const savedObject = (saved && typeof saved === "object" ? saved : {}) as Record<string, unknown>;
+  const result = { ...defaults } as Record<string, unknown>;
+  for (const key of Object.keys(defaults)) {
+    result[key] = { ...(defaults as Record<string, object>)[key], ...(savedObject[key] as object) };
+  }
+  return result as T;
+}
+
+/** Combines what the API returned with the built-in defaults, so a missing section never leaves a blank on the page. */
 function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
   return {
     company: { ...DEFAULT_SITE_CONTENT.company, ...(partial.company as object) },
@@ -19,6 +34,9 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
     clients: { ...DEFAULT_SITE_CONTENT.clients, ...(partial.clients as object) },
     fleet: { ...DEFAULT_SITE_CONTENT.fleet, ...(partial.fleet as object) },
     contact: { ...DEFAULT_SITE_CONTENT.contact, ...(partial.contact as object) },
+    footer: { ...DEFAULT_SITE_CONTENT.footer, ...(partial.footer as object) },
+    pageHeadings: mergeNested(DEFAULT_SITE_CONTENT.pageHeadings, partial.pageHeadings),
+    homeSections: mergeNested(DEFAULT_SITE_CONTENT.homeSections, partial.homeSections),
     social: { ...DEFAULT_SITE_CONTENT.social, ...(partial.social as object) },
     about: { ...DEFAULT_SITE_CONTENT.about, ...(partial.about as object) },
     seo: { ...DEFAULT_SITE_CONTENT.seo, ...(partial.seo as object) },

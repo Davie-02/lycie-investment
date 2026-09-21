@@ -5,6 +5,7 @@ import VehicleFiltersPanel from "@/components/vehicles/VehicleFiltersPanel";
 import Reveal from "@/components/common/Reveal";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getVehicles } from "@/services/vehicles.service";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { applyFilters, EMPTY_FILTERS, type VehicleFilters } from "@/utils/vehicleFilters";
 
 // Caps the stagger at 6 cards' worth of delay so a long results grid
@@ -13,6 +14,7 @@ const STAGGER_STEP_MS = 60;
 const STAGGER_CAP = 6;
 
 export default function Vehicles() {
+  const { content } = useSiteContent();
   const { data: vehicles, isLoading, error } = useAsyncData(() => getVehicles(), [], ["vehicles"]);
   const [filters, setFilters] = useState<VehicleFilters>(EMPTY_FILTERS);
 
@@ -30,8 +32,8 @@ export default function Vehicles() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>Browse available vehicles</h1>
-          <p>Filter by make, body type, fuel, transmission, status and price.</p>
+          <h1>{content.pageHeadings.vehicles.heading}</h1>
+          <p>{content.pageHeadings.vehicles.body}</p>
         </div>
       </section>
 

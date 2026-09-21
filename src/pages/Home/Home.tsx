@@ -12,8 +12,10 @@ import Reveal from "@/components/common/Reveal";
 import TrustStrip from "@/components/company/TrustStrip";
 import ClientsSection from "@/components/company/ClientsSection";
 import FleetSection from "@/components/company/FleetSection";
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export default function Home() {
+  const { content } = useSiteContent();
   return (
     <>
       <Seo
@@ -45,10 +47,10 @@ export default function Home() {
       </Reveal>
       <Reveal>
         <CtaBand
-          heading="Ready to get your next vehicle?"
-          body="Browse what's available now, or tell us what you're looking for."
-          primary={{ label: "Browse Vehicles", to: "/vehicles" }}
-          secondary={{ label: "Contact Us", to: "/contact" }}
+          heading={content.homeSections.cta.heading}
+          body={content.homeSections.cta.body}
+          primary={{ label: content.homeSections.cta.primaryLabel, to: "/vehicles" }}
+          secondary={{ label: content.homeSections.cta.secondaryLabel, to: "/contact" }}
         />
       </Reveal>
     </>

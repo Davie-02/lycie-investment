@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { messageTemplate, telUrl, toInternationalDigits, whatsappUrl } from "./contactLinks";
+import { mailtoLink, mapQueryFor, mapsDirectionsUrl, mapsEmbedUrl, mapsSearchUrl, messageTemplate, telUrl, toInternationalDigits, whatsappUrl } from "./contactLinks";
 
 describe("toInternationalDigits", () => {
   it("keeps numbers already in international format", () => {
@@ -47,5 +47,27 @@ describe("messageTemplate", () => {
 
   it("copes with a missing name", () => {
     expect(messageTemplate("contact", "", "Pricing").body.startsWith("Hello there,")).toBe(true);
+  });
+});
+
+describe("map helpers", () => {
+  it("prefers the dedicated map text, falls back to the address, and can be empty", () => {
+    expect(mapQueryFor("Lilongwe City Mall", "P.O. Box 440")).toBe("Lilongwe City Mall");
+    expect(mapQueryFor("  ", "P.O. Box 440, Karonga")).toBe("P.O. Box 440, Karonga");
+    expect(mapQueryFor(null, null)).toBe("");
+  });
+
+  it("URL-encodes the place so odd characters can't break the link", () => {
+    expect(mapsSearchUrl("Area 3, Lilongwe & co")).toBe("https://www.google.com/maps/search/?api=1&query=Area%203%2C%20Lilongwe%20%26%20co");
+    expect(mapsDirectionsUrl("-13.96, 33.77")).toContain("destination=-13.96%2C%2033.77");
+    expect(mapsEmbedUrl("Karonga")).toBe("https://www.google.com/maps?q=Karonga&output=embed");
+  });
+});
+
+describe("mailtoLink", () => {
+  it("links real addresses and refuses junk", () => {
+    expect(mailtoLink(" info@example.com ")).toBe("mailto:info@example.com");
+    expect(mailtoLink("Contact our team")).toBeNull();
+    expect(mailtoLink(null)).toBeNull();
   });
 });

@@ -4,6 +4,49 @@ export interface ContactContent {
   address: string;
   businessHours: string;
   whatsappNumber: string | null;
+  /**
+   * What the map shows: a street address, a place name ("Lilongwe City Mall"),
+   * or coordinates ("-13.9626, 33.7741"). Blank = use `address`. If both are
+   * blank the map is hidden.
+   */
+  mapQuery: string | null;
+}
+
+/** Footer texts. The year and company name in the copyright line are added automatically. */
+export interface FooterContent {
+  tagline: string;
+  /** Shown after "© 2026 Lycie Investments." e.g. "All rights reserved." */
+  rightsText: string;
+}
+
+/** The big title and intro line at the top of a page. */
+export interface PageHeading {
+  heading: string;
+  body: string;
+}
+
+/** Top-of-page headings for the pages that have no editor of their own. */
+export interface PageHeadingsContent {
+  vehicles: PageHeading;
+  contact: PageHeading;
+  faq: PageHeading;
+  blog: PageHeading;
+  reviews: PageHeading;
+  login: PageHeading;
+  register: PageHeading;
+}
+
+export interface SectionIntro {
+  eyebrow: string;
+  heading: string;
+}
+
+/** Headings of the homepage sections whose content comes from elsewhere (FAQ list, testimonials) plus the closing call-to-action. */
+export interface HomeSectionsContent {
+  faq: SectionIntro;
+  testimonials: SectionIntro;
+  contactCards: SectionIntro & { body: string };
+  cta: { heading: string; body: string; primaryLabel: string; secondaryLabel: string };
 }
 
 export interface SocialContent {
@@ -157,6 +200,9 @@ export interface SiteContent {
   clients: ClientsContent;
   fleet: FleetContent;
   contact: ContactContent;
+  footer: FooterContent;
+  pageHeadings: PageHeadingsContent;
+  homeSections: HomeSectionsContent;
   social: SocialContent;
   about: AboutContent;
   seo: SeoContent;

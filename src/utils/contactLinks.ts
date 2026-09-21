@@ -61,3 +61,29 @@ export function messageTemplate(kind: RequestKind, fullName: string, topic: stri
       };
   }
 }
+
+/** The text to search for on a map: the dedicated map setting if there is one, otherwise the street address. */
+export function mapQueryFor(mapQuery: string | null | undefined, address: string | null | undefined): string {
+  return (mapQuery ?? "").trim() || (address ?? "").trim();
+}
+
+/** Opens Google Maps at this place (a new tab on desktop, the Maps app on phones). */
+export function mapsSearchUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+/** Opens Google Maps with turn-by-turn directions TO this place, starting from where the person is. */
+export function mapsDirectionsUrl(query: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
+}
+
+/** Address for the embedded map. Google's keyless embed accepts any place text or "lat,lng" coordinates. */
+export function mapsEmbedUrl(query: string): string {
+  return `https://www.google.com/maps?q=${encodeURIComponent(query)}&output=embed`;
+}
+
+/** `mailto:` link for a plain address (no subject/body), or null if it doesn't look like one. */
+export function mailtoLink(email: string | null | undefined): string | null {
+  const value = (email ?? "").trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? `mailto:${value}` : null;
+}

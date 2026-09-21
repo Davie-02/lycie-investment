@@ -25,6 +25,38 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     address: "Lilongwe, Malawi",
     businessHours: "Monday – Friday, 8:00 – 17:00",
     whatsappNumber: null,
+    mapQuery: null,
+  },
+  footer: {
+    tagline: "Vehicle imports, dealership, hire, transport and clearing services.",
+    rightsText: "All rights reserved.",
+  },
+  pageHeadings: {
+    vehicles: { heading: "Browse available vehicles", body: "Filter by make, body type, fuel, transmission, status and price." },
+    contact: { heading: "Get in touch", body: "Reach us directly, or send a message and we'll respond as soon as we can." },
+    faq: { heading: "Frequently asked questions", body: "Everything you need to know before getting started." },
+    blog: { heading: "Blog", body: "News, guides and updates from the Lycie Investments team." },
+    reviews: {
+      heading: "What our customers say",
+      body: "Honest feedback from people who've bought, hired, imported or cleared a vehicle with us.",
+    },
+    login: { heading: "Customer account", body: "Sign in to view your balance and transaction history." },
+    register: { heading: "Open an account", body: "Create a secure customer account to keep track of your transactions." },
+  },
+  homeSections: {
+    faq: { eyebrow: "Common Questions", heading: "Frequently asked questions" },
+    testimonials: { eyebrow: "What Customers Say", heading: "Trusted by buyers across Malawi" },
+    contactCards: {
+      eyebrow: "Get in touch",
+      heading: "Talk to our team",
+      body: "Call, write or visit — we're happy to help with imports, hire, transport or clearing.",
+    },
+    cta: {
+      heading: "Ready to get your next vehicle?",
+      body: "Browse what's available now, or tell us what you're looking for.",
+      primaryLabel: "Browse Vehicles",
+      secondaryLabel: "Contact Us",
+    },
   },
   social: {
     facebook: null,

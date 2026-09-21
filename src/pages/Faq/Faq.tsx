@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import Seo from "@/components/common/Seo";
 import Reveal from "@/components/common/Reveal";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { getFaqs } from "@/services/faq.service";
 import AskUsForm from "@/components/faq/AskUsForm";
 
 export default function Faq() {
+  const { content } = useSiteContent();
   const { data: faqs, isLoading, error } = useAsyncData(getFaqs, [], ["faq"]);
 
   const groups = useMemo(() => {
@@ -27,8 +29,8 @@ export default function Faq() {
 
       <section className="service-hero">
         <div className="container">
-          <h1>Frequently asked questions</h1>
-          <p>Everything you need to know before getting started.</p>
+          <h1>{content.pageHeadings.faq.heading}</h1>
+          <p>{content.pageHeadings.faq.body}</p>
         </div>
       </section>
 

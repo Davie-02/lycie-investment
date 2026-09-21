@@ -6,6 +6,7 @@ import EmailField from "@/components/forms/EmailField";
 import RememberMe from "@/components/forms/RememberMe";
 import SocialSignIn from "@/components/forms/SocialSignIn";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
+import { useSiteContent } from "@/context/SiteContentContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { emailError } from "@/utils/email";
 import { offerToSavePassword } from "@/utils/credentials";
@@ -24,6 +25,7 @@ function validate(values: FormValues) {
 
 export default function CustomerLogin() {
   const { login, isSubmitting, errorMessage } = useCustomerAuth();
+  const { content } = useSiteContent();
   const navigate = useNavigate();
   const location = useLocation();
   const [values, setValues] = useState<FormValues>({ email: "", password: "" });
@@ -56,8 +58,8 @@ export default function CustomerLogin() {
       <Seo title="Customer Login" description="Sign in to view your Lycie Investments account." />
       <section className="service-hero">
         <div className="container">
-          <h1>Customer account</h1>
-          <p>Sign in to view your balance and transaction history.</p>
+          <h1>{content.pageHeadings.login.heading}</h1>
+          <p>{content.pageHeadings.login.body}</p>
         </div>
       </section>
       <section className="section container customer-auth">
