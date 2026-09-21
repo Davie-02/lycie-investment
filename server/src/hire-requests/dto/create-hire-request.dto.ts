@@ -1,4 +1,5 @@
 import { IsDateString, IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsDeliverableEmail } from "../../security/email-check";
 import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateHireRequestDto {
@@ -11,6 +12,7 @@ export class CreateHireRequestDto {
   phone!: string;
 
   @IsEmail()
+  @IsDeliverableEmail()
   email!: string;
 
   @IsString()

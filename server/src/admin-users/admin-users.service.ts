@@ -5,6 +5,8 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CreateAdminUserDto } from "./dto/create-admin-user.dto";
 import { UpdateAdminUserDto } from "./dto/update-admin-user.dto";
 import { runSerializable } from "../common/run-serializable";
+import { normalizeEmail } from "../security/email-check";
+import { SessionService } from "../auth/session.service";
 
 // Fields that are safe to return from the API — never includes
 // passwordHash. Every read/write below uses this instead of Prisma's
@@ -17,11 +19,16 @@ const SAFE_SELECT = {
   role: true,
   isActive: true,
   createdAt: true,
+  totpEnabled: true,
+  lastLoginAt: true,
 } as const;
 
 @Injectable()
 export class AdminUsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessions: SessionService
+  ) {}
 
   findAll() {
     return this.prisma.adminUser.findMany({
@@ -34,7 +41,8 @@ export class AdminUsersService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     try {
       return await this.prisma.adminUser.create({
-        data: { name: dto.name, email: dto.email, passwordHash, role: dto.role },
+        // Emails are stored lower-cased so sign-in matches however it is typed.
+        data: { name: dto.name, email: normalizeEmail(dto.email), passwordHash, role: dto.role },
         select: SAFE_SELECT,
       });
     } catch (err) {
@@ -84,9 +92,23 @@ export class AdminUsersService {
       if (dto.name !== undefined) data.name = dto.name;
       if (dto.role !== undefined) data.role = dto.role;
       if (dto.isActive !== undefined) data.isActive = dto.isActive;
-      if (dto.password) data.passwordHash = await bcrypt.hash(dto.password, 10);
+      if (dto.password) {
+        data.passwordHash = await bcrypt.hash(dto.password, 12);
+        // A new password signs the person out everywhere and lifts any lockout.
+        data.passwordChangedAt = new Date();
+        data.failedLoginCount = 0;
+        data.lockedUntil = null;
+      }
+      if (dto.resetTwoFactor) {
+        data.totpEnabled = false;
+        data.totpSecret = null;
+        data.recoveryCodeHashes = [];
+      }
 
-      return tx.adminUser.update({ where: { id }, data, select: SAFE_SELECT });
+      const updated = await tx.adminUser.update({ where: { id }, data, select: SAFE_SELECT });
+      // Deactivating or re-passwording must bite immediately, not after the status cache expires.
+      this.sessions.forget(target.role, id);
+      return updated;
     });
   }
 

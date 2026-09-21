@@ -1,10 +1,11 @@
-import { IsString, MinLength } from "class-validator";
+import { IsNotEmpty, IsString } from "class-validator";
+import { IsStrongPassword } from "../../security/password-policy";
 
 export class ResetPasswordDto {
   @IsString()
+  @IsNotEmpty()
   token!: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsStrongPassword()
   newPassword!: string;
 }

@@ -137,6 +137,33 @@ export function passwordResetEmail(resetUrl: string) {
   };
 }
 
+/** Sent after sign-up so we know the address really belongs to the customer. */
+export function verifyEmailEmail(name: string, verifyUrl: string) {
+  return {
+    subject: "Confirm your email for Lycie Investments",
+    html: wrapper(`
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Welcome to Lycie Investments. Please confirm this is your email address — the link expires in 24 hours and only works once.</p>
+      <p style="margin: 24px 0;">
+        <a href="${verifyUrl}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 20px; border-radius: 4px; text-decoration: none; display: inline-block;">Confirm email</a>
+      </p>
+      <p style="color: #667085; font-size: 13px;">If you didn't create an account, you can safely ignore this email.</p>
+    `),
+  };
+}
+
+/** Tells the account owner their password changed, so an unexpected change gets noticed quickly. */
+export function passwordChangedEmail(name: string) {
+  return {
+    subject: "Your Lycie Investments password was changed",
+    html: wrapper(`
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>The password for your account was just changed, and any other devices signed in to it were signed out.</p>
+      <p style="color: #667085; font-size: 13px;">If this was you, there's nothing more to do. If it wasn't, reset your password straight away and contact us.</p>
+    `),
+  };
+}
+
 export function adminNewSubmissionEmail(formType: string, summaryLines: string[]) {
   return {
     subject: `New ${formType} submission`,

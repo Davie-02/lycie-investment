@@ -1,10 +1,15 @@
-import { IsEmail, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class LoginCustomerDto {
   @IsEmail()
   email!: string;
 
+  // Not held to the strength rules: older accounts must still be able to sign in.
   @IsString()
-  @MinLength(8)
+  @IsNotEmpty()
   password!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  remember?: boolean;
 }

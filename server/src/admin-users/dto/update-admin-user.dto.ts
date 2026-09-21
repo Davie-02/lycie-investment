@@ -1,5 +1,6 @@
-import { IsBoolean, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
+import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
 import { AdminRole } from "@prisma/client";
+import { IsStrongPassword } from "../../security/password-policy";
 
 export class UpdateAdminUserDto {
   @IsString()
@@ -14,8 +15,12 @@ export class UpdateAdminUserDto {
   @IsOptional()
   isActive?: boolean;
 
-  @IsString()
-  @MinLength(8)
+  @IsStrongPassword()
   @IsOptional()
   password?: string;
+
+  /** Owner-only recovery: clear this person's two-factor setup (lost phone, no recovery codes). */
+  @IsBoolean()
+  @IsOptional()
+  resetTwoFactor?: boolean;
 }

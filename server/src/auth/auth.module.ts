@@ -5,23 +5,23 @@ import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { RolesGuard } from "./roles.guard";
 import { OptionalCustomerGuard } from "./optional-customer.guard";
+import { SessionService } from "./session.service";
+import { SocialIdentityService } from "./social-identity";
 
 @Module({
   imports: [
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET,
-        // Kept short deliberately — this is a small admin team, not a
-        // public-facing session, so there's no real cost to re-logging in
-        // periodically, and it limits how long a stolen/leaked token stays
-        // useful. Override via JWT_EXPIRES_IN if 2h turns out wrong for
-        // how the team actually works.
+        // Only a default: SessionService.issue() sets the real lifetime per
+        // sign-in (short normally, long for "keep me signed in"). Kept short so
+        // any token minted without an explicit lifetime is low-risk.
         signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || "2h" },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, RolesGuard, OptionalCustomerGuard],
-  exports: [JwtAuthGuard, RolesGuard, OptionalCustomerGuard, JwtModule],
+  providers: [AuthService, SessionService, SocialIdentityService, JwtAuthGuard, RolesGuard, OptionalCustomerGuard],
+  exports: [JwtAuthGuard, RolesGuard, OptionalCustomerGuard, JwtModule, SessionService, SocialIdentityService],
 })
 export class AuthModule {}

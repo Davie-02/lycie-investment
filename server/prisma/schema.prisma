@@ -24,6 +24,25 @@ model AdminUser {
   updatedAt           DateTime                  @updatedAt
   reviewedPayments    PaymentSubmission[]
   passwordResetTokens AdminPasswordResetToken[]
+
+  /// Consecutive wrong-password attempts; reset to 0 on a successful sign-in.
+  /// At MAX_FAILED_ATTEMPTS the account is locked until `lockedUntil`
+  /// (see server/src/security/lockout.ts).
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+
+  /// Sessions issued before this moment are rejected, so changing or
+  /// resetting the password signs out every other device.
+  passwordChangedAt DateTime?
+
+  /// Two-factor sign-in (authenticator app, RFC 6238 TOTP).
+  /// `totpSecret` is stored as soon as setup starts but only counts once
+  /// `totpEnabled` is true (after the admin proves the app works by typing a code).
+  totpSecret         String?
+  totpEnabled        Boolean  @default(false)
+  /// SHA-256 hashes of the one-time recovery codes shown once at setup.
+  recoveryCodeHashes String[] @default([])
 }
 
 /// Mirrors PasswordResetToken (customer side) for admin accounts — kept as
@@ -54,6 +73,25 @@ model CustomerUser {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  /// Same lockout counters as AdminUser.
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+
+  /// Same purpose as AdminUser.passwordChangedAt.
+  passwordChangedAt DateTime?
+
+  /// Set once the customer proves they own the email (link in the welcome
+  /// email, or an identity provider that already verified it, e.g. Google).
+  emailVerifiedAt DateTime?
+
+  /// Provider user ids for "Continue with Google / Facebook". Unique so one
+  /// provider account can only ever belong to one customer.
+  googleId   String? @unique
+  facebookId String? @unique
+
+  emailVerificationTokens EmailVerificationToken[]
+
   account             Account?
   auditLogs           AuditLog[]
   paymentSubmissions  PaymentSubmission[]
@@ -78,6 +116,21 @@ model PasswordResetToken {
   customerId String    @db.Uuid
   /// SHA-256 of the token actually emailed to the customer — never store
   /// the raw token, same reasoning as hashing passwords themselves.
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  customer CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+}
+
+/// One-time link sent to a new customer to confirm their email address.
+/// Only the SHA-256 of the token is stored, like password reset tokens.
+model EmailVerificationToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  customerId String    @db.Uuid
   tokenHash  String    @unique
   expiresAt  DateTime
   usedAt     DateTime?
@@ -292,7 +345,11 @@ model HireVehicle {
   fuelType     String
   seats        Int
   available    Boolean  @default(true)
+  /// Cover photo (always shown first; kept for older data and simple lists).
   image        String
+  /// Full gallery including the cover, in display order. Empty for vehicles
+  /// created before galleries existed — readers fall back to [image].
+  images       String[] @default([])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

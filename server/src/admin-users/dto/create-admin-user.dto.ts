@@ -1,5 +1,6 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsString, MinLength } from "class-validator";
+import { IsEmail, IsEnum, IsNotEmpty, IsString } from "class-validator";
 import { AdminRole } from "@prisma/client";
+import { IsStrongPassword } from "../../security/password-policy";
 
 export class CreateAdminUserDto {
   @IsString()
@@ -9,8 +10,7 @@ export class CreateAdminUserDto {
   @IsEmail()
   email!: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsStrongPassword()
   password!: string;
 
   @IsEnum(AdminRole)

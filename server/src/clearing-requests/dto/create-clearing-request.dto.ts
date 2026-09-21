@@ -1,4 +1,5 @@
 import { IsDateString, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsDeliverableEmail } from "../../security/email-check";
 import { Type } from "class-transformer";
 import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
@@ -12,6 +13,7 @@ export class CreateClearingRequestDto {
   phone!: string;
 
   @IsEmail()
+  @IsDeliverableEmail()
   email!: string;
 
   @IsString()

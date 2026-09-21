@@ -1,10 +1,11 @@
 import { IsNotEmpty, IsString } from "class-validator";
 import { IsStrongPassword } from "../../security/password-policy";
 
-export class ResetPasswordDto {
+/** An admin changing their own password from the Security page. */
+export class ChangeAdminPasswordDto {
   @IsString()
   @IsNotEmpty()
-  token!: string;
+  currentPassword!: string;
 
   @IsStrongPassword()
   newPassword!: string;

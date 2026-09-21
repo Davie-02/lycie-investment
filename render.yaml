@@ -44,6 +44,16 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      # Optional sign-in tuning. Defaults: 2h normal / 30d "keep me signed in".
+      - key: REMEMBER_ME_EXPIRES_IN
+        value: 30d
+      # "Continue with Google / Facebook" — buttons appear only once these are set.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: FACEBOOK_APP_ID
+        sync: false
+      - key: FACEBOOK_APP_SECRET
+        sync: false
       - key: S3_BUCKET
         sync: false
       # Dashboard-managed: "auto" for Cloudflare R2, or your bucket's region

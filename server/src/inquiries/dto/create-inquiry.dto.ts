@@ -1,4 +1,5 @@
 import { IsEmail, IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsDeliverableEmail } from "../../security/email-check";
 import { PreferredContact, PreferredContactField } from "../../common/preferred-contact";
 
 export class CreateInquiryDto {
@@ -11,6 +12,7 @@ export class CreateInquiryDto {
   phone!: string;
 
   @IsEmail()
+  @IsDeliverableEmail()
   email!: string;
 
   @IsString()
