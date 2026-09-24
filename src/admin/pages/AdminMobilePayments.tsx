@@ -1,9 +1,11 @@
 /**
  * Finance → Mobile money: every Airtel Money / TNM Mpamba payment made through
- * PayChangu. Successful ones are already credited to the customer's account;
+ * PayChangu. Successful ones are already credited — to the purchase the customer
+ * was paying for, or otherwise to their account balance;
  * "Check again" asks the gateway about a payment still marked waiting.
  */
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
@@ -20,6 +22,8 @@ interface MobilePayment {
   createdAt: string;
   confirmedAt: string | null;
   customer: { id: string; name: string; email: string } | null;
+  /** Paid toward a purchase (then it pays that purchase instead of going to the balance). */
+  purchase: { id: string; reference: string; title: string } | null;
 }
 
 interface Summary {
@@ -55,7 +59,7 @@ export default function AdminMobilePayments() {
       <div className="ws-hero">
         <div>
           <h1>Mobile money</h1>
-          <p>Payments customers make from their account with Airtel Money or TNM Mpamba. Paid amounts are credited to their account automatically.</p>
+          <p>Payments customers make from their account with Airtel Money or TNM Mpamba. Paid amounts go automatically to the purchase they were paying for, or to their account balance.</p>
         </div>
       </div>
 
@@ -116,7 +120,15 @@ export default function AdminMobilePayments() {
                   </td>
                   <td>
                     {payment.purpose}
-                    {payment.note && <div className="text-muted">{payment.note}</div>}
+                    {payment.purchase ? (
+                      <div>
+                        <Link to={`/admin/purchases/${payment.purchase.id}`}>
+                          {payment.purchase.reference} — {payment.purchase.title}
+                        </Link>
+                      </div>
+                    ) : (
+                      payment.note && <div className="text-muted">{payment.note}</div>
+                    )}
                   </td>
                   <td className="mono">{payment.txRef}</td>
                   <td>

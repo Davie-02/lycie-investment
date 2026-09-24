@@ -624,3 +624,24 @@ Signed out, any of these shows the sign-in form and then continues to the same s
 
 **Where:** `src/pages/Customer/portal/` — `PortalLayout.tsx` (menu, greeting, email-confirmation banner),
 `PortalContext.tsx` (data loaded once, live updates), one file per section, `portal.css`.
+
+## Purchases, balances and customer statements (added 2026-09-27)
+
+**What:** every purchase a customer makes (vehicle, import, clearing, hire, parts, service, other) is recorded with its
+cost lines, how it was priced (standard / deal / promotion / discount, with the deal, promotion name, promo code and the
+saving), every payment and refund, and the balance still owed. Customers see it all under **My account → My purchases**
+and can pay the balance by mobile money, from their account balance, or by uploading a proof for that purchase.
+Staff use **Finance → Sales & balances** (list, filters, period totals, breakdowns, CSV export, record/edit/cancel,
+record payments and refunds, void mistakes) and **Finance → Customer accounts** (per-customer totals and a printable statement).
+
+**Where:** `server/src/purchases/` (`purchase-math.ts` holds the arithmetic and its tests), tables `Purchase`,
+`PurchaseItem`, `PurchasePayment` (migration `20260927090000_purchases_ledger`); `PaymentSubmission.purchaseId` and
+`MobilePayment.purchaseId/exchangeRate` link website payments to a purchase. Frontend: `src/admin/pages/purchases/`,
+`src/pages/Customer/portal/Purchases.tsx`, labels in `src/utils/purchases.ts`.
+
+**Rules:** money is exact decimals, never floats. `amountPaid` only changes in the same serializable transaction as the
+payment row that explains it. Payments are never deleted — voided with a reason (a voided balance payment goes back to
+the balance). Each website payment's reference is unique in `sourceRef`, so it can't be counted twice. Payments in
+another currency keep the amount received and the rate used (default: Finance → Prices & currency). Refunds, voids
+and exports need Finance **manage**; everything else Finance **edit**/**view**. Dollars and kwacha are never added together
+— totals are shown per currency.

@@ -308,3 +308,176 @@
     margin-left: var(--space-1);
   }
 }
+
+/* ── My purchases ─────────────────────────────────────────────────────── */
+.portal-stat--owing {
+  border-color: var(--color-accent-dark);
+}
+
+.portal-pill--warn {
+  background: var(--color-warn-bg);
+  color: #8a5a00;
+}
+
+:root[data-theme="dark"] .portal-pill--warn {
+  color: #f2c46d;
+}
+
+.purchase-card {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.purchase-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-3);
+}
+
+.purchase-card__head h3 {
+  margin: 0;
+}
+
+.purchase-card__head p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.purchase-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.purchase-offer {
+  background: var(--color-primary);
+  color: #fff;
+  text-transform: none;
+}
+
+.purchase-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-tint);
+  overflow: hidden;
+}
+
+.purchase-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-success);
+  transition: width 0.4s ease;
+}
+
+.purchase-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.purchase-figures dt {
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+}
+
+.purchase-figures dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.purchase-figures__owing {
+  color: var(--color-error) !important;
+}
+
+.purchase-note {
+  margin: 0;
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-accent-dark);
+  background: var(--color-tint);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.purchase-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.purchase-details[open] summary {
+  margin-bottom: var(--space-3);
+}
+
+.purchase-details h4 {
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.purchase-details tfoot td,
+.purchase-details tfoot th {
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.purchase-pay {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.purchase-pay__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.purchase-pay__form {
+  max-width: 420px;
+}
+
+.purchase-pay__hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+}
+
+.purchase-card .portal-pill {
+  text-transform: none;
+}
+
+/* Cost and payment tables inside a purchase (compact; they scroll sideways on narrow phones). */
+.purchase-details table {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.purchase-details th,
+.purchase-details td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.purchase-details th {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.purchase-details td:last-child,
+.purchase-details th:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.purchase-details tfoot th {
+  color: var(--color-ink);
+}

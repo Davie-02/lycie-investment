@@ -71,10 +71,12 @@ export class FinancialController {
   @Roles("OWNER", "MANAGER")
   approvePayment(
     @Param("id") id: string,
-    @CurrentUser() user: { sub: string },
-    @Body("note") note?: string
+    @CurrentUser() user: { sub: string; name?: string },
+    @Body("note") note?: string,
+    @Body("creditAmount") creditAmount?: unknown
   ) {
-    return this.financial.reviewPayment(id, user.sub, true, note);
+    const credit = Number(creditAmount);
+    return this.financial.reviewPayment(id, user, true, typeof note === "string" ? note.slice(0, 500) : undefined, Number.isFinite(credit) && credit > 0 ? Math.round(credit * 100) / 100 : undefined);
   }
 
   @Post("payments/:id/reject")
@@ -84,6 +86,6 @@ export class FinancialController {
     @CurrentUser() user: { sub: string },
     @Body("note") note?: string
   ) {
-    return this.financial.reviewPayment(id, user.sub, false, note);
+    return this.financial.reviewPayment(id, user, false, typeof note === "string" ? note.slice(0, 500) : undefined);
   }
 }

@@ -38,6 +38,7 @@ const PortalOverview = lazy(() => import("@/pages/Customer/portal/Overview"));
 const PortalTrack = lazy(() => import("@/pages/Customer/portal/TrackVehicle"));
 const PortalRequests = lazy(() => import("@/pages/Customer/portal/Requests"));
 const PortalPayments = lazy(() => import("@/pages/Customer/portal/Payments"));
+const PortalPurchases = lazy(() => import("@/pages/Customer/portal/Purchases"));
 const PortalSaved = lazy(() => import("@/pages/Customer/portal/Saved"));
 const PortalMessages = lazy(() => import("@/pages/Customer/portal/Messages"));
 const PortalInvite = lazy(() => import("@/pages/Customer/portal/Invite"));
@@ -88,6 +89,7 @@ export default function AppRoutes() {
           <Route index element={<PortalOverview />} />
           <Route path="track" element={<PortalTrack />} />
           <Route path="requests" element={<PortalRequests />} />
+          <Route path="purchases" element={<PortalPurchases />} />
           <Route path="payments" element={<PortalPayments />} />
           <Route path="saved" element={<PortalSaved />} />
           <Route path="messages" element={<PortalMessages />} />

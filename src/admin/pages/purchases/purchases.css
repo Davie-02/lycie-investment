@@ -1,0 +1,315 @@
+/* Finance: purchases, customer accounts and statements. */
+
+.num,
+.admin-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.purchase-owed {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+.purchase-chip--offer {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.purchase-table__row {
+  cursor: pointer;
+}
+
+.purchase-table__row:hover td {
+  background: var(--color-tint);
+}
+
+.purchase-toolbar input[type="date"] {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+
+.purchase-summary + .purchase-summary {
+  margin-top: var(--space-5);
+}
+
+.purchase-summary__currency {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-md);
+}
+
+.purchase-stat-button {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.purchase-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.purchase-breakdown h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-base);
+}
+
+.purchase-breakdown .admin-table td {
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+
+.purchase-breakdown .admin-table td.num {
+  white-space: nowrap;
+}
+
+.purchase-breakdown .link-button {
+  text-align: left;
+}
+
+/* The form */
+.purchase-form {
+  margin-bottom: var(--space-5);
+}
+
+.purchase-form__group {
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.purchase-form__group legend {
+  margin-bottom: var(--space-3);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.purchase-form__check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.purchase-form__help {
+  font-size: var(--fs-sm);
+}
+
+.purchase-form__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  margin: var(--space-3) 0 0;
+}
+
+.purchase-form__totals dt {
+  color: var(--color-muted);
+  font-size: var(--fs-sm);
+}
+
+.purchase-form__totals dd {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-lines {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.purchase-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr) minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.purchase-line .form-field {
+  margin: 0;
+}
+
+.purchase-line__amount {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 0.55rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.purchase-line__amount span {
+  font-size: var(--fs-sm);
+}
+
+.purchase-line__remove {
+  margin-bottom: 0.35rem;
+}
+
+.purchase-pricing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.purchase-pricing__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+
+.purchase-pricing__option--on {
+  border-color: var(--color-primary);
+  background: var(--color-tint);
+  font-weight: 600;
+}
+
+.purchase-pay__hint {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-sm);
+}
+
+/* One purchase / one statement */
+.purchase-detail > * + * {
+  margin-top: var(--space-4);
+}
+
+.purchase-detail__back {
+  margin: 0;
+}
+
+.purchase-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.purchase-detail__h {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-md);
+}
+
+.purchase-detail__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-4);
+}
+
+.purchase-detail__top .form-card {
+  margin: 0;
+}
+
+.purchase-detail__links {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--fs-sm);
+}
+
+.purchase-detail__money {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.purchase-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.purchase-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-tint);
+  overflow: hidden;
+}
+
+.purchase-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-success);
+}
+
+.purchase-payment--void td {
+  color: var(--color-muted);
+}
+
+.purchase-payment--void td:nth-child(-n + 4) {
+  text-decoration: line-through;
+}
+
+.purchase-void-note {
+  color: var(--color-error);
+  font-size: var(--fs-xs);
+}
+
+@media (max-width: 900px) {
+  .purchase-detail__top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .purchase-line {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .purchase-line > :nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+}
+
+/* Printing a purchase or a statement: just the page content. */
+@media print {
+  .ws-sidebar,
+  .ws-topbar,
+  .ws-tabs,
+  .ws-skip,
+  .no-print,
+  .ws-guide,
+  .undo-toast {
+    display: none !important;
+  }
+
+  .ws,
+  .ws--collapsed {
+    display: block !important;
+  }
+
+  .ws-main {
+    padding: 0 !important;
+  }
+
+  .purchase-detail .form-card {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}
+
+/* The small breakdown tables sit side by side: let their cells wrap and stay inside their column. */
+.purchase-breakdown {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.purchase-breakdown .admin-table td {
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+  white-space: normal;
+}

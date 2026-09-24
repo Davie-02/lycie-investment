@@ -34,6 +34,12 @@ export function topicsForWrite(path: string): string[] {
     case "shipments":
     case "customer-cases":
       return ["shipments"];
+    // Customers' purchases and balances (only the topic name goes out; the account page refetches through its own sign-in).
+    case "purchases":
+    case "financial":
+    case "mobile-payments":
+    case "referrals":
+      return ["purchases"];
     // /content-admin/<type>/... — the type IS the topic.
     case "content-admin":
       return second ? [second] : [];

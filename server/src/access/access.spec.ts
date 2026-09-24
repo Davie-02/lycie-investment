@@ -52,5 +52,10 @@ describe("module access", () => {
     expect(accessForRoute("GET", "/api/workspace/guides")).toEqual({ kind: "staff" });
     expect(accessForRoute("PATCH", "/api/site-content/language")).toEqual({ kind: "modules", modules: ["system"], level: "edit" });
     expect(accessForRoute("PATCH", "/api/site-content/hero")).toEqual({ kind: "modules", modules: ["marketing"], level: "edit" });
+    // Purchases: Finance; voiding a payment and exporting need manage.
+    expect(accessForRoute("GET", "/api/purchases/customers/x")).toEqual({ kind: "modules", modules: ["finance"], level: "view" });
+    expect(accessForRoute("POST", "/api/purchases/x/payments")).toEqual({ kind: "modules", modules: ["finance"], level: "edit" });
+    expect(accessForRoute("POST", "/api/purchases/payments/x/void")).toEqual({ kind: "modules", modules: ["finance"], level: "manage" });
+    expect(accessForRoute("GET", "/api/purchases/export")).toEqual({ kind: "modules", modules: ["finance"], level: "manage" });
   });
 });

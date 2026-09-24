@@ -62,7 +62,7 @@ export const GUIDE_DEFAULTS: GuideDefault[] = [
   g("module:sales", "sales", "Sales", "Everything about vehicles for sale: the listings on the website, customers' questions about them, and deals and promotions."),
   g("module:hire", "hire", "Hire & Fleet", "The vehicles we hire out, their photos and rates, and every hire booking from request to return."),
   g("module:imports", "imports", "Imports & Clearing", "New import and clearing requests from the website, and tracking each vehicle from purchase to delivery."),
-  g("module:finance", "finance", "Finance", "Money coming in: payment proofs customers upload, mobile money payments, referral rewards, and the exchange rate used to show prices."),
+  g("module:finance", "finance", "Finance", "Everything customers buy and pay: each purchase with its costs, deals and discounts, payments and the balance still owed; customer statements; payment proofs, mobile money, referral rewards, and the exchange rate used to show prices."),
   g("module:customers", "customers", "Customer Care", "Messages from the website's contact form and customer reviews waiting to be approved."),
   g("module:marketing", "marketing", "Marketing & Content", "Everything visitors read on the website: page texts, notices and pop-ups, testimonials, FAQs, blog posts, and posts to our social media pages."),
   g("module:ai", "ai", "Lycie AI", "Lycie is the chat assistant on the website. Here you teach her what she should know, see what customers ask, and review the FAQs and testimonials she drafts."),
@@ -120,10 +120,22 @@ export const GUIDE_DEFAULTS: GuideDefault[] = [
 
   // ---------------------------------------------------------------- Finance
   g(
+    "page:/admin/purchases",
+    "finance",
+    "Sales & balances",
+    "Every purchase a customer makes — a vehicle, an import, clearing, a hire, parts or a service — with each cost, whether it was on a deal, promotion or discount, what has been paid and what is still owed. Record a sale here, then record each payment as it comes in; the customer sees it all in their account and gets a receipt. Mistakes are voided with a reason (never deleted), so the history stays complete.",
+  ),
+  g(
+    "page:/admin/customer-accounts",
+    "finance",
+    "Customer accounts",
+    "Each customer's money in one place: what they've bought, paid and still owe, how much they saved on deals, and their account balance. Open a customer to see or print their full statement.",
+  ),
+  g(
     "page:/admin/payments",
     "finance",
     "Payment proofs",
-    "Customers can upload proof of a payment (for example a bank slip). Check it, then approve it — the amount is added to their account balance and recorded in their history — or reject it.",
+    "Customers can upload proof of a payment (for example a bank slip). Check it, then approve it — if they said which purchase it is for, it pays that purchase; otherwise it is added to their account balance — or reject it.",
   ),
   g(
     "page:/admin/mobile-payments",

@@ -1,11 +1,12 @@
 /**
- * Portal overview: the customer's key numbers at a glance (balance, vehicles on
- * their way, open requests, saved vehicles, unread messages), the latest on
+ * Portal overview: the customer's key numbers at a glance (balance, what's
+ * still to pay on purchases, vehicles on their way, open requests, saved vehicles, unread messages), the latest on
  * each shipment, recent requests, and shortcuts to what they usually do next.
  */
 import { Link } from "react-router-dom";
 import { useSavedVehicles } from "@/context/SavedVehiclesContext";
 import { formatCurrency } from "@/utils/format";
+import { money } from "@/utils/purchases";
 import { stageLabel } from "@/utils/shipmentStages";
 import { usePortal } from "./PortalContext";
 import { activeShipments, openRequests } from "./shared";
@@ -13,7 +14,7 @@ import PortalHeading from "./PortalHeading";
 import { REQUEST_TYPE_LABELS, statusTone } from "./shared";
 
 export default function Overview() {
-  const { account, cases, requests, unreadMessages, isLoading, loadError } = usePortal();
+  const { account, purchases, cases, requests, unreadMessages, isLoading, loadError } = usePortal();
   const { savedVehicles } = useSavedVehicles();
   const onTheWay = activeShipments(cases);
   const open = openRequests(requests);
@@ -21,7 +22,12 @@ export default function Overview() {
   if (isLoading) return <p className="text-muted">Loading your account…</p>;
   if (loadError) return <p className="text-muted" role="alert">{loadError}</p>;
 
+  // What's still owed on purchases, per currency (dollars and kwacha aren't added together).
+  const owed = new Map<string, number>();
+  for (const p of purchases) if (p.status === "active" && Number(p.balance) > 0) owed.set(p.currency, (owed.get(p.currency) ?? 0) + Number(p.balance));
+
   const stats = [
+    ...[...owed.entries()].map(([currency, amount]) => ({ to: "/account/purchases", value: money(amount, currency), label: "Still to pay on purchases" })),
     { to: "/account/payments", value: account ? formatCurrency(Number(account.balance), account.currency) : "—", label: "Account balance" },
     { to: "/account/track", value: String(onTheWay.length), label: onTheWay.length === 1 ? "Vehicle on its way" : "Vehicles on their way" },
     { to: "/account/requests", value: String(open.length), label: "Open requests" },
@@ -98,6 +104,9 @@ export default function Overview() {
           </Link>
           <Link to="/clearing" className="portal-action">
             Clear a vehicle<span>We handle customs for you</span>
+          </Link>
+          <Link to="/account/purchases" className="portal-action">
+            My purchases<span>Costs, payments and what's left to pay</span>
           </Link>
           <Link to="/account/payments" className="portal-action">
             Make a payment<span>Mobile money or proof of payment</span>

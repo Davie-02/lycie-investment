@@ -27,6 +27,7 @@ const PORTAL_SECTIONS: Section[] = [
   { to: "/account", label: "Overview", icon: "home", end: true },
   { to: "/account/track", label: "Track my vehicle", icon: "ship" },
   { to: "/account/requests", label: "My requests", icon: "list" },
+  { to: "/account/purchases", label: "My purchases", icon: "receipt" },
   { to: "/account/payments", label: "Payments", icon: "wallet" },
   { to: "/account/saved", label: "Saved & alerts", icon: "heart" },
   { to: "/account/messages", label: "Messages", icon: "chat" },
@@ -44,7 +45,7 @@ export default function PortalLayout() {
 
 function PortalShell() {
   const { currentUser, logout } = useCustomerAuth();
-  const { cases, unreadMessages } = usePortal();
+  const { cases, purchases, unreadMessages } = usePortal();
   const navigate = useNavigate();
   const location = useLocation();
   const [verifyNotice, setVerifyNotice] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -62,6 +63,7 @@ function PortalShell() {
   const badges: Record<string, number> = {
     "/account/track": activeShipments(cases).length,
     "/account/messages": unreadMessages,
+    "/account/purchases": purchases.filter((p) => p.status === "active" && Number(p.balance) > 0).length,
   };
   const current = PORTAL_SECTIONS.find((s) => (s.end ? location.pathname === s.to : location.pathname.startsWith(s.to)));
 

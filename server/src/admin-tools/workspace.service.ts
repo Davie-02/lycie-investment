@@ -101,13 +101,23 @@ export class WorkspaceService {
         ];
       }
       case "finance": {
-        const [pendingProofs, mobile, pendingMobile, referrals] = await Promise.all([
+        const [pendingProofs, mobile, pendingMobile, referrals, owing] = await Promise.all([
           p.paymentSubmission.count({ where: { status: "PENDING" } }),
           p.mobilePayment.aggregate({ where: { status: "success", confirmedAt: { gte: days(30) } }, _sum: { amount: true } }),
           p.mobilePayment.count({ where: { status: "pending", createdAt: { gte: days(2) } } }),
           p.referral.count({ where: { status: "pending" } }),
+          // Balances still owed on purchases (comparing two columns needs SQL). Dollars only in the
+          // total, since amounts in different currencies can't be added; overdue counts every currency.
+          p.$queryRaw<Array<{ owed_usd: unknown; overdue: bigint }>>`
+            SELECT COALESCE(SUM(CASE WHEN "currency" = 'USD' THEN "total" - "amountPaid" END), 0) AS owed_usd,
+                   COUNT(*) FILTER (WHERE "dueDate" < NOW()) AS overdue
+            FROM "Purchase" WHERE "status" = 'active' AND "total" > "amountPaid"`,
         ]);
+        const owedUsd = Math.round(Number(owing[0]?.owed_usd ?? 0));
+        const overdue = Number(owing[0]?.overdue ?? 0);
         return [
+          { key: "owed", label: "Owed by customers (USD)", value: owedUsd, path: "/admin/purchases?payment=owing" },
+          { key: "overdue", label: "Overdue balances", value: overdue, path: "/admin/purchases?payment=overdue", attention: overdue > 0 },
           { key: "proofs", label: "Payment proofs to approve", value: pendingProofs, path: "/admin/payments", attention: pendingProofs > 0 },
           { key: "mobile", label: "Mobile money, 30 days (MWK)", value: mobile._sum.amount ?? 0, path: "/admin/mobile-payments" },
           { key: "mobilePending", label: "Mobile payments waiting", value: pendingMobile, path: "/admin/mobile-payments" },

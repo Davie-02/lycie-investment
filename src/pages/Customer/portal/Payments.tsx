@@ -1,8 +1,10 @@
 /**
  * Payments: the account balance, paying by mobile money, uploading proof of
- * another payment (approved by staff), and the history of both.
+ * another payment (approved by staff) — optionally for one purchase, which it
+ * then pays directly — and the history of both.
  */
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import FormField from "@/components/forms/FormField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import MobileMoneyCard from "@/components/customer/MobileMoneyCard";
@@ -12,6 +14,7 @@ import { formatCurrency } from "@/utils/format";
 import { usePortal } from "./PortalContext";
 import PortalHeading from "./PortalHeading";
 import { statusTone } from "./shared";
+import { money } from "@/utils/purchases";
 
 interface PaymentFormValues {
   amount: string;
@@ -19,7 +22,13 @@ interface PaymentFormValues {
 }
 
 export default function Payments() {
-  const { account, isLoading, reloadAccount } = usePortal();
+  const { account, purchases, isLoading, reloadPurchases } = usePortal();
+  const [params] = useSearchParams();
+  const owing = purchases.filter((p) => p.status === "active" && Number(p.balance) > 0);
+  const [purchaseId, setPurchaseId] = useState(() => {
+    const wanted = params.get("purchase");
+    return wanted && owing.some((p) => p.id === wanted) ? wanted : "";
+  });
   const [values, setValues] = useState<PaymentFormValues>({ amount: "", description: "" });
   const [proof, setProof] = useState<File | null>(null);
   const [amountError, setAmountError] = useState<string | undefined>();
@@ -45,8 +54,8 @@ export default function Payments() {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      await submitPayment(amount, proof, values.description || undefined);
-      await reloadAccount();
+      await submitPayment(amount, proof, values.description || undefined, purchaseId || undefined);
+      await reloadPurchases();
       setValues({ amount: "", description: "" });
       setProof(null);
       setStatus("success");
@@ -73,12 +82,22 @@ export default function Payments() {
 
       <form className="form-card customer-account__form" onSubmit={handleSubmit} noValidate>
         <h3 style={{ marginTop: 0 }}>Paid another way? Upload your proof</h3>
-        <p className="text-muted">A bank slip or transfer screenshot. Your balance updates once our team has checked it.</p>
-        {status === "success" && <FormStatusBanner status="success" successMessage="Payment submitted. Your balance will update after our team approves it." errorMessage={null} />}
+        <p className="text-muted">A bank slip or transfer screenshot. Once our team has checked it, it pays the purchase you choose — or goes to your balance.</p>
+        {status === "success" && <FormStatusBanner status="success" successMessage="Payment submitted. It will count once our team approves it." errorMessage={null} />}
         {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={errorMessage} />}
         <div className="form-grid form-grid--2col">
           <FormField id="transaction-amount" label={`Amount (${account.currency})`} type="number" min="1" step="1" required value={values.amount} onChange={handleChange("amount")} error={amountError} />
           <FormField id="transaction-description" label="Description (optional)" value={values.description} onChange={handleChange("description")} />
+          {owing.length > 0 && (
+            <FormField as="select" id="transaction-purchase" label="What is it for?" wrapperClassName="form-grid__full" value={purchaseId} onChange={(e) => setPurchaseId(e.target.value)}>
+              <option value="">Add it to my account balance</option>
+              {owing.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.reference} — {p.title} (balance {money(p.balance, p.currency)})
+                </option>
+              ))}
+            </FormField>
+          )}
           <div className="form-field form-grid__full">
             <label htmlFor="payment-proof">
               Proof of payment<span className="form-field__required"> *</span>
@@ -141,6 +160,7 @@ export default function Payments() {
                 <tr>
                   <th>Date</th>
                   <th>Reference</th>
+                  <th>For</th>
                   <th>Amount</th>
                   <th>Status</th>
                 </tr>
@@ -150,6 +170,7 @@ export default function Payments() {
                   <tr key={submission.id}>
                     <td>{new Date(submission.createdAt).toLocaleDateString()}</td>
                     <td className="mono">{submission.reference}</td>
+                    <td>{purchases.find((p) => p.id === submission.purchaseId)?.reference ?? "Balance"}</td>
                     <td>{formatCurrency(Number(submission.amount), submission.currency)}</td>
                     <td>
                       <span className={`portal-pill ${statusTone(submission.status === "APPROVED" ? "confirmed" : submission.status === "REJECTED" ? "cancelled" : "")}`}>

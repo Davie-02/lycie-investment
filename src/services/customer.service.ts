@@ -1,4 +1,5 @@
 import type { Vehicle } from "@/types/vehicle";
+import type { Purchase } from "@/utils/purchases";
 import { ApiError } from "./http";
 import { clearCsrfToken, fetchWithCsrf } from "./csrf";
 import { authHeader, clearFallbackToken, settleSession } from "./sessionToken";
@@ -65,6 +66,8 @@ export interface PaymentSubmission {
   status: "PENDING" | "APPROVED" | "REJECTED";
   reviewNote: string | null;
   createdAt: string;
+  /** The purchase it was sent for, if any. */
+  purchaseId?: string | null;
 }
 
 export interface CustomerRequestSummary {
@@ -380,11 +383,12 @@ export function unsaveVehicle(vehicleId: string) {
   });
 }
 
-export function submitPayment(amount: number, proof: File, note?: string) {
+export function submitPayment(amount: number, proof: File, note?: string, purchaseId?: string) {
   const body = new FormData();
   body.append("amount", String(amount));
   body.append("proof", proof);
   if (note) body.append("note", note);
+  if (purchaseId) body.append("purchaseId", purchaseId);
 
   return customerFetch<PaymentSubmission>("/financial/me/payment-submissions", {
     method: "POST",
@@ -498,4 +502,20 @@ export interface MyReferral {
 
 export function getMyReferral() {
   return customerFetch<MyReferral>("/customers/me/referral");
+}
+
+// ── Purchases ────────────────────────────────────────────────────────────
+
+export function getMyPurchases() {
+  return customerFetch<Purchase[]>("/customers/me/purchases");
+}
+
+/** Pays part of a purchase from the account balance. `amount` is in the balance's currency. */
+export function payPurchaseFromBalance(purchaseId: string, amount: number) {
+  return customerFetch<Purchase>(`/customers/me/purchases/${encodeURIComponent(purchaseId)}/apply-balance`, { method: "POST", body: JSON.stringify({ amount }) });
+}
+
+/** Mobile money toward one purchase (kwacha; the server checks it isn't more than is owed). */
+export function startPurchaseMobilePayment(purchaseId: string, amount: number) {
+  return customerFetch<{ txRef: string; checkoutUrl: string }>("/payments/mobile", { method: "POST", body: JSON.stringify({ amount, purpose: "other", purchaseId }) });
 }

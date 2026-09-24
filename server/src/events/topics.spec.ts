@@ -35,4 +35,10 @@ describe("topicsForWrite", () => {
     expect(topicsForWrite("/api/deal-admin/abc123/publish")).toEqual(["deals"]);
     expect(topicsForWrite("/api/deal-admin")).toEqual(["deals"]);
   });
+
+  it("tells open account pages to refresh purchases after a payment", () => {
+    expect(topicsForWrite("/api/purchases/abc/payments")).toEqual(["purchases"]);
+    expect(topicsForWrite("/api/financial/payments/abc/approve")).toEqual(["purchases"]);
+    expect(topicsForWrite("/api/mobile-payments/webhook")).toEqual(["purchases"]);
+  });
 });

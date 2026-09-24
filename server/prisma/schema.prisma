@@ -144,6 +144,7 @@ model CustomerUser {
   mobilePayments      MobilePayment[]
   referralsMade       Referral[]           @relation("ReferralsMade")
   referredBy          Referral?            @relation("ReferredCustomer")
+  purchases           Purchase[]
 }
 
 /// A password-reset link is only ever useful to the customer it was issued
@@ -208,6 +209,7 @@ model CustomerCase {
   vehicle     Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   hireVehicle HireVehicle?         @relation(fields: [hireVehicleId], references: [id], onDelete: Restrict)
   updates     CustomerCaseUpdate[]
+  purchases   Purchase[]
 
   @@index([customerId, updatedAt])
   @@index([status, updatedAt])
@@ -283,9 +285,12 @@ model PaymentSubmission {
   reviewNote        String?
   reviewedAt        DateTime?
   reviewedByAdminId String?
+  /// The purchase this payment is for (optional): approving it pays that purchase instead of the balance.
+  purchaseId        String?                 @db.Uuid
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
 
+  purchase        Purchase?    @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
   customer        CustomerUser @relation(fields: [customerId], references: [id], onDelete: Restrict)
   account         Account      @relation(fields: [accountId], references: [id], onDelete: Restrict)
   reviewedByAdmin AdminUser?   @relation(fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
@@ -356,6 +361,7 @@ model Vehicle {
   savedBy       SavedVehicle[]
   reviews       Review[]
   viewStats     VehicleViewStat[]
+  purchases     Purchase[]
   /// Hidden from the public site when false (a draft or temporarily off the market).
   isPublished   Boolean           @default(true)
   /// Set = archived: hidden everywhere public, kept so it can be restored or duplicated later.
@@ -858,6 +864,7 @@ model Deal {
   publishedAt  DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  purchases    Purchase[]
 
   @@index([status, createdAt])
 }
@@ -991,6 +998,10 @@ model MobilePayment {
   checkoutUrl  String?
   /// The gateway's answer when verified (method, network, charges). Admin reference only.
   providerData Json?
+  /// Paying toward a purchase: the payment goes to it (converted at `exchangeRate`, fixed when the customer started) instead of the balance.
+  purchaseId   String?       @db.Uuid
+  purchase     Purchase?     @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  exchangeRate Decimal?      @db.Decimal(19, 6)
   confirmedAt  DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -1031,4 +1042,119 @@ model WorkspaceGuide {
   departments String[] @default([])
   updatedBy   String?
   updatedAt   DateTime @updatedAt
+}
+
+/// Something a customer bought from us — a vehicle, an import, clearing, a hire,
+/// parts or a service — with what each part cost, any deal/promotion/discount,
+/// what has been paid and what is still owed. Balance = total - amountPaid.
+model Purchase {
+  id             String        @id @default(uuid()) @db.Uuid
+  /// Shown on receipts and statements, e.g. "PUR-2026-0042".
+  reference      String        @unique
+  customerId     String        @db.Uuid
+  customer       CustomerUser  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  /// vehicle | import | clearing | hire | parts | service | other
+  type           String
+  title          String
+  currency       String        @default("USD")
+  /// Sum of the cost items, before any discount.
+  subtotal       Decimal       @db.Decimal(19, 2)
+  /// standard | deal | promotion | discount
+  pricing        String        @default("standard")
+  /// The deal or promotion's name, or why a discount was given.
+  offerName      String?
+  promoCode      String?
+  dealId         String?
+  deal           Deal?         @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  discountAmount Decimal       @default(0) @db.Decimal(19, 2)
+  /// What the customer owes in total: subtotal - discountAmount.
+  total          Decimal       @db.Decimal(19, 2)
+  /// Money received minus refunds (voided payments excluded). Changed only in the
+  /// same database transaction as the PurchasePayment rows it sums.
+  amountPaid     Decimal       @default(0) @db.Decimal(19, 2)
+  /// active | cancelled
+  status         String        @default("active")
+  purchasedAt    DateTime      @default(now())
+  dueDate        DateTime?
+  vehicleId      String?
+  vehicle        Vehicle?      @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  /// The shipment (import/clearing) this purchase pays for.
+  caseId         String?       @db.Uuid
+  shipment       CustomerCase? @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  /// Request it came from: "hire-request" | "import-request" | "clearing-request" | "inquiry", and its id.
+  sourceType     String?
+  sourceId       String?
+  /// Seen by the customer.
+  customerNote   String?
+  /// Staff only.
+  staffNote      String?
+  createdById    String?
+  createdByName  String?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  items              PurchaseItem[]
+  payments           PurchasePayment[]
+  paymentSubmissions PaymentSubmission[]
+  mobilePayments     MobilePayment[]
+
+  @@index([customerId, purchasedAt])
+  @@index([status, purchasedAt])
+  @@index([type, purchasedAt])
+  @@index([pricing, purchasedAt])
+}
+
+/// One cost line of a purchase (the vehicle, shipping, duty, clearing fees…).
+model PurchaseItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  purchaseId  String   @db.Uuid
+  purchase    Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  /// vehicle | shipping | duty | clearing | registration | hire | insurance | parts | service | fee | other
+  category    String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal  @db.Decimal(19, 2)
+  /// quantity × unitPrice
+  amount      Decimal  @db.Decimal(19, 2)
+  sortOrder   Int      @default(0)
+
+  @@index([purchaseId, sortOrder])
+}
+
+/// Money received for a purchase (or refunded). Never deleted: a mistake is
+/// voided (with a reason), so the history stays complete.
+model PurchasePayment {
+  id               String    @id @default(uuid()) @db.Uuid
+  purchaseId       String    @db.Uuid
+  purchase         Purchase  @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  /// payment | refund
+  kind             String    @default("payment")
+  /// In the purchase's currency, always positive.
+  amount           Decimal   @db.Decimal(19, 2)
+  /// cash | bank | mobile_money | card | cheque | account_balance | other
+  method           String
+  /// Receipt number, bank or mobile-money reference.
+  reference        String?
+  /// When the money actually came in (may be earlier than when it was recorded).
+  paidAt           DateTime  @default(now())
+  note             String?
+  /// When the customer paid in another currency: what they handed over, and the rate used (units per 1 of the purchase currency).
+  receivedAmount   Decimal?  @db.Decimal(19, 2)
+  receivedCurrency String?
+  exchangeRate     Decimal?  @db.Decimal(19, 6)
+  /// staff | mobile_money | payment_proof | account_balance
+  source           String    @default("staff")
+  /// The mobile-money txRef / proof reference / ledger reference, so nothing is counted twice.
+  sourceRef        String?   @unique
+  recordedById     String?
+  recordedByName   String?
+  voidedAt         DateTime?
+  voidReason       String?
+  voidedByName     String?
+  createdAt        DateTime  @default(now())
+
+  @@index([purchaseId, paidAt])
+  @@index([paidAt])
 }

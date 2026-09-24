@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
 
 export const PAYMENT_PURPOSES = ["deposit", "hire", "import", "clearing", "other"] as const;
 
@@ -19,4 +19,9 @@ export class StartMobilePaymentDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+
+  /** Paying toward one of their purchases (instead of adding to their balance). */
+  @IsOptional()
+  @IsUUID()
+  purchaseId?: string;
 }

@@ -42,6 +42,7 @@ import { MobilePaymentsModule } from "./mobile-payments/mobile-payments.module";
 import { ShipmentsModule } from "./shipments/shipments.module";
 import { ReferralsModule } from "./referrals/referrals.module";
 import { GuidesModule } from "./guides/guides.module";
+import { PurchasesModule } from "./purchases/purchases.module";
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { GuidesModule } from "./guides/guides.module";
     ShipmentsModule,
     ReferralsModule,
     GuidesModule,
+    PurchasesModule,
   ],
   controllers: [HealthController],
   providers: [

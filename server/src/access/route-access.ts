@@ -71,6 +71,11 @@ const RULES: Rule[] = [
   [/^\/(import-requests|clearing-requests|customer-cases|shipments)(\/|$)/, (_m, w) => one("imports", w)],
   [/^\/customer-lookup$/, () => any(["imports", "finance", "customers", "sales", "hire"], false)],
   [/^\/financial\/payments(\/|$)/, (_m, w) => one("finance", w)],
+  // Purchases & balances. Viewing and recording payments: Finance. Taking money back
+  // out (voiding a payment) and exporting customers' money records: Finance manage.
+  [/^\/purchases\/export$/, () => one("finance", true, "manage")],
+  [/^\/purchases\/payments\/[^/]+\/void$/, () => one("finance", true, "manage")],
+  [/^\/purchases(\/|$)/, (_m, w) => one("finance", w)],
   [/^\/mobile-payments(\/|$)/, (_m, w) => one("finance", w)],
   [/^\/referrals(\/|$)/, (_m, w) => one("finance", w)],
   [/^\/pricing\/convert-listings$/, () => one("finance", true, "manage")],

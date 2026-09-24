@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsInt, IsOptional, IsString, IsUUID, Min } from "class-validator";
 
 export class CreateFinancialTransactionDto {
   // multipart/form-data (required alongside the proof-of-payment file
@@ -13,4 +13,9 @@ export class CreateFinancialTransactionDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  /** The purchase this payment is for (optional). */
+  @IsOptional()
+  @IsUUID()
+  purchaseId?: string;
 }

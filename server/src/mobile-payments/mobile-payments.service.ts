@@ -14,6 +14,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { mobilePaymentReceiptEmail } from "../email/email-templates";
 import { createCheckout, paychanguConfigured, verifyPayment } from "./paychangu.client";
 import { StartMobilePaymentDto } from "./mobile-payments.dto";
+import { PurchasesService } from "../purchases/purchases.service";
 
 const PURPOSE_LABEL: Record<string, string> = {
   deposit: "account deposit",
@@ -31,7 +32,8 @@ export class MobilePaymentsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationsService
+    private readonly notifications: NotificationsService,
+    private readonly purchases: PurchasesService
   ) {}
 
   get enabled(): boolean {
@@ -43,13 +45,35 @@ export class MobilePaymentsService {
     const customer = await this.prisma.customerUser.findUnique({ where: { id: customerId } });
     if (!customer) throw new NotFoundException("Customer not found.");
 
+    // Paying toward a purchase: fix the exchange rate now (the one the customer is shown),
+    // and don't take more than is owed.
+    let target: { purchaseId: string; exchangeRate: Prisma.Decimal; reference: string } | null = null;
+    let purpose: string = dto.purpose;
+    if (dto.purchaseId) {
+      const { purchase, owed } = await this.purchases.payable(customerId, dto.purchaseId);
+      const rate = await this.purchases.autoRate(purchase.currency, "MWK");
+      if (!rate) throw new ServiceUnavailableException("We can't convert to kwacha right now. Please try again later.");
+      const maxMwk = Math.ceil(owed.mul(rate).toNumber());
+      if (dto.amount > maxMwk) throw new BadRequestException(`That's more than you owe on this purchase (${mwk(maxMwk)}).`);
+      target = { purchaseId: purchase.id, exchangeRate: rate, reference: purchase.reference };
+      purpose = ["hire", "import", "clearing"].includes(purchase.type) ? purchase.type : "other";
+    }
+
     const txRef = `LYC-${Date.now().toString(36).toUpperCase()}-${randomBytes(4).toString("hex").toUpperCase()}`;
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
     const apiUrl = process.env.PUBLIC_API_URL ?? `${frontendUrl}/api`;
     const [firstName, ...rest] = customer.name.trim().split(/\s+/);
 
     const payment = await this.prisma.mobilePayment.create({
-      data: { customerId, txRef, amount: dto.amount, purpose: dto.purpose, note: dto.note ?? "" },
+      data: {
+        customerId,
+        txRef,
+        amount: dto.amount,
+        purpose,
+        note: target ? `${target.reference}${dto.note ? ` — ${dto.note}` : ""}` : dto.note ?? "",
+        purchaseId: target?.purchaseId ?? null,
+        exchangeRate: target?.exchangeRate ?? null,
+      },
     });
     try {
       const checkoutUrl = await createCheckout({
@@ -62,7 +86,7 @@ export class MobilePaymentsService {
         returnUrl: `${frontendUrl}/account/payment-return?tx_ref=${txRef}`,
         callbackUrl: `${apiUrl}/mobile-payments/webhook`,
         title: "Lycie Investments",
-        description: `${PURPOSE_LABEL[dto.purpose]}${dto.note ? ` — ${dto.note}` : ""}`.slice(0, 120),
+        description: `${PURPOSE_LABEL[purpose]}${target ? ` — ${target.reference}` : dto.note ? ` — ${dto.note}` : ""}`.slice(0, 120),
       });
       await this.prisma.mobilePayment.update({ where: { id: payment.id }, data: { checkoutUrl } });
       return { txRef, checkoutUrl };
@@ -99,6 +123,21 @@ export class MobilePaymentsService {
         data: { status: "success", confirmedAt: new Date(), providerData: verified.raw as Prisma.InputJsonValue },
       });
       if (claimed.count !== 1) return false;
+      // Toward a purchase: it pays that purchase (at the rate fixed when they started).
+      if (payment.purchaseId && payment.exchangeRate) {
+        const applied = await this.purchases.applyExternalPayment(tx, {
+          purchaseId: payment.purchaseId,
+          amount: new Prisma.Decimal(payment.amount).div(payment.exchangeRate),
+          method: "mobile_money",
+          source: "mobile_money",
+          sourceRef: payment.txRef,
+          receivedAmount: new Prisma.Decimal(payment.amount),
+          receivedCurrency: payment.currency,
+          exchangeRate: payment.exchangeRate,
+        });
+        if (applied) return true;
+        // The purchase was cancelled meanwhile: the money goes to their balance instead.
+      }
       if (payment.customerId) {
         const account = await tx.account.upsert({ where: { customerId: payment.customerId }, update: {}, create: { customerId: payment.customerId } });
         await tx.account.update({ where: { id: account.id }, data: { balance: { increment: payment.amount } } });
@@ -121,7 +160,7 @@ export class MobilePaymentsService {
         name: payment.customer.name,
         amount: mwk(payment.amount),
         reference: payment.txRef,
-        purpose: PURPOSE_LABEL[payment.purpose] ?? payment.purpose,
+        purpose: payment.purchaseId ? `payment toward ${payment.note.split(" — ")[0]}` : PURPOSE_LABEL[payment.purpose] ?? payment.purpose,
       });
       void this.notifications.notify({
         email: payment.customer.email,
@@ -152,7 +191,7 @@ export class MobilePaymentsService {
       where: { customerId },
       orderBy: { createdAt: "desc" },
       take: 50,
-      select: { txRef: true, amount: true, currency: true, purpose: true, note: true, status: true, createdAt: true, confirmedAt: true },
+      select: { txRef: true, amount: true, currency: true, purpose: true, note: true, status: true, createdAt: true, confirmedAt: true, purchaseId: true },
     });
   }
 
@@ -161,7 +200,7 @@ export class MobilePaymentsService {
       where: status ? { status } : undefined,
       orderBy: { createdAt: "desc" },
       take: 300,
-      include: { customer: { select: { id: true, name: true, email: true } } },
+      include: { customer: { select: { id: true, name: true, email: true } }, purchase: { select: { id: true, reference: true, title: true } } },
     });
   }
 

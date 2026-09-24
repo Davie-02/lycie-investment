@@ -310,9 +310,14 @@ export function adminResetPassword(token: string, newPassword: string) {
 
 /** Downloads a CSV export (spreadsheet) of requests or reviews. */
 export async function downloadExport(type: string): Promise<void> {
+  return downloadCsv(`/admin-tools/export/${encodeURIComponent(type)}`, `${type}.csv`);
+}
+
+/** Downloads any CSV the API offers (e.g. /purchases/export?…) as a file. */
+export async function downloadCsv(path: string, fallbackName = "export.csv"): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/admin-tools/export/${encodeURIComponent(type)}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       credentials: "include",
       headers: { ...authHeader("admin") },
     });
@@ -326,7 +331,7 @@ export async function downloadExport(type: string): Promise<void> {
   }
   if (!response.ok) throw new ApiError(await parseErrorMessage(response), response.status);
 
-  const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? `${type}.csv`;
+  const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? fallbackName;
   const url = URL.createObjectURL(await response.blob());
   const link = document.createElement("a");
   link.href = url;

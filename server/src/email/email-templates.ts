@@ -351,3 +351,66 @@ export function shipmentOpenedEmail(input: { name: string; title: string; tracki
     `),
   };
 }
+
+function summaryRows(rows: Array<[string, string, boolean?]>): string {
+  return `
+    <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+      ${rows
+        .map(
+          ([label, value, bold]) =>
+            `<tr><td style="padding: 6px 0; color: #667085;${bold ? " font-weight: bold;" : ""}">${escapeHtml(label)}</td><td style="padding: 6px 0; text-align: right;${bold ? " font-weight: bold;" : ""}">${escapeHtml(value)}</td></tr>`
+        )
+        .join("")}
+    </table>
+  `;
+}
+
+function accountButton(url: string, label: string): string {
+  return `<p style="margin: 20px 0;"><a href="${escapeHtml(url)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">${escapeHtml(label)}</a></p>`;
+}
+
+/** Sent when staff record something a customer bought: what it cost, any saving, and what's left to pay. */
+export function purchaseRecordedEmail(input: { name: string; reference: string; title: string; total: string; paid: string; balance: string; saving: string | null; accountUrl: string }) {
+  return {
+    subject: `Your purchase ${input.reference}: ${input.title}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Thank you for your purchase. <strong>${escapeHtml(input.title)}</strong> is now in your account, with every cost and payment.</p>
+      ${summaryRows([
+        ["Reference", input.reference],
+        ...(input.saving ? ([["You saved", input.saving]] as Array<[string, string]>) : []),
+        ["Total", input.total, true],
+        ["Paid so far", input.paid],
+        ["Balance to pay", input.balance, true],
+      ])}
+      ${accountButton(input.accountUrl, "See it in my account")}
+    `),
+  };
+}
+
+/** Receipt for a payment (or refund) recorded against a purchase. */
+export function purchasePaymentReceiptEmail(input: {
+  name: string;
+  refund: boolean;
+  amount: string;
+  method: string;
+  purchaseReference: string;
+  title: string;
+  paid: string;
+  balance: string;
+  accountUrl: string;
+}) {
+  return {
+    subject: input.refund ? `Refund on ${input.purchaseReference}: ${input.amount}` : `Payment received: ${input.amount} for ${input.purchaseReference}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>${input.refund ? "We've refunded" : "Thank you — we've received"} <strong>${escapeHtml(input.amount)}</strong> (${escapeHtml(input.method)}) for <strong>${escapeHtml(input.title)}</strong>.</p>
+      ${summaryRows([
+        ["Purchase", input.purchaseReference],
+        ["Paid so far", input.paid],
+        ["Balance to pay", input.balance, true],
+      ])}
+      ${accountButton(input.accountUrl, "See my purchases")}
+    `),
+  };
+}
