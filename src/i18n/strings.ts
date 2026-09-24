@@ -33,7 +33,6 @@ const en = {
   "footer.sales": "Vehicle Sales",
   "footer.hire": "Vehicle Hire",
   "footer.clearing": "Vehicle Clearing",
-  "footer.track": "Track my vehicle",
   "auth.signIn": "Sign in",
   "auth.signingIn": "Signing in…",
   "auth.email": "Email",
@@ -41,10 +40,6 @@ const en = {
   "auth.forgot": "Forgot your password?",
   "auth.newCustomer": "New customer?",
   "auth.createAccount": "Create an account",
-  "track.title": "Track your vehicle",
-  "track.intro": "Enter the tracking code we sent you to see where your vehicle is.",
-  "track.code": "Tracking code",
-  "track.button": "Track",
 };
 
 export type StringKey = keyof typeof en;
@@ -74,7 +69,6 @@ const ny: Record<StringKey, string> = {
   "footer.sales": "Kugulitsa Magalimoto",
   "footer.hire": "Kubwereka Magalimoto",
   "footer.clearing": "Kuchotsa Magalimoto ku Kasitomu",
-  "footer.track": "Tsatirani galimoto yanu",
   "auth.signIn": "Lowani",
   "auth.signingIn": "Tikulowetsani…",
   "auth.email": "Imelo",
@@ -82,10 +76,6 @@ const ny: Record<StringKey, string> = {
   "auth.forgot": "Mwaiwala mawu achinsinsi?",
   "auth.newCustomer": "Ndinu watsopano?",
   "auth.createAccount": "Pangani akaunti",
-  "track.title": "Tsatirani galimoto yanu",
-  "track.intro": "Lembani nambala yotsatirira yomwe tinakutumizirani kuti muwone kumene galimoto yanu yafika.",
-  "track.code": "Nambala yotsatirira",
-  "track.button": "Tsatirani",
 };
 
 export const STRINGS: Record<Lang, Record<StringKey, string>> = { en, ny };

@@ -4,8 +4,8 @@
  * Staff open a shipment for a customer (it gets a tracking code like
  * LYC-7K2M9Q, sent straight to the customer), then post progress through the stages in stages.ts — with a
  * message and optional photos (e.g. at the port). Each update is emailed and,
- * when set up, sent by WhatsApp. Customers follow it on their account page or,
- * without signing in, at /track with the code (which shows no personal details).
+ * when set up, sent by WhatsApp. Customers follow it only in their own
+ * account ("Track my vehicle"); there is no public tracking page.
  *
  * Tracking codes are private. Only people with the "tracking" privilege (the
  * Director, Managers, system administrators, or anyone they grant it to) can
@@ -21,7 +21,7 @@ import { shipmentOpenedEmail, shipmentUpdateEmail } from "../email/email-templat
 import { atLeast } from "../access/modules";
 import type { StaffActor } from "../access/current-staff.decorator";
 import { CreateShipmentDto, ShipmentProgressDto, UpdateShipmentDto } from "./shipments.dto";
-import { STAGES, stageInfo } from "./stages";
+import { stageInfo } from "./stages";
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -130,12 +130,12 @@ export class ShipmentsService {
         });
         // The customer receives their code directly; staff without the privilege never see it.
         const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-        const trackUrl = `${frontendUrl}/track?code=${encodeURIComponent(created.trackingCode!)}`;
+        const trackUrl = `${frontendUrl}/account#track`;
         void this.notifications.notify({
           email: customer.email,
           phone: customer.phone,
           ...shipmentOpenedEmail({ name: customer.name, title: created.title, trackingCode: created.trackingCode!, trackUrl }),
-          text: `We're now tracking ${created.title} for you. Your tracking code is ${created.trackingCode}. Keep it safe — we'll ask for it when you contact us. Track it: ${trackUrl}`,
+          text: `We're now tracking ${created.title} for you. Your tracking code is ${created.trackingCode}. Keep it safe — we'll ask for it when you contact us. Follow it in your account: ${trackUrl}`,
         });
         if (this.canSeeCodes(actor)) return created;
         return { ...withoutCode(created), codeSentToCustomer: true };
@@ -169,32 +169,14 @@ export class ShipmentsService {
     ]);
 
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    const trackUrl = `${frontendUrl}/track?code=${encodeURIComponent(shipment.trackingCode ?? "")}`;
+    const trackUrl = `${frontendUrl}/account#track`;
     void this.notifications.notify({
       email: shipment.customer.email,
       phone: shipment.customer.phone,
       ...shipmentUpdateEmail({ name: shipment.customer.name, title: shipment.title, stageLabel: stage.label, message: dto.message, trackUrl }),
-      text: `${shipment.title}: now "${stage.label}". ${dto.message} Track it: ${trackUrl}`,
+      text: `${shipment.title}: now "${stage.label}". ${dto.message} Follow it in your account: ${trackUrl}`,
     });
     return update;
-  }
-
-  /** Public tracking by code: progress only, never who the customer is. */
-  async track(code: string) {
-    const shipment = await this.prisma.customerCase.findUnique({
-      where: { trackingCode: code.trim().toUpperCase() },
-      include: { updates: { orderBy: { createdAt: "asc" } } },
-    });
-    if (!shipment) throw new NotFoundException("No shipment has that tracking code. Please check it and try again.");
-    return {
-      trackingCode: shipment.trackingCode,
-      title: shipment.title,
-      kind: shipment.kind,
-      stage: shipment.stage,
-      eta: shipment.eta,
-      stages: STAGES.map(({ key, label }) => ({ key, label })),
-      updates: shipment.updates.map((u) => ({ stage: u.stage, message: u.message, photos: u.photos, createdAt: u.createdAt })),
-    };
   }
 
   async summary() {

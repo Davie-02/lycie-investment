@@ -11,7 +11,7 @@
  * Open a shipment (it gets a tracking code), then post progress through the
  * stages with a message and photos. Each update is emailed to the customer
  * (and sent by WhatsApp when set up); they follow it on their account page or
- * at /track with the code.
+ * in their own account ("Track my vehicle").
  */
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { subscribeLive } from "@/services/liveContent";

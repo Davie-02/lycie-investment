@@ -89,7 +89,6 @@ export default function Footer() {
             <li><Link to="/vehicles">{t("footer.sales")}</Link></li>
             <li><Link to="/hire">{t("footer.hire")}</Link></li>
             <li><Link to="/clearing">{t("footer.clearing")}</Link></li>
-            <li><Link to="/track">{t("footer.track")}</Link></li>
           </ul>
         </div>
 

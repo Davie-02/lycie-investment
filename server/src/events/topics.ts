@@ -30,7 +30,7 @@ export function topicsForWrite(path: string): string[] {
     // Bookings change which hire vehicles (and dates) are available.
     case "hire-requests":
       return ["hire-vehicles"];
-    // Shipment progress shows on the public tracking page and customers' accounts.
+    // Shipment progress shows in customers' accounts ("Track my vehicle") and the workspace.
     case "shipments":
     case "customer-cases":
       return ["shipments"];

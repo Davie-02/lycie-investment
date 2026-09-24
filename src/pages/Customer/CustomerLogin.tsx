@@ -77,7 +77,8 @@ export default function CustomerLogin() {
     // Ask the browser to offer to save the password (see utils/credentials.ts).
     if (outcome.kind === "customer" || outcome.kind === "staff") void offerToSavePassword(values.email, values.password);
     if (outcome.kind === "customer") {
-      const destination = (location.state as { from?: string } | null)?.from ?? "/account";
+      // Shown in place of /account when signed out: keep any #section (e.g. #track from an email link).
+      const destination = (location.state as { from?: string } | null)?.from ?? `/account${location.pathname === "/account" ? location.hash : ""}`;
       navigate(destination, { replace: true });
     } else if (outcome.kind === "staff") {
       goToWorkspace();

@@ -568,9 +568,9 @@ Check field names against PayChangu's current API docs in the sandbox before goi
 
 **What:** **Imports & Clearing → Shipments**: open a shipment for a customer (gets a code like `LYC-7K2M9Q`),
 then post progress through 8 stages (purchased → shipped → port → road → border → customs → ready → delivered)
-with a message and photos. The customer is emailed (and WhatsApped) each time and sees a timeline on their
-account page; anyone with the code can follow it at `/track` (no personal details shown).
-**Where:** `server/src/shipments/`, `src/admin/pages/AdminShipments.tsx`, `src/components/common/ShipmentTimeline.tsx`, `src/pages/Track/`.
+with a message and photos. The customer is emailed (and WhatsApped) each time and follows it only under **Track my vehicle** in their
+account (there is no public tracking page; old `/track` links go to the account, via sign-in).
+**Where:** `server/src/shipments/`, `src/admin/pages/AdminShipments.tsx`, `src/components/common/ShipmentTimeline.tsx`, `src/pages/Customer/CustomerAccount.tsx` (section `#track`).
 
 ## WhatsApp notifications (added 2026-09-25)
 
@@ -589,7 +589,7 @@ business yet and lets Finance reward the referrer — credited to their account 
 
 ## Chichewa (added 2026-09-25)
 
-**What:** an EN | NY switch in the site header translates the menus, footer, sign-in and tracking pages (remembered
+**What:** an EN | NY switch in the site header translates the menus, footer and sign-in pages (remembered
 per device; sets `<html lang>`). System administrators turn the switch on or off and pick the default language in
 **System → Settings & status → Website language** (saved as site content `language`; needs System edit access). Text edited in Website content stays as written. **Have a native speaker review
 `src/i18n/strings.ts` before launch.**
@@ -600,5 +600,5 @@ per device; sets `<html lang>`). System administrators turn the switch on or off
 Every change made in the workspace is pushed to open browsers over the live-update stream (`/api/events`,
 topic names only — never data) and the page quietly refetches: website content and settings, vehicles, hire
 vehicles and booked dates, notices, testimonials, FAQs, blog, deals, reviews, prices, shipment progress
-(tracking page and customer accounts) and workspace guides. Public API answers are always revalidated
+(customers' Track my vehicle) and workspace guides. Public API answers are always revalidated
 (`Cache-Control: no-cache` + ETag), and staff dashboards drop their cached numbers on any change.

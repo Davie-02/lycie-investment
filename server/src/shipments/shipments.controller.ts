@@ -64,15 +64,3 @@ export class CustomerLookupController {
     return this.shipments.lookupCustomers(q.slice(0, 80));
   }
 }
-
-/** Public: follow a shipment with its tracking code. */
-@Controller("track")
-export class TrackingController {
-  constructor(private readonly shipments: ShipmentsService) {}
-
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @Get(":code")
-  track(@Param("code") code: string) {
-    return this.shipments.track(code.slice(0, 20));
-  }
-}

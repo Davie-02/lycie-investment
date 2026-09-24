@@ -1,7 +1,7 @@
 /**
  * A shipment's progress: the stages as a stepper (done / current / to come)
  * and every update with its message and photos. Used on the customer account
- * page, the public /track page and the admin Shipments page.
+ * page ("Track my vehicle") and the workspace's Shipments pages.
  */
 import { SHIPMENT_STAGES, stageIndex, stageLabel } from "@/utils/shipmentStages";
 import { resolveUploadUrl } from "@/utils/resolveUploadUrl";

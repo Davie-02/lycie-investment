@@ -321,7 +321,7 @@ export function shipmentUpdateEmail(input: { name: string; title: string; stageL
       <p>Hi ${escapeHtml(input.name)},</p>
       <p>There's news on <strong>${escapeHtml(input.title)}</strong> — it's now at <strong>${escapeHtml(input.stageLabel)}</strong>.</p>
       <p style="line-height: 1.55;">${escapeHtml(input.message).replace(/\n/g, "<br>")}</p>
-      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Track it</a></p>
+      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Track it in your account</a></p>
     `),
   };
 }
@@ -346,8 +346,8 @@ export function shipmentOpenedEmail(input: { name: string; title: string; tracki
       <p>Hi ${escapeHtml(input.name)},</p>
       <p>We've started tracking <strong>${escapeHtml(input.title)}</strong> for you. Your tracking code is:</p>
       <p style="font-family: 'Courier New', monospace; font-size: 22px; letter-spacing: 2px; margin: 16px 0;"><strong>${escapeHtml(input.trackingCode)}</strong></p>
-      <p>Keep it safe — our team will ask for it when you contact us about this vehicle, and you can follow its progress any time:</p>
-      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Track it</a></p>
+      <p>Keep it safe — our team will ask for it when you contact us about this vehicle. You can follow its progress any time under <strong>Track my vehicle</strong> in your account:</p>
+      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Open my account</a></p>
     `),
   };
 }

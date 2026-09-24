@@ -38,7 +38,7 @@ export default function LanguageSettings() {
   return (
     <form className="form-card" onSubmit={save}>
       <h3 style={{ marginTop: 0 }}>Website language</h3>
-      <p className="text-muted">English and Chichewa are available for the website's menus, footer, sign-in and tracking pages.</p>
+      <p className="text-muted">English and Chichewa are available for the website's menus, footer and sign-in pages.</p>
       {status === "saved" && <FormStatusBanner status="success" successMessage="Saved — the website updates straight away." errorMessage={null} />}
       {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={error} />}
       <label style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.75rem" }}>

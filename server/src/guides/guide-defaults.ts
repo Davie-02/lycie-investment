@@ -109,7 +109,7 @@ export const GUIDE_DEFAULTS: GuideDefault[] = [
     "page:/admin/shipments",
     "imports",
     "Shipments",
-    "Open a shipment for a customer when their vehicle is bought: the customer is sent a private tracking code straight away. Then post an update each time it reaches a new stage (shipped, at port, at the border, customs, ready…), with a message and photos; the customer is notified every time and can follow it on their account page or the website's tracking page.\n\nTracking codes are private. Unless you've been given access to them (the Director and Managers have it), ask the customer for their code and enter it to see their shipment.",
+    "Open a shipment for a customer when their vehicle is bought: the customer is sent a private tracking code straight away. Then post an update each time it reaches a new stage (shipped, at port, at the border, customs, ready…), with a message and photos; the customer is notified every time and can follow it under 'Track my vehicle' in their account (there is no public tracking page).\n\nTracking codes are private. Unless you've been given access to them (the Director and Managers have it), ask the customer for their code and enter it to see their shipment.",
   ),
   g(
     "page:/admin/import-requests",

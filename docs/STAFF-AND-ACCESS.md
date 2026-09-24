@@ -80,6 +80,7 @@ to in Staff & access — see the list of all shipments and their codes. Everyone
 Customer Care, Sales…) asks the customer for their code and enters it (Shipments, or Customer Care → *Look up
 a shipment*) to see that one shipment; Imports staff can then post progress. When a shipment is opened the
 code is emailed (and WhatsApped) straight to the customer, so staff without the privilege never see it.
+Customers follow their shipments only in their own account (*Track my vehicle*); there is no public tracking page.
 Look-ups are limited to 20 a minute so codes can't be guessed by trying many.
 
 ## Who can manage accounts

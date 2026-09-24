@@ -40,7 +40,6 @@ const AdminLayout = lazy(() => import("@/admin/components/AdminLayout"));
 const AdminLogin = lazy(() => import("@/admin/pages/AdminLogin"));
 const AdminForgotPassword = lazy(() => import("@/admin/pages/AdminForgotPassword"));
 const AdminResetPassword = lazy(() => import("@/admin/pages/AdminResetPassword"));
-const TrackShipment = lazy(() => import("@/pages/Track/Track"));
 const PaymentReturn = lazy(() => import("@/pages/Customer/PaymentReturn"));
 
 function CustomerAccountRoute() {
@@ -63,7 +62,8 @@ export default function AppRoutes() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/deals" element={<Deals />} />
         <Route path="/compare" element={<Compare />} />
-        <Route path="/track" element={<TrackShipment />} />
+        {/* Tracking is only in customers' own accounts; old /track links go there (sign-in first if needed). */}
+        <Route path="/track" element={<Navigate to="/account#track" replace />} />
         <Route path="/account/payment-return" element={<PaymentReturn />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/reviews" element={<Reviews />} />

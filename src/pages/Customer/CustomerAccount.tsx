@@ -6,7 +6,7 @@
  * used.
  */
 import { useEffect, useState, type FormEvent, type ChangeEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
 import EmailField from "@/components/forms/EmailField";
@@ -154,6 +154,12 @@ export default function CustomerAccount() {
       )
       .finally(() => setIsLoading(false));
   }, []);
+
+  // Links from emails ("Track it in your account") land on /account#track: scroll there once the section exists.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (!isLoading && hash === "#track") document.getElementById("track")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [isLoading, hash]);
 
   // Shipment and booking updates from staff appear here as soon as they're posted.
   useEffect(
@@ -495,10 +501,10 @@ export default function CustomerAccount() {
             <ReferralCard />
             <VehicleAlerts emailConfirmed={Boolean(currentUser?.emailVerifiedAt)} />
 
-            <div className="customer-account__history">
-              <h2>Vehicle updates</h2>
+            <div className="customer-account__history" id="track">
+              <h2>Track my vehicle</h2>
               {cases.length === 0 ? (
-                <p className="text-muted">No vehicle updates have been added to your account.</p>
+                <p className="text-muted">Nothing to track yet. When we import or clear a vehicle for you, its progress appears here.</p>
               ) : (
                 <div className="customer-cases">
                   {cases.map((customerCase) => (
@@ -518,8 +524,8 @@ export default function CustomerAccount() {
                       {customerCase.trackingCode ? (
                         <>
                           <p className="text-muted">
-                            Tracking code <span className="mono">{customerCase.trackingCode}</span> ·{" "}
-                            <Link to={`/track?code=${customerCase.trackingCode}`}>share tracking page</Link>
+                            Your tracking code: <span className="mono">{customerCase.trackingCode}</span> — keep it private; our team will ask
+                            for it when you contact us about this vehicle.
                           </p>
                           <ShipmentTimeline
                             stage={customerCase.stage ?? null}
