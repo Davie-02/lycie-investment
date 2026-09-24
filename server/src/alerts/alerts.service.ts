@@ -149,7 +149,7 @@ export class AlertsService {
             price: priceText(v.price, v.currency, null),
             url: `${this.frontendUrl()}/vehicles/${encodeURIComponent(v.slug)}`,
           })),
-          manageUrl: `${this.frontendUrl()}/account#alerts`,
+          manageUrl: `${this.frontendUrl()}/account/saved`,
         }),
       });
       if (result.ok) sent += 1;
@@ -191,7 +191,7 @@ export class AlertsService {
             url: `${this.frontendUrl()}/vehicles/${encodeURIComponent(v.slug)}`,
           },
           oldPrice: priceText(row.notifiedPrice, v.currency, null),
-          manageUrl: `${this.frontendUrl()}/account`,
+          manageUrl: `${this.frontendUrl()}/account/saved`,
         }),
       });
       if (result.ok) sent += 1;

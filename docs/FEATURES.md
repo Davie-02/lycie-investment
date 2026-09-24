@@ -570,7 +570,7 @@ Check field names against PayChangu's current API docs in the sandbox before goi
 then post progress through 8 stages (purchased → shipped → port → road → border → customs → ready → delivered)
 with a message and photos. The customer is emailed (and WhatsApped) each time and follows it only under **Track my vehicle** in their
 account (there is no public tracking page; old `/track` links go to the account, via sign-in).
-**Where:** `server/src/shipments/`, `src/admin/pages/AdminShipments.tsx`, `src/components/common/ShipmentTimeline.tsx`, `src/pages/Customer/CustomerAccount.tsx` (section `#track`).
+**Where:** `server/src/shipments/`, `src/admin/pages/AdminShipments.tsx`, `src/components/common/ShipmentTimeline.tsx`, `src/pages/Customer/portal/TrackVehicle.tsx` (`/account/track`).
 
 ## WhatsApp notifications (added 2026-09-25)
 
@@ -602,3 +602,25 @@ topic names only — never data) and the page quietly refetches: website content
 vehicles and booked dates, notices, testimonials, FAQs, blog, deals, reviews, prices, shipment progress
 (customers' Track my vehicle) and workspace guides. Public API answers are always revalidated
 (`Cache-Control: no-cache` + ETag), and staff dashboards drop their cached numbers on any change.
+
+## Customer portal (redesigned 2026-09-26)
+
+**What:** signed-in customers get a portal at `/account` with a section menu (a sidebar on computers, a
+swipeable row of tabs on phones) and live badges:
+
+| Section | Address | What's there |
+| --- | --- | --- |
+| Overview | `/account` | Balance, vehicles on their way, open requests, saved vehicles, unread messages; latest shipment stages; recent requests; shortcuts |
+| Track my vehicle | `/account/track` | Every import/clearing with stages, updates, photos and the private tracking code (the only place customers can track) |
+| My requests | `/account/requests` | Inquiries, hire bookings, imports, clearing, contact messages with status; filter by type; cancel a pending booking |
+| Payments | `/account/payments` | Balance, mobile money, proof-of-payment upload, transaction history, submitted proofs |
+| Saved & alerts | `/account/saved` | Shortlist (compare up to 3, price-drop emails) and vehicle alerts |
+| Messages | `/account/messages` | Messages from staff |
+| Invite friends | `/account/invite` | Referral link and rewards |
+| Profile & security | `/account/settings` | Name, email, phone (WhatsApp), password, sign out everywhere |
+
+Signed out, any of these shows the sign-in form and then continues to the same section. Old links
+(`/track`, `/account#track`) go to Track my vehicle; emails link to the right section.
+
+**Where:** `src/pages/Customer/portal/` — `PortalLayout.tsx` (menu, greeting, email-confirmation banner),
+`PortalContext.tsx` (data loaded once, live updates), one file per section, `portal.css`.

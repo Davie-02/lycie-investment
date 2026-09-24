@@ -32,7 +32,16 @@ const BlogList = lazy(() => import("@/pages/Blog/BlogList"));
 const BlogPost = lazy(() => import("@/pages/Blog/BlogPost"));
 const CustomerLogin = lazy(() => import("@/pages/Customer/CustomerLogin"));
 const CustomerRegister = lazy(() => import("@/pages/Customer/CustomerRegister"));
-const CustomerAccount = lazy(() => import("@/pages/Customer/CustomerAccount"));
+// The customer portal: a layout with a section menu, and one page per section.
+const PortalLayout = lazy(() => import("@/pages/Customer/portal/PortalLayout"));
+const PortalOverview = lazy(() => import("@/pages/Customer/portal/Overview"));
+const PortalTrack = lazy(() => import("@/pages/Customer/portal/TrackVehicle"));
+const PortalRequests = lazy(() => import("@/pages/Customer/portal/Requests"));
+const PortalPayments = lazy(() => import("@/pages/Customer/portal/Payments"));
+const PortalSaved = lazy(() => import("@/pages/Customer/portal/Saved"));
+const PortalMessages = lazy(() => import("@/pages/Customer/portal/Messages"));
+const PortalInvite = lazy(() => import("@/pages/Customer/portal/Invite"));
+const PortalSettings = lazy(() => import("@/pages/Customer/portal/Settings"));
 const ForgotPassword = lazy(() => import("@/pages/Customer/ForgotPassword"));
 const ResetPassword = lazy(() => import("@/pages/Customer/ResetPassword"));
 const VerifyEmail = lazy(() => import("@/pages/Customer/VerifyEmail"));
@@ -44,7 +53,8 @@ const PaymentReturn = lazy(() => import("@/pages/Customer/PaymentReturn"));
 
 function CustomerAccountRoute() {
   const { isAuthenticated } = useCustomerAuth();
-  return isAuthenticated ? <CustomerAccount /> : <CustomerLogin />;
+  // Signed out: the sign-in form in place (the address is kept, so they return to the same section).
+  return isAuthenticated ? <PortalLayout /> : <CustomerLogin />;
 }
 
 export default function AppRoutes() {
@@ -63,7 +73,7 @@ export default function AppRoutes() {
         <Route path="/deals" element={<Deals />} />
         <Route path="/compare" element={<Compare />} />
         {/* Tracking is only in customers' own accounts; old /track links go there (sign-in first if needed). */}
-        <Route path="/track" element={<Navigate to="/account#track" replace />} />
+        <Route path="/track" element={<Navigate to="/account/track" replace />} />
         <Route path="/account/payment-return" element={<PaymentReturn />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/reviews" element={<Reviews />} />
@@ -74,7 +84,16 @@ export default function AppRoutes() {
         <Route path="/account/forgot-password" element={<ForgotPassword />} />
         <Route path="/account/reset-password" element={<ResetPassword />} />
         <Route path="/account/verify-email" element={<VerifyEmail />} />
-        <Route path="/account" element={<CustomerAccountRoute />} />
+        <Route path="/account" element={<CustomerAccountRoute />}>
+          <Route index element={<PortalOverview />} />
+          <Route path="track" element={<PortalTrack />} />
+          <Route path="requests" element={<PortalRequests />} />
+          <Route path="payments" element={<PortalPayments />} />
+          <Route path="saved" element={<PortalSaved />} />
+          <Route path="messages" element={<PortalMessages />} />
+          <Route path="invite" element={<PortalInvite />} />
+          <Route path="settings" element={<PortalSettings />} />
+        </Route>
         </Route>
 
       {/* Admin routes are wrapped in their own auth provider and layout —

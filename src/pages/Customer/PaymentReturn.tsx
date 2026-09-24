@@ -53,8 +53,8 @@ export default function PaymentReturn() {
             The payment didn't go through, and nothing was taken from your wallet. You can try again from your account.
           </p>
         )}
-        <Link className="btn btn-secondary" to="/account">
-          Back to my account
+        <Link className="btn btn-secondary" to="/account/payments">
+          Back to my payments
         </Link>
       </div>
     </section>

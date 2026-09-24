@@ -130,7 +130,7 @@ export class ShipmentsService {
         });
         // The customer receives their code directly; staff without the privilege never see it.
         const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-        const trackUrl = `${frontendUrl}/account#track`;
+        const trackUrl = `${frontendUrl}/account/track`;
         void this.notifications.notify({
           email: customer.email,
           phone: customer.phone,
@@ -169,7 +169,7 @@ export class ShipmentsService {
     ]);
 
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    const trackUrl = `${frontendUrl}/account#track`;
+    const trackUrl = `${frontendUrl}/account/track`;
     void this.notifications.notify({
       email: shipment.customer.email,
       phone: shipment.customer.phone,

@@ -102,7 +102,7 @@ export class ContactAdminService {
 
     // A heads-up email is a courtesy — the message is delivered either way.
     const frontend = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    const notice = profileMessageNotificationEmail({ customerName: record.fullName, subject, accountUrl: `${frontend}/account` });
+    const notice = profileMessageNotificationEmail({ customerName: record.fullName, subject, accountUrl: `${frontend}/account/messages` });
     void this.email.send({ to: record.email, ...notice }).catch((err) => this.logger.warn(`Notification email failed: ${err}`));
 
     await this.log(type, id, adminId, "message", `Subject: ${subject}`);

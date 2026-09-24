@@ -5,7 +5,8 @@
 import { useEffect, useState } from "react";
 import { getMyReferral, type MyReferral } from "@/services/customer.service";
 
-export default function ReferralCard() {
+/** `withHeading={false}` when the page already titles and explains it (the portal's Invite friends section). */
+export default function ReferralCard({ withHeading = true }: { withHeading?: boolean }) {
   const [referral, setReferral] = useState<MyReferral | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -19,10 +20,14 @@ export default function ReferralCard() {
 
   return (
     <div className="customer-account__history">
-      <h2>Invite friends</h2>
-      <p className="text-muted">
-        Share your link. When a friend who joins through it buys, imports or hires with us, we'll add a thank-you reward to your account.
-      </p>
+      {withHeading && (
+        <>
+          <h2>Invite friends</h2>
+          <p className="text-muted">
+            Share your link. When a friend who joins through it buys, imports or hires with us, we'll add a thank-you reward to your account.
+          </p>
+        </>
+      )}
       <div className="form-card customer-account__form">
         <p className="mono" style={{ overflowWrap: "anywhere", margin: 0 }}>{referral.link}</p>
         <div className="form-actions">
