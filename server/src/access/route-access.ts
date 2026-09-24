@@ -76,6 +76,8 @@ const RULES: Rule[] = [
   [/^\/(contact-messages|reviews)(\/|$)/, (_m, w) => one("customers", w)],
   [/^\/notifications\/status$/, () => any(["customers", "system"], false)],
   [/^\/site-content\/apply-profile$/, () => one("marketing", true, "manage")],
+  // Whether visitors may switch language is a system setting, not a content edit.
+  [/^\/site-content\/language$/, (_m, w) => one("system", w)],
   [/^\/(site-content|notices|testimonials|faq|blog-posts|social)(\/|$)/, (_m, w) => one("marketing", w)],
   [/^\/lycie\/write$/, (_m, w) => any(["marketing", "sales", "hire", "ai"], w)],
   [/^\/lycie(\/|$)/, (_m, w) => one("ai", w)],

@@ -54,6 +54,13 @@ export interface ThemeContent {
   followDeviceDarkMode: boolean;
 }
 
+/** The English / Chichewa switch in the site header (set in the workspace: System → Site settings). */
+export interface LanguageContent {
+  /** Show the EN | NY switch so visitors can choose. When off, everyone sees the default language. */
+  allowVisitorSwitch: boolean;
+  defaultLanguage: "en" | "ny";
+}
+
 /** Footer texts. The year and company name in the copyright line are added automatically. */
 export interface FooterContent {
   tagline: string;
@@ -252,6 +259,7 @@ export interface SiteContent {
   contact: ContactContent;
   footer: FooterContent;
   theme: ThemeContent;
+  language: LanguageContent;
   importCalculator: ImportCalculatorContent;
   pageHeadings: PageHeadingsContent;
   homeSections: HomeSectionsContent;

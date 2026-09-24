@@ -1,11 +1,11 @@
 /**
- * The website's sign-in page — for customers AND staff. The server works out
- * which account the email and password open:
+ * The website's sign-in page — one form for customers AND staff (it says
+ * nothing about staff; the server works out which account the email and
+ * password open):
  *  - customers go to their account page;
  *  - staff go to the workspace (/admin), after choosing their own password on
  *    their first sign-in (invitation) and entering their authenticator code if
  *    two-step is on.
- * System administrators are pointed to the separate administrator portal.
  * Also what /account shows to visitors who aren't signed in.
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
@@ -236,9 +236,6 @@ export default function CustomerLogin() {
             </p>
             <p className="text-muted customer-auth__switch">
               {t("auth.newCustomer")} <Link to="/account/register">{t("auth.createAccount")}</Link>
-            </p>
-            <p className="text-muted customer-auth__switch" style={{ fontSize: "var(--fs-xs)" }}>
-              {t("auth.staffNote")} <Link to="/admin/login">System administrators</Link>
             </p>
           </form>
         )}

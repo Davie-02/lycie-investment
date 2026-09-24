@@ -46,6 +46,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     deliveryUsd: 250,
   },
   theme: { defaultTheme: "classic", allowVisitorSwitch: true, followDeviceDarkMode: false },
+  language: { allowVisitorSwitch: true, defaultLanguage: "en" },
   footer: {
     tagline: "Vehicle imports, dealership, hire, transport and clearing services.",
     rightsText: "All rights reserved.",
@@ -59,7 +60,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       heading: "What our customers say",
       body: "Honest feedback from people who've bought, hired, imported or cleared a vehicle with us.",
     },
-    login: { heading: "Sign in", body: "Customers: see your requests, vehicles and payments. Staff: open your workspace." },
+    login: { heading: "Sign in", body: "Sign in to your Lycie Investments account." },
     register: { heading: "Open an account", body: "Create a secure customer account to keep track of your transactions." },
   },
   homeSections: {

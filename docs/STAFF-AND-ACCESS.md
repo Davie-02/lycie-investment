@@ -94,7 +94,7 @@ valid 10 minutes.
 - Optional network lock: `SYSTEM_ADMIN_ALLOWED_IPS="41.70.1.2, 102.68.3.4"`.
 - Every sign-in emails an alert; every change is in Activity & undo.
 - The last active administrator can't be demoted, deactivated or deleted.
-- **System → System status** shows these rules and which services are connected.
+- **System → Settings & status** shows these rules, which services are connected, and the website language setting.
 
 ## HR: leave
 

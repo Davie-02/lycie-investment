@@ -17,8 +17,8 @@ import { LanguageProvider } from "@/i18n/LanguageContext";
 export default function App() {
   return (
     <BrowserRouter>
-      <LanguageProvider>
       <SiteContentProvider>
+        <LanguageProvider>
         <PricingProvider>
         <ThemeProvider>
         <NoticesProvider>
@@ -32,8 +32,8 @@ export default function App() {
         </NoticesProvider>
         </ThemeProvider>
         </PricingProvider>
+        </LanguageProvider>
       </SiteContentProvider>
-      </LanguageProvider>
     </BrowserRouter>
   );
 }

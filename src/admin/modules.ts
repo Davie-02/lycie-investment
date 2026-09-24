@@ -202,7 +202,7 @@ export const MODULES: ModuleDef[] = [
     description: "Access, security and the activity log",
     pages: [
       page("/admin/users", "Staff & access", L.people, { description: "Who can use which module", level: "manage" }),
-      page("/admin/system", "System status", L.systemStatus, { description: "Security rules and connected services" }),
+      page("/admin/system", "Settings & status", L.systemStatus, { description: "Website language, security rules and connected services" }),
     ],
   },
 ];

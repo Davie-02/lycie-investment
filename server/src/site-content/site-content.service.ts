@@ -4,6 +4,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { UpdateSiteContentDto } from "./dto/update-site-content.dto";
 import { COMPANY_PROFILE } from "./company-profile";
 
+/** The site's language setting: may visitors switch between English and Chichewa, and which is the default. */
+export function languageSetting(raw: Record<string, unknown>): { allowVisitorSwitch: boolean; defaultLanguage: "en" | "ny" } {
+  return { allowVisitorSwitch: raw.allowVisitorSwitch !== false, defaultLanguage: raw.defaultLanguage === "ny" ? "ny" : "en" };
+}
+
 @Injectable()
 export class SiteContentService implements OnModuleInit {
   private readonly logger = new Logger(SiteContentService.name);
@@ -53,7 +58,8 @@ export class SiteContentService implements OnModuleInit {
     // Prisma's Json column expects Prisma.InputJsonValue, not the DTO's
     // Record<string, unknown> — class-validator's @IsObject() already
     // confirmed this is a plain object at runtime, so the cast is safe.
-    const value = dto.value as Prisma.InputJsonValue;
+    // The language setting is a switch, so only its two known fields are kept.
+    const value = (key === "language" ? languageSetting(dto.value) : dto.value) as Prisma.InputJsonValue;
     return this.prisma.siteContent.upsert({
       where: { key },
       update: { value },

@@ -4,6 +4,8 @@
  */
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { adminApi } from "../adminApi";
+import LanguageSettings from "../components/LanguageSettings";
+import "@/components/forms/FormField.css";
 import "../components/AdminLayout.css";
 
 interface Status {
@@ -48,10 +50,17 @@ export default function AdminSystemStatus() {
     <div>
       <div className="ws-hero">
         <div>
-          <h1>System status</h1>
-          <p>Security rules in force and connected services. Settings are changed on the server (Render → Environment).</p>
+          <h1>Settings &amp; status</h1>
+          <p>Site settings, the security rules in force, and connected services.</p>
         </div>
       </div>
+
+      <section className="ws-section">
+        <div className="ws-section__head">
+          <h2>Site settings</h2>
+        </div>
+        <LanguageSettings />
+      </section>
       {isLoading && <p className="text-muted">Loading…</p>}
       {error && <p className="text-muted" role="alert">{error}</p>}
       {data && (
@@ -60,6 +69,7 @@ export default function AdminSystemStatus() {
             <div className="ws-section__head">
               <h2>Security</h2>
             </div>
+            <p className="text-muted">These are set on the server (Render → Environment).</p>
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <tbody>

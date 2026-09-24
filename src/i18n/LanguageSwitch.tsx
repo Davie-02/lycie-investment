@@ -1,8 +1,9 @@
-/** "EN | NY" switch in the site header. */
+/** "EN | NY" switch in the site header. Hidden when an administrator has turned language switching off. */
 import { useLanguage } from "./LanguageContext";
 
 export default function LanguageSwitch({ className = "" }: { className?: string }) {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, canSwitch } = useLanguage();
+  if (!canSwitch) return null;
   return (
     <div className={`language-switch ${className}`} role="group" aria-label="Language / Chiyankhulo">
       {(["en", "ny"] as const).map((code) => (

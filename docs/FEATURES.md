@@ -590,5 +590,6 @@ business yet and lets Finance reward the referrer — credited to their account 
 ## Chichewa (added 2026-09-25)
 
 **What:** an EN | NY switch in the site header translates the menus, footer, sign-in and tracking pages (remembered
-per device; sets `<html lang>`). Text edited in Website content stays as written. **Have a native speaker review
+per device; sets `<html lang>`). System administrators turn the switch on or off and pick the default language in
+**System → Settings & status → Website language** (saved as site content `language`; needs System edit access). Text edited in Website content stays as written. **Have a native speaker review
 `src/i18n/strings.ts` before launch.**
