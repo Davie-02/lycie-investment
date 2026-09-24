@@ -7,7 +7,11 @@
  * last numbers instantly instead of waiting.
  */
 import { useEffect, useState } from "react";
-import { adminApi, DATA_CHANGED_EVENT } from "../adminApi";
+import { adminApi, ADMIN_WRITE_EVENT, DATA_CHANGED_EVENT } from "../adminApi";
+import { subscribeLive } from "@/services/liveContent";
+
+/** Changes (by anyone) that move dashboard numbers. */
+const LIVE_TOPICS = ["vehicles", "hire-vehicles", "reviews", "deals", "faq", "testimonials", "blog-posts", "notices", "shipments", "pricing"];
 import type { ModuleKey } from "../access";
 
 export interface Stat {
@@ -57,10 +61,14 @@ export function useWorkspaceSummary(): { data: WorkspaceSummary | null; error: b
     const refresh = () => void load(true).catch(() => undefined);
     const onFocus = () => document.visibilityState === "visible" && void load().catch(() => undefined);
     window.addEventListener(DATA_CHANGED_EVENT, refresh);
+    window.addEventListener(ADMIN_WRITE_EVENT, refresh);
     document.addEventListener("visibilitychange", onFocus);
+    const stopLive = subscribeLive(LIVE_TOPICS, refresh);
     return () => {
+      stopLive();
       listeners.delete(setData);
       window.removeEventListener(DATA_CHANGED_EVENT, refresh);
+      window.removeEventListener(ADMIN_WRITE_EVENT, refresh);
       document.removeEventListener("visibilitychange", onFocus);
     };
   }, []);

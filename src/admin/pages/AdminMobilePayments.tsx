@@ -61,8 +61,8 @@ export default function AdminMobilePayments() {
 
       {summary && !summary.enabled && (
         <p className="form-status form-status--info">
-          Mobile money isn't switched on yet. Create a PayChangu business account, then set PAYCHANGU_SECRET_KEY (and optionally
-          PAYCHANGU_WEBHOOK_SECRET) on the server. The "Pay with mobile money" option then appears on customers' account pages.
+          Mobile money isn't switched on yet. A system administrator can connect it (System → Settings & status); the "Pay with mobile
+          money" option then appears on customers' account pages.
         </p>
       )}
       {summary && (

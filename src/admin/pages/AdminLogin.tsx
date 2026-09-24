@@ -141,8 +141,7 @@ export default function AdminLogin() {
         </form>
       ) : (
         <form className="form-card admin-login__card" onSubmit={handlePasswordStep} noValidate name="admin-login">
-          <h1 className="admin-login__title">System administrator portal</h1>
-          <p className="text-muted admin-login__subtitle">For Lycie Investments system administrators only. Every sign-in is logged and emailed to the account owner.</p>
+          <h1 className="admin-login__title">Sign in</h1>
 
           {reasonMessage && !loginError && <FormStatusBanner status="error" successMessage="" errorMessage={reasonMessage} />}
           {loginError && <FormStatusBanner status="error" successMessage="" errorMessage={loginError} />}
@@ -170,9 +169,7 @@ export default function AdminLogin() {
           <p className="text-muted admin-login__switch">
             <Link to="/admin/forgot-password">Forgot your password?</Link>
           </p>
-          <p className="text-muted admin-login__switch">
-            Staff member? <Link to="/account/login">Sign in on the main sign-in page</Link>.
-          </p>
+
         </form>
       )}
     </div>

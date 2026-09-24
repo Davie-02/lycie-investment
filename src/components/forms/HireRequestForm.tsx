@@ -12,6 +12,7 @@ import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitHireRequest } from "@/services/inquiries.service";
 import { calculateHireCost } from "@/utils/hirePricing";
 import { apiGet } from "@/services/http";
+import { subscribeLive } from "@/services/liveContent";
 
 import type { HireRequest } from "@/types/requests";
 import type { HireVehicle } from "@/types/vehicle";
@@ -95,10 +96,14 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
   const [booked, setBooked] = useState<BookedRange[]>([]);
 
   // Dates already taken, so customers can pick free ones instead of being turned down later.
+  // Refreshed the moment staff confirm or cancel a booking.
   useEffect(() => {
-    apiGet<{ booked: BookedRange[] }>(`/hire-requests/availability/${encodeURIComponent(vehicle.id)}`)
-      .then((result) => setBooked(result.booked))
-      .catch(() => setBooked([])); // unknown availability: the server still checks on submit
+    const load = () =>
+      apiGet<{ booked: BookedRange[] }>(`/hire-requests/availability/${encodeURIComponent(vehicle.id)}`)
+        .then((result) => setBooked(result.booked))
+        .catch(() => setBooked([])); // unknown availability: the server still checks on submit
+    void load();
+    return subscribeLive(["hire-vehicles"], () => void load());
   }, [vehicle.id]);
 
   const clash = findClash(values.pickupDate, values.returnDate, booked);

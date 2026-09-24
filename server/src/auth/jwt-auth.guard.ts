@@ -46,7 +46,7 @@ export class JwtAuthGuard implements CanActivate {
 
     if (payload.role === "OWNER") {
       if (!ownerIpAllowed(request.ip)) {
-        throw new ForbiddenException("System administrator accounts can't be used from this network.");
+        throw new UnauthorizedException("Please sign in again.");
       }
       if (ownerTwoFactorRequired() && staff && !staff.totpEnabled && !allowedBeforeTwoFactorSetup(request.path)) {
         throw new ForbiddenException({

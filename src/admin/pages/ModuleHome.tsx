@@ -9,6 +9,7 @@ import { MODULES, prefetch } from "../modules";
 import { Icon } from "../components/AdminLayout";
 import { StatTile } from "./AdminDashboard";
 import { LEVEL_LABELS } from "../access";
+import PageGuide from "../components/PageGuide";
 
 export default function ModuleHome() {
   const { module: key } = useParams();
@@ -33,6 +34,8 @@ export default function ModuleHome() {
           Your access: {LEVEL_LABELS[level]}
         </span>
       </div>
+
+      <PageGuide guideKey={`module:${module.key}`} />
 
       <section className="ws-section">
         <div className="ws-stats">

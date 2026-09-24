@@ -374,8 +374,7 @@ function StaffForm({ user, catalog, isSystemAdmin, selfId, withStepUp, onSaved, 
 
       {role === "OWNER" && (
         <p className="form-status form-status--info">
-          System administrators can do everything, including managing other administrators. They sign in only through the secure administrator
-          portal and must use two-step verification.
+          System administrators can do everything, including managing other administrators. Their invitation explains how they sign in.
         </p>
       )}
 

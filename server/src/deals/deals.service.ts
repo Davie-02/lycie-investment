@@ -100,7 +100,7 @@ export class DealsService {
 
   /** Searches the web for current deals and saves new ones for review. Returns what was found. */
   async scan(): Promise<{ found: number; added: number; mode: ResearchMode }> {
-    if (!this.research.available) throw new BadRequestException("The AI search isn't set up yet (GEMINI_API_KEY is missing).");
+    if (!this.research.available) throw new BadRequestException("The AI search isn't connected yet. A system administrator can see what's needed under System → Settings & status.");
     this.allowScan();
 
     let reply;

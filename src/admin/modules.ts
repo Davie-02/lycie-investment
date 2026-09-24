@@ -87,6 +87,7 @@ const L = {
   leave: () => import("./pages/AdminLeave"),
   activity: () => import("./pages/AdminActivity"),
   systemStatus: () => import("./pages/AdminSystemStatus"),
+  guides: () => import("./pages/AdminGuides"),
   security: () => import("./pages/AdminSecurity"),
   myAccount: () => import("./pages/MyAccount"),
   directory: () => import("./pages/StaffDirectory"),
@@ -203,6 +204,7 @@ export const MODULES: ModuleDef[] = [
     pages: [
       page("/admin/users", "Staff & access", L.people, { description: "Who can use which module", level: "manage" }),
       page("/admin/system", "Settings & status", L.systemStatus, { description: "Website language, security rules and connected services" }),
+      page("/admin/guides", "Guides", L.guides, { description: "Write the page descriptions staff see, and choose who sees them", systemAdminOnly: true }),
     ],
   },
 ];

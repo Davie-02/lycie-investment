@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";
 import { adminSignInAlertEmail, passwordChangedEmail, passwordResetEmail } from "../email/email-templates";
 import { SessionService, type IssuedSession, type SessionRole } from "./session.service";
-import { CLEARED_LOCK_STATE, isLocked, lockedMessage, stateAfterFailure } from "../security/lockout";
+import { CLEARED_LOCK_STATE, isLocked, lockedMessage, recordUnknownEmailFailure, stateAfterFailure, unknownEmailLockedUntil } from "../security/lockout";
 import { normalizeEmail } from "../security/email-check";
 import { describeDevice } from "../security/device";
 import { effectiveAccess, type AccessMap } from "../access/modules";
@@ -138,17 +138,23 @@ export class AuthService {
    * lockout notice after five wrong passwords).
    */
   async login(email: string, password: string, _remember: boolean, context: SignInContext = {}): Promise<LoginResult> {
+    const phantomLock = unknownEmailLockedUntil(email);
+    if (phantomLock) throw new UnauthorizedException(lockedMessage(phantomLock));
     const { admin, matches, locked } = await this.checkStaffPassword(email, password);
     if (admin && locked) throw new UnauthorizedException(lockedMessage(admin.lockedUntil!));
     if (!admin || !matches) {
       if (admin) await this.recordFailure(admin);
+      else {
+        const lock = recordUnknownEmailFailure(email);
+        if (lock) throw new UnauthorizedException(lockedMessage(lock));
+      }
       throw new UnauthorizedException("Invalid email or password.");
     }
-    if (admin.role !== "OWNER") {
-      throw new UnauthorizedException("Staff accounts sign in on the website's main sign-in page, not the system administrator portal.");
-    }
-    if (!ownerIpAllowed(context.ip)) {
-      throw new UnauthorizedException("System administrator accounts can't be used from this network.");
+    // Staff (who use the website sign-in) and administrators outside the allowed
+    // networks get exactly the same answer as a wrong password: this page never
+    // confirms who has what kind of account, or that network rules exist.
+    if (admin.role !== "OWNER" || !ownerIpAllowed(context.ip)) {
+      throw new UnauthorizedException("Invalid email or password.");
     }
     return this.continueSignIn(admin, false, context);
   }

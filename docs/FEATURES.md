@@ -593,3 +593,12 @@ business yet and lets Finance reward the referrer — credited to their account 
 per device; sets `<html lang>`). System administrators turn the switch on or off and pick the default language in
 **System → Settings & status → Website language** (saved as site content `language`; needs System edit access). Text edited in Website content stays as written. **Have a native speaker review
 `src/i18n/strings.ts` before launch.**
+
+
+## Changes reach the website immediately (updated 2026-09-26)
+
+Every change made in the workspace is pushed to open browsers over the live-update stream (`/api/events`,
+topic names only — never data) and the page quietly refetches: website content and settings, vehicles, hire
+vehicles and booked dates, notices, testimonials, FAQs, blog, deals, reviews, prices, shipment progress
+(tracking page and customer accounts) and workspace guides. Public API answers are always revalidated
+(`Cache-Control: no-cache` + ETag), and staff dashboards drop their cached numbers on any change.

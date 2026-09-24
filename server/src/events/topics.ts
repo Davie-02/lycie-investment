@@ -27,9 +27,13 @@ export function topicsForWrite(path: string): string[] {
       return ["deals"];
     case "pricing":
       return ["pricing", "vehicles", "hire-vehicles"];
-    // Bookings change which hire vehicles are available.
+    // Bookings change which hire vehicles (and dates) are available.
     case "hire-requests":
       return ["hire-vehicles"];
+    // Shipment progress shows on the public tracking page and customers' accounts.
+    case "shipments":
+    case "customer-cases":
+      return ["shipments"];
     // /content-admin/<type>/... — the type IS the topic.
     case "content-admin":
       return second ? [second] : [];

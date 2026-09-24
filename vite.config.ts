@@ -51,6 +51,10 @@ export default defineConfig(({ mode }) => {
         // React and the router change rarely, so they live in their own file: returning visitors keep
         // it cached across deploys and only re-download the (much smaller) app code.
         manualChunks: { "vendor-react": ["react", "react-dom", "react-router-dom"] },
+        // File names carry only a content hash, so the public site's files don't list the names of
+        // the workspace's pages (e.g. which admin screens exist).
+        chunkFileNames: "assets/[hash].js",
+        assetFileNames: "assets/[hash][extname]",
       },
     },
   },

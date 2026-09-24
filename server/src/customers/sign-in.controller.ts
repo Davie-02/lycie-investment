@@ -7,8 +7,9 @@
  * goes: staff to the workspace (/admin) with a staff session, customers to
  * their account page. If both accounts share the password, staff wins.
  *
- * System administrator (Owner) accounts are refused here — they may only sign
- * in through the hardened admin portal (/admin/login).
+ * System administrator (Owner) accounts are refused here with the ordinary
+ * "Invalid email or password" — they may only sign in through their own
+ * portal, and nothing on this page hints that it exists.
  */
 import { Body, Controller, HttpCode, Post, Req, Res, UnauthorizedException } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
@@ -17,7 +18,7 @@ import { AuthService } from "../auth/auth.service";
 import { signInContext } from "../auth/auth.controller";
 import { SessionService } from "../auth/session.service";
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE, clearSessionCookie } from "../auth/session-cookie";
-import { lockedMessage } from "../security/lockout";
+import { lockedMessage, recordUnknownEmailFailure, unknownEmailLockedUntil } from "../security/lockout";
 import { CustomersService } from "./customers.service";
 import { LoginCustomerDto } from "./dto/login-customer.dto";
 
@@ -34,15 +35,16 @@ export class SignInController {
   @HttpCode(200)
   async signIn(@Body() dto: LoginCustomerDto, @Req() request: Request, @Res({ passthrough: true }) response: Response) {
     const remember = dto.remember === true;
+    const phantomLock = unknownEmailLockedUntil(dto.email);
+    if (phantomLock) throw new UnauthorizedException(lockedMessage(phantomLock));
     const [staff, customer] = await Promise.all([
       this.auth.checkStaffPassword(dto.email, dto.password),
       this.customers.checkPassword(dto.email, dto.password),
     ]);
 
     if (staff.matches && staff.admin) {
-      if (staff.admin.role === "OWNER") {
-        throw new UnauthorizedException("This is a system administrator account. Please sign in through the administrator portal.");
-      }
+      // Administrator accounts can't be used here. Same answer as a wrong password, so this page reveals nothing about them.
+      if (staff.admin.role === "OWNER") throw new UnauthorizedException("Invalid email or password.");
       const result = await this.auth.continueSignIn(staff.admin, remember, signInContext(request));
       if (result.kind === "two-factor") return { kind: "two-factor", challenge: result.challenge };
       if (result.kind === "password-change") return { kind: "password-change", challenge: result.challenge, name: result.name };
@@ -62,6 +64,11 @@ export class SignInController {
 
     // Nothing opened. Count the wrong password against whichever accounts exist.
     const existing = [staff.admin, customer.customer].filter(Boolean);
+    if (existing.length === 0) {
+      // No account at all: count it the same way, so lockout doesn't reveal which emails are registered.
+      const lock = recordUnknownEmailFailure(dto.email);
+      if (lock) throw new UnauthorizedException(lockedMessage(lock));
+    }
     if (staff.admin && !staff.locked) await this.auth.recordStaffFailure(staff.admin);
     if (customer.customer && !customer.locked) await this.customers.recordFailure(customer.customer);
     const allLocked = existing.length > 0 && (!staff.admin || staff.locked) && (!customer.customer || customer.locked);

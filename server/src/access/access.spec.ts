@@ -33,6 +33,9 @@ describe("module access", () => {
     expect(accessForRoute("POST", "/api/admin-users")).toEqual({ kind: "modules", modules: ["system", "hr"], level: "manage" });
     expect(accessForRoute("GET", "/api/auth/session")).toEqual({ kind: "staff" });
     expect(accessForRoute("GET", "/api/something-new")).toBeNull();
+    // Guide editing is deliberately unmapped: only the OWNER role list on the controller can open it.
+    expect(accessForRoute("PUT", "/api/guides/page:/admin")).toBeNull();
+    expect(accessForRoute("GET", "/api/workspace/guides")).toEqual({ kind: "staff" });
     expect(accessForRoute("PATCH", "/api/site-content/language")).toEqual({ kind: "modules", modules: ["system"], level: "edit" });
     expect(accessForRoute("PATCH", "/api/site-content/hero")).toEqual({ kind: "modules", modules: ["marketing"], level: "edit" });
   });

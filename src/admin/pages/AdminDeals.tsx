@@ -102,7 +102,7 @@ function DealsTab() {
         </div>
         <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
           <button className="btn btn-secondary" onClick={() => setAdding((v) => !v)}>{adding ? "Cancel" : "Add a deal"}</button>
-          <button className="btn btn-primary" onClick={scan} disabled={busy || data?.aiAvailable === false} title={data?.aiAvailable === false ? "Set GEMINI_API_KEY to enable" : undefined}>
+          <button className="btn btn-primary" onClick={scan} disabled={busy || data?.aiAvailable === false} title={data?.aiAvailable === false ? "The AI search isn't connected yet — see System → Settings & status" : undefined}>
             {busy ? "Searching the internet…" : "Search the internet for deals"}
           </button>
         </div>

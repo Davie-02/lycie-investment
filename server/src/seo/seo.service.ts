@@ -120,7 +120,7 @@ export class SeoService {
 
   robots(): string {
     const url = this.siteUrl();
-    return ["User-agent: *", "Allow: /", "Disallow: /admin", "Disallow: /account", "", `Sitemap: ${url}/sitemap.xml`, ""].join("\n");
+    return ["User-agent: *", "Allow: /", "Disallow: /account", "", `Sitemap: ${url}/sitemap.xml`, ""].join("\n");
   }
 
   // ------------------------------------------------------------------ page rendering

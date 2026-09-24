@@ -1,12 +1,13 @@
 /**
  * Numbers for the staff workspace dashboards: one small set of counts per
  * module, computed only for the modules the person can see, in one request.
- * Each module's numbers are cached for 20 seconds, so a busy office opening
- * dashboards at once costs the database one query set, not dozens — this is
- * what keeps every dashboard quick to open.
+ * Each module's numbers are cached for 20 seconds — but dropped the moment
+ * anything changes — so a busy office opening dashboards at once costs the
+ * database one query set, while numbers are never stale after a change.
  */
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { EventsService } from "../events/events.service";
 import { atLeast, MODULE_KEYS, type AccessMap, type ModuleKey } from "../access/modules";
 import { PUBLIC } from "../content-admin/content-state";
 
@@ -26,7 +27,13 @@ const CACHE_MS = 20_000;
 export class WorkspaceService {
   private readonly cache = new Map<ModuleKey, { until: number; stats: Promise<Stat[]> }>();
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    events: EventsService
+  ) {
+    // Any change anywhere (staff edit, new website request) makes the next dashboard read fresh.
+    events.onWrite(() => this.cache.clear());
+  }
 
   async summary(access: AccessMap): Promise<Partial<Record<ModuleKey, Stat[]>>> {
     const visible = MODULE_KEYS.filter((key) => atLeast(access[key], "view"));

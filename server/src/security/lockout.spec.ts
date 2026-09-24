@@ -1,4 +1,4 @@
-import { LOCK_DURATION_MS, MAX_FAILED_ATTEMPTS, isLocked, lockedMessage, stateAfterFailure } from "./lockout";
+import { LOCK_DURATION_MS, MAX_FAILED_ATTEMPTS, isLocked, lockedMessage, recordUnknownEmailFailure, stateAfterFailure, unknownEmailLockedUntil } from "./lockout";
 
 describe("lockout", () => {
   const now = new Date("2026-01-01T12:00:00Z");
@@ -23,5 +23,20 @@ describe("lockout", () => {
   it("words the wait in minutes, rounding up", () => {
     expect(lockedMessage(new Date(now.getTime() + 30_000), now)).toContain("1 minute,");
     expect(lockedMessage(new Date(now.getTime() + 14 * 60_000 + 1), now)).toContain("15 minutes");
+  });
+});
+
+describe("lockout for emails with no account", () => {
+  it("locks unknown emails after the same number of attempts, so lockout reveals nothing", () => {
+    const email = `nobody-${Date.now()}@example.org`;
+    const now = new Date("2026-09-25T10:00:00Z");
+    for (let i = 1; i < MAX_FAILED_ATTEMPTS; i++) expect(recordUnknownEmailFailure(email, now)).toBeNull();
+    const lock = recordUnknownEmailFailure(email, now);
+    expect(lock).not.toBeNull();
+    expect(unknownEmailLockedUntil(email.toUpperCase(), now)).toEqual(lock);
+    // After the lock ends, counting starts again.
+    const later = new Date(now.getTime() + LOCK_DURATION_MS + 1000);
+    expect(unknownEmailLockedUntil(email, later)).toBeNull();
+    expect(recordUnknownEmailFailure(email, later)).toBeNull();
   });
 });

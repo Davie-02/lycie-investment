@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import ShipmentTimeline, { type ShipmentUpdateView } from "@/components/common/ShipmentTimeline";
 import { apiGet } from "@/services/http";
+import { subscribeLive } from "@/services/liveContent";
 import { useT } from "@/i18n/LanguageContext";
 import "@/components/forms/FormField.css";
 
@@ -32,13 +33,20 @@ export default function Track() {
     if (!code) return;
     setLoading(true);
     setError(null);
-    apiGet<Tracking>(`/track/${encodeURIComponent(code)}`)
-      .then(setResult)
-      .catch((err: Error) => {
-        setResult(null);
-        setError(err.message);
-      })
-      .finally(() => setLoading(false));
+    const load = () =>
+      apiGet<Tracking>(`/track/${encodeURIComponent(code)}`)
+        .then((data) => {
+          setResult(data);
+          setError(null);
+        })
+        .catch((err: Error) => {
+          setResult(null);
+          setError(err.message);
+        })
+        .finally(() => setLoading(false));
+    void load();
+    // New progress appears while the page is open.
+    return subscribeLive(["shipments"], () => void load());
   }, [code]);
 
   function submit(event: FormEvent) {

@@ -175,6 +175,11 @@ export class AdminToolsService {
     return result.count;
   }
 
+  /**
+   * Settings & status (System module). The descriptions — including the names
+   * of the server settings — live here on the server and are only ever sent
+   * to people with System access, never shipped in the website's code.
+   */
   async systemStatus() {
     const [admins, adminsWithout2fa, staffWithout2fa] = await Promise.all([
       this.prisma.adminUser.count({ where: { role: "OWNER", isActive: true } }),
@@ -182,26 +187,31 @@ export class AdminToolsService {
       this.prisma.adminUser.count({ where: { role: { not: "OWNER" }, isActive: true, totpEnabled: false } }),
     ]);
     const on = (value: string | undefined) => Boolean(value && value.trim());
+    const row = (label: string, ok: boolean, detail: string) => ({ label, ok, detail });
     return {
-      security: {
-        adminTwoFactorRequired: ownerTwoFactorRequired(),
-        adminIpAllowlist: on(process.env.SYSTEM_ADMIN_ALLOWED_IPS),
-        admins,
-        adminsWithout2fa,
-        staffWithout2fa,
-        sessionHours: process.env.JWT_EXPIRES_IN || "2h",
-      },
-      services: {
-        email: this.email.isConfigured,
-        emailVerification: on(process.env.EMAIL_VERIFICATION_PROVIDER) && on(process.env.EMAIL_VERIFICATION_API_KEY),
-        whatsapp: on(process.env.WHATSAPP_PHONE_NUMBER_ID) && on(process.env.WHATSAPP_ACCESS_TOKEN) && on(process.env.WHATSAPP_TEMPLATE_NAME),
-        mobileMoney: on(process.env.PAYCHANGU_SECRET_KEY),
-        mobileMoneyWebhook: on(process.env.PAYCHANGU_WEBHOOK_SECRET),
-        ai: this.gemini.isConfigured,
-        imageStorage: this.uploads.isUsingObjectStorage,
-        googleSignIn: on(process.env.GOOGLE_CLIENT_ID),
-        facebookSignIn: on(process.env.FACEBOOK_APP_ID),
-      },
+      securityNote: "These rules are set on the API server (Render → Environment) and apply after a redeploy.",
+      security: [
+        row("Two-step verification required for administrators", ownerTwoFactorRequired(), "SYSTEM_ADMIN_REQUIRE_2FA — on unless set to false. Until an administrator sets it up, only My security works."),
+        row("Administrators limited to listed networks", on(process.env.SYSTEM_ADMIN_ALLOWED_IPS), "Optional: SYSTEM_ADMIN_ALLOWED_IPS=41.70.1.2, 102.68.3.4 — elsewhere, administrator sign-in simply fails."),
+        row("Administrators sign in only on their own sign-in page", true, "/admin/login. The website's sign-in refuses administrator accounts with the ordinary 'Invalid email or password'. Nothing on the website links to it."),
+        row("Sign-in pages reveal nothing", true, "Wrong password, unknown email, wrong kind of account or blocked network all get the same answer; lockout (5 tries → 15 minutes) applies to unknown emails too."),
+        row("Sensitive changes need 'confirm it's you'", true, "Adding administrators, changing access or roles, deleting accounts, resetting two-step: password + code, valid 10 minutes."),
+        row("Sign-in alerts", true, "Every staff sign-in is emailed to that account's owner (time, network address, device)."),
+        row("Sessions", true, `Normal sessions last ${process.env.JWT_EXPIRES_IN || "2h"}. Administrators: no 'keep me signed in', signed out after 3 minutes idle.`),
+        row("Administrators with two-step on", adminsWithout2fa === 0, `${admins - adminsWithout2fa} of ${admins}`),
+        row("Staff with two-step on", staffWithout2fa === 0, staffWithout2fa ? `${staffWithout2fa} staff haven't turned it on (recommended).` : "Everyone"),
+      ],
+      services: [
+        row("Email delivery", this.email.isConfigured, this.email.isConfigured ? "Connected" : "Set RESEND_API_KEY or BREVO_API_KEY — invitations, resets and alerts need it."),
+        row("Mailbox verification", on(process.env.EMAIL_VERIFICATION_PROVIDER) && on(process.env.EMAIL_VERIFICATION_API_KEY), "Optional: EMAIL_VERIFICATION_PROVIDER (kickbox, zerobounce or abstract) + EMAIL_VERIFICATION_API_KEY."),
+        row("WhatsApp notifications", on(process.env.WHATSAPP_PHONE_NUMBER_ID) && on(process.env.WHATSAPP_ACCESS_TOKEN) && on(process.env.WHATSAPP_TEMPLATE_NAME), "Optional: WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN, WHATSAPP_TEMPLATE_NAME (an approved one-variable template)."),
+        row("Mobile money (PayChangu)", on(process.env.PAYCHANGU_SECRET_KEY), "Optional: PAYCHANGU_SECRET_KEY (try a sandbox key first)."),
+        row("Mobile money webhook", on(process.env.PAYCHANGU_WEBHOOK_SECRET), "Optional: PAYCHANGU_WEBHOOK_SECRET. Payments also confirm when customers return."),
+        row("Lycie AI", this.gemini.isConfigured, this.gemini.isConfigured ? "Connected" : "Set GEMINI_API_KEY."),
+        row("Permanent image storage", this.uploads.isUsingObjectStorage, this.uploads.isUsingObjectStorage ? "Connected" : "Set the S3_* storage settings, or photos are lost on restart."),
+        row("Sign in with Google", on(process.env.GOOGLE_CLIENT_ID), "Optional: GOOGLE_CLIENT_ID."),
+        row("Sign in with Facebook", on(process.env.FACEBOOK_APP_ID), "Optional: FACEBOOK_APP_ID + FACEBOOK_APP_SECRET."),
+      ],
     };
   }
 

@@ -4,7 +4,7 @@ import { randomBytes, createHash } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";
 import { emailChangedNoticeEmail, passwordChangedEmail, passwordResetEmail, verifyEmailEmail } from "../email/email-templates";
-import { CLEARED_LOCK_STATE, isLocked, lockedMessage, stateAfterFailure } from "../security/lockout";
+import { CLEARED_LOCK_STATE, isLocked, lockedMessage, recordUnknownEmailFailure, stateAfterFailure, unknownEmailLockedUntil } from "../security/lockout";
 import { checkEmailDeliverable, normalizeEmail } from "../security/email-check";
 import type { VerifiedIdentity } from "../auth/social-identity";
 import { SessionService, type IssuedSession } from "../auth/session.service";
@@ -94,7 +94,8 @@ export class CustomersService {
 
     const existing = await this.prisma.customerUser.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException("A customer with this email already exists.");
+      // Worded to help the real owner without spelling out "this email is registered".
+      throw new ConflictException("We couldn't create an account with this email. If it's yours, sign in or reset your password.");
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
@@ -133,10 +134,16 @@ export class CustomersService {
    * account is refused even with the right password until the lock ends.
    */
   async authenticate(email: string, password: string) {
+    const phantomLock = unknownEmailLockedUntil(email);
+    if (phantomLock) throw new UnauthorizedException(lockedMessage(phantomLock));
     const check = await this.checkPassword(email, password);
     if (check.customer && check.locked) throw new UnauthorizedException(lockedMessage(check.customer.lockedUntil!));
     if (!check.customer || !check.matches) {
       if (check.customer) await this.recordFailure(check.customer);
+      else {
+        const lock = recordUnknownEmailFailure(email);
+        if (lock) throw new UnauthorizedException(lockedMessage(lock));
+      }
       throw new UnauthorizedException("Invalid email or password.");
     }
     return this.completePasswordSignIn(check.customer);

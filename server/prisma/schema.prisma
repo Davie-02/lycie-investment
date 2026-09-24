@@ -1016,3 +1016,19 @@ model Referral {
   @@index([referrerId])
   @@index([status, createdAt])
 }
+
+/// A system administrator's edit of a workspace guide (the "About this page"
+/// descriptions staff see). Guides not edited use the built-in text in
+/// server/src/guides/guide-defaults.ts.
+model WorkspaceGuide {
+  /// "module:<key>" or "page:<path>", e.g. "page:/admin/vehicles".
+  key         String   @id
+  title       String
+  body        String
+  /// Who sees it: "module" (anyone who can open that module/page), "admins"
+  /// (system administrators only), "departments" (the listed ones), "hidden".
+  audience    String   @default("module")
+  departments String[] @default([])
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+}

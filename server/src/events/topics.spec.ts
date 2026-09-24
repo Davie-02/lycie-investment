@@ -4,6 +4,8 @@ describe("topicsForWrite", () => {
   it("maps content endpoints to their own topic", () => {
     expect(topicsForWrite("/api/vehicles/abc")).toEqual(["vehicles"]);
     expect(topicsForWrite("/api/site-content/hero")).toEqual(["site-content"]);
+    expect(topicsForWrite("/api/site-content/language")).toEqual(["site-content"]);
+    expect(topicsForWrite("/api/shipments/abc/progress")).toEqual(["shipments"]);
     expect(topicsForWrite("/api/faq")).toEqual(["faq"]);
   });
 

@@ -90,7 +90,7 @@ export class EmailService {
     const provider = this.provider;
     if (provider === "none") {
       this.logger.warn(`No email provider configured — skipping email "${subject}" to ${to}. Set RESEND_API_KEY or BREVO_API_KEY.`);
-      return { ok: false, error: "Email isn't set up yet (no RESEND_API_KEY or BREVO_API_KEY)." };
+      return { ok: false, error: "Email isn't connected yet. A system administrator can see what's needed under System → Settings & status." };
     }
 
     try {

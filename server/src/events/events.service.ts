@@ -22,6 +22,19 @@ export class EventsService implements OnModuleDestroy {
   private readonly subject = new Subject<ContentEvent>();
   private readonly pending = new Map<string, NodeJS.Timeout>();
   private clients = 0;
+  private readonly writeListeners = new Set<() => void>();
+
+  /**
+   * Server-side only: run `listener` after every successful write request
+   * (used to drop cached dashboard numbers). Nothing is sent to browsers.
+   */
+  onWrite(listener: () => void): void {
+    this.writeListeners.add(listener);
+  }
+
+  noteWrite(): void {
+    this.writeListeners.forEach((listener) => listener());
+  }
 
   emit(topics: string[]): void {
     for (const topic of topics) {

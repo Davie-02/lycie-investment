@@ -24,7 +24,7 @@ export class WriterService {
 
   async write(dto: WriteDto): Promise<{ text: string; model: string }> {
     if (!this.gemini.isConfigured) {
-      throw new UnprocessableEntityException("The AI writer needs the Gemini key to be set up (GEMINI_API_KEY).");
+      throw new UnprocessableEntityException("The AI writer isn't connected yet. A system administrator can see what's needed under System → Settings & status.");
     }
     if (this.today.value >= DAILY_LIMIT) {
       throw new HttpException("The AI writer's daily limit has been reached. Try again tomorrow.", HttpStatus.TOO_MANY_REQUESTS);

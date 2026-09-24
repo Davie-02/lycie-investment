@@ -72,7 +72,7 @@ export class MarketService {
 
   /** Researches the market on the web, blends in the company's own demand, and saves a fresh briefing. */
   async generateReport() {
-    if (!this.research.available) throw new BadRequestException("The AI research isn't set up yet (GEMINI_API_KEY is missing).");
+    if (!this.research.available) throw new BadRequestException("The AI research isn't connected yet. A system administrator can see what's needed under System → Settings & status.");
     if (Date.now() - this.lastReportAt < REPORT_MIN_GAP_MS) {
       throw new HttpException("A briefing was generated a few minutes ago. Give it a while before asking again.", HttpStatus.TOO_MANY_REQUESTS);
     }

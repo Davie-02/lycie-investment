@@ -13,6 +13,11 @@ export class ContentChangeInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest<Request>();
     const isWrite = !["GET", "HEAD", "OPTIONS"].includes(request.method);
     if (!isWrite) return next.handle();
-    return next.handle().pipe(tap(() => this.events.emit(topicsForWrite(request.path))));
+    return next.handle().pipe(
+      tap(() => {
+        this.events.noteWrite();
+        this.events.emit(topicsForWrite(request.path));
+      })
+    );
   }
 }

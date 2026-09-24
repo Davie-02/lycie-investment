@@ -50,6 +50,9 @@ const TOPIC_FOR_MODEL: Record<string, string> = {
   SiteContent: "site-content",
   Review: "reviews",
   Deal: "deals",
+  CustomerCase: "shipments",
+  CustomerCaseUpdate: "shipments",
+  WorkspaceGuide: "guides",
 };
 
 /** Outside effects an undo can't take back, by the original action's route. */

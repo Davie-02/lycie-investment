@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+
 /**
  * Account lockout after repeated wrong passwords.
  *
@@ -44,3 +46,34 @@ export function stateAfterFailure(currentCount: number, now: Date = new Date()):
 
 /** The counters after a successful sign-in: everything forgiven. */
 export const CLEARED_LOCK_STATE: LockState = { failedLoginCount: 0, lockedUntil: null };
+
+/**
+ * Lockout for email addresses that have NO account. Without this, "Too many
+ * failed sign-in attempts" would only ever appear for real accounts, so
+ * trying five wrong passwords would reveal whether an email is registered.
+ * Unknown emails are counted here (in memory, by a hash of the address) and
+ * locked the same way, so both cases look identical from outside.
+ */
+
+const unknownFailures = new Map<string, LockState>();
+
+function unknownKey(email: string): string {
+  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+}
+
+/** The lock currently applying to an address with no account, if any. */
+export function unknownEmailLockedUntil(email: string, now: Date = new Date()): Date | null {
+  const state = unknownFailures.get(unknownKey(email));
+  return state?.lockedUntil && isLocked(state.lockedUntil, now) ? state.lockedUntil : null;
+}
+
+/** Counts one more wrong attempt for an address with no account. Returns the lock if it just started. */
+export function recordUnknownEmailFailure(email: string, now: Date = new Date()): Date | null {
+  const key = unknownKey(email);
+  const current = unknownFailures.get(key);
+  const count = current?.lockedUntil && !isLocked(current.lockedUntil, now) ? 0 : current?.failedLoginCount ?? 0;
+  const next = stateAfterFailure(count, now);
+  unknownFailures.set(key, next);
+  if (unknownFailures.size > 20_000) unknownFailures.clear();
+  return next.lockedUntil;
+}

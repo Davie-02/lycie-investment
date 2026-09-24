@@ -16,6 +16,8 @@ export const SESSION_EXPIRED_EVENT = "admin-session-expired";
 export const UNDOABLE_EVENT = "admin-undoable";
 /** Fired after an undo, so the current admin screen reloads its data (AdminLayout remounts it). */
 export const DATA_CHANGED_EVENT = "admin-data-changed";
+/** Fired after every successful change made from the workspace (dashboards refresh their numbers). */
+export const ADMIN_WRITE_EVENT = "admin-write";
 /** Fired when a system administrator must set up two-step verification before doing anything else. */
 export const TWO_FACTOR_REQUIRED_EVENT = "admin-two-factor-required";
 
@@ -139,6 +141,8 @@ async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(await parseErrorMessage(response), response.status, code);
   }
 
+  if (init.method && init.method !== "GET") window.dispatchEvent(new Event(ADMIN_WRITE_EVENT));
+
   // The server marks changes that can be reversed; the Undo bar (UndoToast) listens for this.
   const undoId = response.headers.get("X-Undo-Id");
   if (undoId) {
@@ -188,6 +192,8 @@ export const adminApi = {
   get: <T>(path: string) => adminFetch<T>(path),
   post: <T>(path: string, body: unknown) =>
     adminFetch<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    adminFetch<T>(path, { method: "PUT", body: JSON.stringify(body) }),
   patch: <T>(path: string, body: unknown) =>
     adminFetch<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
   delete: <T>(path: string) => adminFetch<T>(path, { method: "DELETE" }),

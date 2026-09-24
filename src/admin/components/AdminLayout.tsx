@@ -19,6 +19,8 @@ import "./AdminLayout.css";
 import "./AdminShell.css";
 import AdminSearch from "./AdminSearch";
 import UndoToast from "./UndoToast";
+import PageGuide from "./PageGuide";
+import { clearGuides } from "../hooks/useGuides";
 
 // Idle auto-logout (a valid session doesn't help if someone walked away from an
 // unlocked screen). System administrators get a shorter one and never "keep me signed in".
@@ -71,6 +73,7 @@ export default function AdminLayout() {
 
   function handleLogout(reason?: "inactivity" | "expired") {
     clearWorkspaceSummary();
+    clearGuides();
     logout();
     navigate(isSystemAdmin ? "/admin/login" : "/account/login", { state: reason ? { reason } : undefined });
   }
@@ -300,8 +303,7 @@ export default function AdminLayout() {
 
         {currentUser?.mustSetUpTwoFactor && (
           <div className="ws-alert" role="alert">
-            <strong>Action needed:</strong> system administrator accounts must use two-step verification. Set it up below — the
-            rest of the workspace unlocks as soon as it's on.
+            <strong>Action needed:</strong> set up two-step verification below — the rest of the workspace unlocks as soon as it's on.
           </div>
         )}
 
@@ -319,6 +321,8 @@ export default function AdminLayout() {
         )}
 
         <main className="ws-main" id="ws-main">
+          {/* Module overviews show their own guide; detail pages (e.g. one booking) have none. */}
+          {!location.pathname.startsWith("/admin/m/") && <PageGuide guideKey={currentPage ? `page:${currentPage.path}` : null} />}
           <Suspense fallback={<PageSkeleton />}>
             <Outlet key={reloadKey} />
           </Suspense>

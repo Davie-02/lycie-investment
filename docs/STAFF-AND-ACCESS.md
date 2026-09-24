@@ -85,9 +85,30 @@ The most sensitive changes (new administrator, role or access change, deleting,
 2FA reset) also ask **"Confirm it's you"** — password plus authenticator code,
 valid 10 minutes.
 
+## Guides ("About this page")
+
+Every workspace page and module overview starts with a short guide explaining what it's for and how it
+works (built-in texts: `server/src/guides/guide-defaults.ts`). The main system administrator rewrites them
+under **System → Guides** and chooses who sees each: everyone who can open that area, only system
+administrators, chosen departments, or nobody. Guides describing security rules are for administrators only
+by default. Staff only ever receive the guides meant for them (`GET /api/workspace/guides`); editing is
+limited to the OWNER role. Edits reach open workspaces immediately.
+
+## What the public side reveals (nothing)
+
+- Both sign-in pages give the same "Invalid email or password" for a wrong password, an unknown email, the
+  wrong kind of account (an administrator on the website form, staff on the administrator page) and a blocked
+  network. Lockout after 5 tries also applies to emails with no account, so it can't be used to discover who
+  is registered.
+- The administrator sign-in page is a plain "Sign in" form; nothing on the website links to it, and
+  `robots.txt` doesn't mention it (the page is sent with `X-Robots-Tag: noindex`).
+- The website's built files have anonymous names, and no setting names or security rules are in the
+  browser code: Settings & status descriptions come from the server, only for people with System access.
+- Messages staff see when a service isn't connected say only "A system administrator can see what's needed".
+
 ## The system administrator portal
 
-- Owner accounts only; staff are told to use the website sign-in.
+- Owner accounts only (anyone else gets the ordinary "Invalid email or password").
 - **Two-step verification is mandatory** (`SYSTEM_ADMIN_REQUIRE_2FA`, on unless set to `false`).
   Until it's set up, only My Security works.
 - No "keep me signed in"; 3-minute idle sign-out (staff: 5 minutes unless they chose to stay signed in).

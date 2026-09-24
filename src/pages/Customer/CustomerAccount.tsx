@@ -38,6 +38,7 @@ import MyMessages from "@/components/customer/MyMessages";
 import "./customer.css";
 import Price from "@/components/common/Price";
 import VehicleAlerts from "@/components/customer/VehicleAlerts";
+import { subscribeLive } from "@/services/liveContent";
 import MobileMoneyCard from "@/components/customer/MobileMoneyCard";
 import ReferralCard from "@/components/customer/ReferralCard";
 import ShipmentTimeline from "@/components/common/ShipmentTimeline";
@@ -153,6 +154,20 @@ export default function CustomerAccount() {
       )
       .finally(() => setIsLoading(false));
   }, []);
+
+  // Shipment and booking updates from staff appear here as soon as they're posted.
+  useEffect(
+    () =>
+      subscribeLive(["shipments", "hire-vehicles"], () => {
+        Promise.all([getCustomerCases(), getMyRequests()])
+          .then(([loadedCases, loadedRequests]) => {
+            setCases(loadedCases);
+            setRequests(loadedRequests);
+          })
+          .catch(() => undefined);
+      }),
+    []
+  );
 
   function handleChange(field: keyof PaymentFormValues) {
     return (e: ChangeEvent<HTMLInputElement>) => {
