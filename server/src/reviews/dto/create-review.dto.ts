@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Length, Max, Min } from "class-validator";
+import { IsInt, IsOptional, IsString, Length, Max, Min, MaxLength } from "class-validator";
 
 const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
@@ -23,5 +23,6 @@ export class CreateReviewDto {
   /** Omit to leave a review about the company itself. */
   @IsOptional()
   @IsString()
+  @MaxLength(64)
   vehicleId?: string;
 }

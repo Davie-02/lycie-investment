@@ -7,8 +7,8 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import type { Faq } from "@/types/faq";
 
 export default function AdminFaq() {
-  const { currentUser } = useAdminAuth();
-  const canEdit = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canEdit = can("marketing", "edit");
 
   return (
     <ContentManager<Faq>

@@ -6,9 +6,19 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import { ApiError } from "@/services/http";
 import ContactCell from "../components/ContactCell";
 import "../components/AdminLayout.css";
+import type { ModuleKey } from "../access";
 import Price from "@/components/common/Price";
 
-type TabKey = "inquiries" | "import" | "clearing" | "hire" | "contact";
+export type TabKey = "inquiries" | "import" | "clearing" | "hire" | "contact";
+
+/** The module that owns each kind of request (who may see and handle it). */
+const TAB_MODULE: Record<TabKey, ModuleKey> = {
+  inquiries: "sales",
+  import: "imports",
+  clearing: "imports",
+  hire: "hire",
+  contact: "customers",
+};
 type RequestStatus = "new" | "contacted" | "closed";
 
 const STATUS_BADGE_CLASS: Record<RequestStatus, string> = {
@@ -149,11 +159,12 @@ const EXPORT_FOR_TAB: Record<TabKey, string> = {
 };
 
 /** Downloads everything in the current list as a spreadsheet-ready CSV file. */
-function ExportButton({ type }: { type: string }) {
-  const { currentUser } = useAdminAuth();
+function ExportButton({ type, module }: { type: string; module: ModuleKey }) {
+  const { can } = useAdminAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (currentUser?.role !== "OWNER" && currentUser?.role !== "MANAGER") return null;
+  // Personal data leaves the system here, so it needs "manage" on the module.
+  if (!can(module, "manage")) return null;
 
   return (
     <div className="requests-export">
@@ -180,22 +191,41 @@ function ExportButton({ type }: { type: string }) {
   );
 }
 
-export default function AdminRequests() {
+interface AdminRequestsProps {
+  /** Show only these request types (each department page shows its own). */
+  only?: TabKey[];
+  title?: string;
+}
+
+export default function AdminRequests({ only, title = "Submitted requests" }: AdminRequestsProps = {}) {
+  const { can } = useAdminAuth();
   const [searchParams] = useSearchParams();
+  const tabs = TABS.filter((tab) => (!only || only.includes(tab.key)) && can(TAB_MODULE[tab.key]));
   const requested = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<TabKey>(TABS.some((t) => t.key === requested) ? (requested as TabKey) : "inquiries");
+  const [chosenTab, setActiveTab] = useState<TabKey | null>(tabs.some((t) => t.key === requested) ? (requested as TabKey) : null);
+  const activeTab = chosenTab && tabs.some((t) => t.key === chosenTab) ? chosenTab : tabs[0]?.key;
+
+  if (!activeTab) {
+    return (
+      <div>
+        <h1>{title}</h1>
+        <div className="admin-empty-state">You don't have access to any request types. Ask your system administrator.</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <h1>Submitted Requests</h1>
+      <h1>{title}</h1>
       <p className="admin-page-intro">
         Mark a submission Contacted once you've followed up, and Closed once it's resolved.
       </p>
 
-      <ExportButton type={EXPORT_FOR_TAB[activeTab]} />
+      <ExportButton type={EXPORT_FOR_TAB[activeTab]} module={TAB_MODULE[activeTab]} />
 
+      {tabs.length > 1 && (
       <div className="admin-nav admin-tabs" role="tablist" aria-label="Request type">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.key}
             type="button"
@@ -210,6 +240,7 @@ export default function AdminRequests() {
           </button>
         ))}
       </div>
+      )}
 
       {activeTab === "inquiries" && <InquiriesTable />}
       {activeTab === "import" && <ImportRequestsTable />}
@@ -221,8 +252,8 @@ export default function AdminRequests() {
 }
 
 function InquiriesTable() {
-  const { currentUser } = useAdminAuth();
-  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canManage = can("sales", "edit");
   const [refreshKey, setRefreshKey] = useState(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -294,8 +325,8 @@ function InquiriesTable() {
 }
 
 function ImportRequestsTable() {
-  const { currentUser } = useAdminAuth();
-  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canManage = can("imports", "edit");
   const [refreshKey, setRefreshKey] = useState(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -367,8 +398,8 @@ function ImportRequestsTable() {
 }
 
 function ClearingRequestsTable() {
-  const { currentUser } = useAdminAuth();
-  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canManage = can("imports", "edit");
   const [refreshKey, setRefreshKey] = useState(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -509,8 +540,8 @@ function HireRequestsTable() {
 }
 
 function ContactMessagesTable() {
-  const { currentUser } = useAdminAuth();
-  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canManage = can("customers", "edit");
   const [refreshKey, setRefreshKey] = useState(0);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

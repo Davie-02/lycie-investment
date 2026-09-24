@@ -13,11 +13,17 @@ import { readCookie } from "./auth/cookies";
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE } from "./auth/session-cookie";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: the payment webhook checks a signature over the exact bytes received.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 
   if (process.env.NODE_ENV === "production" && !process.env.FRONTEND_URL) {
     throw new Error("FRONTEND_URL must be configured in production.");
+  }
+  // JWT_SECRET signs every session and CSRF token. A short or guessable one
+  // would let anyone forge an Owner session, so refuse to start with one.
+  if (process.env.NODE_ENV === "production" && (process.env.JWT_SECRET ?? "").length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 random characters in production.");
   }
 
   // Behind a host's reverse proxy every request appears to come from the
@@ -34,6 +40,8 @@ async function bootstrap() {
     origin: frontendUrl,
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+    // Lets the admin screen read "this action can be undone" (see admin-tools/activity.interceptor.ts).
+    exposedHeaders: ["X-Undo-Id", "X-Undo-Action"],
   });
 
   // Sets a standard set of protective HTTP response headers (hides which

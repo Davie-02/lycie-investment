@@ -3,6 +3,7 @@ import { clearCsrfToken, fetchWithCsrf, getCsrfToken } from "@/services/csrf";
 import { authHeader, clearFallbackToken, settleSession } from "@/services/sessionToken";
 import { resolveUploadUrl as sharedResolveUploadUrl } from "@/utils/resolveUploadUrl";
 import { parseErrorMessage } from "@/utils/apiError";
+import type { AccessMap } from "./access";
 
 // Re-exported so existing admin code importing from "../adminApi" keeps
 // working unchanged — the actual logic lives in one shared place now, used
@@ -11,6 +12,17 @@ export const resolveUploadUrl = sharedResolveUploadUrl;
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 export const SESSION_EXPIRED_EVENT = "admin-session-expired";
+/** Fired after any admin change the server says can be undone. detail: { id, action }. */
+export const UNDOABLE_EVENT = "admin-undoable";
+/** Fired after an undo, so the current admin screen reloads its data (AdminLayout remounts it). */
+export const DATA_CHANGED_EVENT = "admin-data-changed";
+/** Fired when a system administrator must set up two-step verification before doing anything else. */
+export const TWO_FACTOR_REQUIRED_EVENT = "admin-two-factor-required";
+
+export interface UndoableDetail {
+  id: string;
+  action: string;
+}
 const ADMIN_USER_KEY = "lycie_admin_user";
 /** "1" when this admin ticked "Keep me signed in" — the dashboard then skips its 5-minute idle logout. */
 const ADMIN_REMEMBER_KEY = "lycie_admin_remember";
@@ -19,13 +31,21 @@ export interface AdminUserSummary {
   id: string;
   name: string;
   email: string;
-  role: "OWNER" | "MANAGER" | "VIEWER";
+  /** OWNER = system administrator; EMPLOYEE = staff (access from department + overrides); MANAGER/VIEWER = older accounts. */
+  role: "OWNER" | "MANAGER" | "VIEWER" | "EMPLOYEE";
   isActive: boolean;
   createdAt: string;
   /** Present on the signed-in admin's own record (/auth/session). */
   twoFactorEnabled?: boolean;
-  /** Present on records from the Admin Users list (/admin-users). */
+  /** Present on records from the staff list (/admin-users). */
   totpEnabled?: boolean;
+  department?: string | null;
+  jobTitle?: string | null;
+  phone?: string | null;
+  /** What this person can use, module by module (computed by the server). */
+  access?: AccessMap;
+  /** A system administrator who must set up two-step verification before anything else works. */
+  mustSetUpTwoFactor?: boolean;
 }
 
 /** Signs out on the server (clears the cookie) and forgets any fallback token. */
@@ -110,13 +130,58 @@ async function adminFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiError(await parseErrorMessage(response), response.status);
+    const code = await response
+      .clone()
+      .json()
+      .then((body: { code?: unknown }) => (typeof body?.code === "string" ? body.code : undefined))
+      .catch(() => undefined);
+    if (code === "TWO_FACTOR_SETUP_REQUIRED") window.dispatchEvent(new Event(TWO_FACTOR_REQUIRED_EVENT));
+    throw new ApiError(await parseErrorMessage(response), response.status, code);
+  }
+
+  // The server marks changes that can be reversed; the Undo bar (UndoToast) listens for this.
+  const undoId = response.headers.get("X-Undo-Id");
+  if (undoId) {
+    let action = "Change saved";
+    try {
+      action = decodeURIComponent(response.headers.get("X-Undo-Action") ?? "") || action;
+    } catch {
+      // A malformed header just falls back to the generic wording.
+    }
+    window.dispatchEvent(new CustomEvent<UndoableDetail>(UNDOABLE_EVENT, { detail: { id: undoId, action } }));
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+export interface UndoResult {
+  undone: true;
+  action: string;
+  restored: number;
+  /** Things an undo can't take back (e.g. an email that was already sent). */
+  notes: string[];
+}
+
+/**
+ * Reverses one logged admin action. A 409 means parts were changed again
+ * since; pass `force` to undo anyway. Afterwards every open screen refetches.
+ */
+export async function undoAdminAction(activityId: string, force = false): Promise<UndoResult> {
+  const result = await adminFetch<UndoResult>(`/admin-tools/activity/${encodeURIComponent(activityId)}/undo`, {
+    method: "POST",
+    body: JSON.stringify({ force }),
+  });
+  window.dispatchEvent(new Event(DATA_CHANGED_EVENT));
+  return result;
+}
+
+/** Signs out every other device/browser on this admin account; this one stays signed in. */
+export async function adminSignOutEverywhere(): Promise<void> {
+  const result = await adminFetch<AdminAuthResponse>("/auth/sign-out-everywhere", { method: "POST", body: "{}" });
+  await settleSession("admin", result.token, isAdminRemembered());
 }
 
 export const adminApi = {
@@ -140,23 +205,44 @@ interface AdminAuthResponse {
   token?: string;
 }
 
-/** Step one of sign-in either finishes (session) or asks for an authenticator code (challenge). */
-export type AdminLoginResult = { user: AdminUserSummary } | { requiresTwoFactor: true; challenge: string };
+/** Step one of sign-in: finished (session), or an authenticator code / a first password is still needed. */
+export type AdminLoginResult =
+  | { user: AdminUserSummary }
+  | { requiresTwoFactor: true; challenge: string }
+  | { requiresPasswordChange: true; challenge: string; name: string };
 
-/** Settles cookie-vs-header mode and remembers the "keep me signed in" choice. */
-async function finishAdminSignIn(response: AdminAuthResponse, remember: boolean): Promise<{ user: AdminUserSummary }> {
+type AdminStepResponse = AdminAuthResponse | { requiresTwoFactor: true; challenge: string } | { requiresPasswordChange: true; challenge: string; name: string };
+
+/** Settles cookie-vs-header mode and remembers the "keep me signed in" choice. Also used after the website's shared sign-in. */
+export async function finishAdminSignIn(response: AdminAuthResponse, remember: boolean): Promise<{ user: AdminUserSummary }> {
   await settleSession("admin", response.token, remember);
   setAdminRemembered(remember);
   return { user: response.user };
 }
 
+/** The system administrator portal's sign-in (Owners only — other staff use the website sign-in). */
 export async function adminLogin(email: string, password: string, remember = false): Promise<AdminLoginResult> {
-  const response = await adminFetch<AdminAuthResponse | { requiresTwoFactor: true; challenge: string }>("/auth/login", {
+  const response = await adminFetch<AdminStepResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password, remember }),
   });
-  if ("requiresTwoFactor" in response) return response;
+  if ("requiresTwoFactor" in response || "requiresPasswordChange" in response) return response;
   return finishAdminSignIn(response, remember);
+}
+
+/** First sign-in with an invitation: replace the one-time password with your own. May still ask for a 2FA code. */
+export async function adminFirstPassword(challenge: string, newPassword: string, remember = false): Promise<AdminLoginResult> {
+  const response = await adminFetch<AdminStepResponse>("/auth/first-password", {
+    method: "POST",
+    body: JSON.stringify({ challenge, newPassword }),
+  });
+  if ("requiresTwoFactor" in response || "requiresPasswordChange" in response) return response;
+  return finishAdminSignIn(response, remember);
+}
+
+/** "Confirm it's you" before sensitive actions (valid 10 minutes). */
+export function adminConfirmIdentity(password: string, code?: string) {
+  return adminFetch<{ confirmedUntil: string }>("/auth/confirm-identity", { method: "POST", body: JSON.stringify({ password, code: code || undefined }) });
 }
 
 /** Step two: the 6-digit authenticator code (or a one-time recovery code). */

@@ -18,4 +18,10 @@ export class RegisterCustomerDto {
   @IsOptional()
   @IsBoolean()
   remember?: boolean;
+
+  /** A friend's referral code from their share link (optional). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  referralCode?: string;
 }

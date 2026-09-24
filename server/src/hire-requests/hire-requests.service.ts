@@ -11,6 +11,7 @@ import { CreateHireRequestDto } from "./dto/create-hire-request.dto";
 import { UpdateHireRequestStatusDto } from "./dto/update-hire-request-status.dto";
 import { calculateHireCost } from "./hire-pricing.util";
 import { runSerializable } from "../common/run-serializable";
+import { NotificationsService } from "../notifications/notifications.service";
 import {
   hireRequestReceivedEmail,
   hireBookingConfirmedEmail,
@@ -19,11 +20,15 @@ import {
   adminNewSubmissionEmail,
 } from "../email/email-templates";
 
+/** Longest single hire that can be requested online. */
+const MAX_HIRE_DAYS = 365;
+
 @Injectable()
 export class HireRequestsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly notifications: NotificationsService
   ) {}
 
   async create(dto: CreateHireRequestDto, customerId?: string) {
@@ -34,10 +39,38 @@ export class HireRequestsService {
       throw new NotFoundException("The selected hire vehicle could not be found.");
     }
 
+    if (!vehicle.available || !vehicle.isPublished || vehicle.archivedAt) {
+      throw new BadRequestException("This vehicle isn't available for hire right now. Please choose another one.");
+    }
+
     const pickupDate = new Date(dto.pickupDate);
     const returnDate = new Date(dto.returnDate);
     if (returnDate < pickupDate) {
       throw new BadRequestException("Return date cannot be before pickup date.");
+    }
+    // A day of slack for time zones: "today" in Malawi may still be "yesterday" on the server.
+    if (pickupDate.getTime() < Date.now() - 36 * 60 * 60_000) {
+      throw new BadRequestException("The pickup date is in the past. Please choose a date from today onwards.");
+    }
+    if (returnDate.getTime() - pickupDate.getTime() > MAX_HIRE_DAYS * 24 * 60 * 60_000) {
+      throw new BadRequestException(`Hires can be booked for up to ${MAX_HIRE_DAYS} days at a time. For longer, please contact us.`);
+    }
+
+    // Tell the customer now, rather than after an admin has to turn them down.
+    const clash = await this.prisma.hireRequest.findFirst({
+      where: {
+        vehicleId: vehicle.id,
+        status: "confirmed",
+        pickupDate: { lt: returnDate },
+        returnDate: { gt: pickupDate },
+      },
+      select: { pickupDate: true, returnDate: true },
+    });
+    if (clash) {
+      const day = (date: Date) => date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      throw new ConflictException(
+        `${vehicle.name} is already booked from ${day(clash.pickupDate)} to ${day(clash.returnDate)}. Please choose other dates or another vehicle.`
+      );
     }
 
     const { days, totalCost } = calculateHireCost(
@@ -86,6 +119,23 @@ export class HireRequestsService {
     await this.emailService.notifyAdmin(adminEmail.subject, adminEmail.html);
 
     return request;
+  }
+
+  /**
+   * Public: the date ranges a hire vehicle is already booked for (confirmed
+   * bookings from today on), so the booking form can show them and customers
+   * pick free dates. Only dates — never who booked.
+   */
+  async availability(vehicleId: string): Promise<{ booked: Array<{ from: string; to: string }> }> {
+    const startOfToday = new Date();
+    startOfToday.setUTCHours(0, 0, 0, 0);
+    const bookings = await this.prisma.hireRequest.findMany({
+      where: { vehicleId, status: "confirmed", returnDate: { gte: startOfToday } },
+      orderBy: { pickupDate: "asc" },
+      select: { pickupDate: true, returnDate: true },
+      take: 200,
+    });
+    return { booked: bookings.map((b) => ({ from: b.pickupDate.toISOString(), to: b.returnDate.toISOString() })) };
   }
 
   findAll() {
@@ -172,6 +222,15 @@ export class HireRequestsService {
       await this.emailService.send({ to: updated.email, ...hireBookingCancelledEmail(emailDetails) });
     } else if (dto.status === "completed") {
       await this.emailService.send({ to: updated.email, ...hireBookingCompletedEmail(emailDetails) });
+    }
+    // WhatsApp too, for customers who gave a phone number (email already went above).
+    const whatsappText: Record<string, string> = {
+      confirmed: `Your booking of the ${updated.vehicle.name} (${updated.pickupDate.toDateString()} to ${updated.returnDate.toDateString()}) is confirmed.`,
+      cancelled: `Your booking of the ${updated.vehicle.name} has been cancelled. Contact us if you have questions.`,
+      completed: `Thank you for hiring the ${updated.vehicle.name} with us.`,
+    };
+    if (whatsappText[dto.status]) {
+      void this.notifications.notify({ phone: updated.phone, preferredContact: updated.preferredContact, subject: "", html: "", text: whatsappText[dto.status] });
     }
     // Reverting to "pending" doesn't send an email — that's an internal
     // admin correction, not something the customer needs to hear about.

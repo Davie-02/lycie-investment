@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Req, Res, UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { CustomersService } from "./customers.service";
 import { RegisterCustomerDto } from "./dto/register-customer.dto";
 import { LoginCustomerDto } from "./dto/login-customer.dto";
@@ -68,9 +68,23 @@ export class CustomersController {
 
   @Post("logout")
   @HttpCode(200)
-  logout(@Res({ passthrough: true }) response: Response) {
+  async logout(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    // Cancel the token itself, not just the cookie, so no copy of it keeps working.
+    await this.sessions.revokeFromRequest(request, CUSTOMER_SESSION_COOKIE);
     clearSessionCookie(response, CUSTOMER_SESSION_COOKIE);
     return { loggedOut: true };
+  }
+
+  /** Signs out every other device and browser. This one stays signed in. */
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post("me/sign-out-everywhere")
+  @HttpCode(200)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("CUSTOMER")
+  async signOutEverywhere(@CurrentUser() user: { sub: string; remember?: boolean }, @Res({ passthrough: true }) response: Response) {
+    const { session, user: current } = await this.customers.signOutEverywhere(user.sub, user.remember === true);
+    this.sessions.attach(response, CUSTOMER_SESSION_COOKIE, session);
+    return sessionBody(current, session);
   }
 
   /** "Am I signed in?" — the browser calls this after login to confirm its cookie actually works. */

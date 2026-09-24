@@ -4,6 +4,7 @@
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitInquiry } from "@/services/inquiries.service";
@@ -95,7 +96,7 @@ export default function InquiryForm({ vehicleId, vehicleLabel }: InquiryFormProp
       <div className="form-grid">
         <FormField id="fullName" label="Full Name" required value={values.fullName} onChange={handleChange("fullName")} error={errors.fullName} />
         <FormField id="phone" label="Phone" required value={values.phone} onChange={handleChange("phone")} error={errors.phone} />
-        <FormField id="email" label="Email" type="email" required value={values.email} onChange={handleChange("email")} error={errors.email} />
+        <EmailField id="email" value={values.email} onChange={(email) => setValues((prev) => ({ ...prev, email }))} error={errors.email} autoComplete="email" />
         <FormField
           id="message"
           label="Message"

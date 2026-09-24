@@ -3,6 +3,7 @@ import { ApiError } from "./http";
 import { clearCsrfToken, fetchWithCsrf } from "./csrf";
 import { authHeader, clearFallbackToken, settleSession } from "./sessionToken";
 import { parseErrorMessage } from "@/utils/apiError";
+import { finishAdminSignIn, setStoredUser, type AdminUserSummary } from "@/admin/adminApi";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 const CUSTOMER_USER_KEY = "lycie_customer_user";
@@ -19,6 +20,8 @@ export interface CustomerUser {
   role?: "CUSTOMER";
   /** null/absent until the customer confirms their email address. */
   emailVerifiedAt?: string | null;
+  /** For WhatsApp updates. */
+  phone?: string | null;
 }
 
 export interface CustomerSession {
@@ -86,12 +89,19 @@ export interface CustomerCase {
   status: "REQUESTED" | "IN_PROGRESS" | "READY" | "COMPLETED" | "CANCELLED";
   details: string | null;
   updatedAt: string;
+  /** Shipment tracking (imports/clearing). */
+  kind?: string;
+  stage?: string | null;
+  trackingCode?: string | null;
+  eta?: string | null;
   vehicle: { make: string; model: string; year: number; images: string[] } | null;
   hireVehicle: { name: string; image: string } | null;
   updates: Array<{
     id: string;
     status: CustomerCase["status"];
     message: string;
+    stage?: string | null;
+    photos?: string[];
     createdAt: string;
   }>;
 }
@@ -187,10 +197,10 @@ async function finishSignIn(response: CustomerAuthResponse, remember: boolean): 
   return { user: response.user };
 }
 
-export async function registerCustomer(name: string, email: string, password: string, remember = false) {
+export async function registerCustomer(name: string, email: string, password: string, remember = false, referralCode?: string) {
   const response = await customerFetch<CustomerAuthResponse>("/customers/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password, remember }),
+    body: JSON.stringify({ name, email, password, remember, referralCode: referralCode || undefined }),
   });
   return finishSignIn(response, remember);
 }
@@ -201,6 +211,40 @@ export async function loginCustomer(email: string, password: string, remember = 
     body: JSON.stringify({ email, password, remember }),
   });
   return finishSignIn(response, remember);
+}
+
+/** What the website's one sign-in form can lead to (POST /sign-in serves customers and staff). */
+export type SignInOutcome =
+  | { kind: "customer"; session: CustomerSession }
+  | { kind: "staff" }
+  | { kind: "two-factor"; challenge: string }
+  | { kind: "password-change"; challenge: string; name: string };
+
+/**
+ * The shared sign-in. Customers get their session here; staff accounts get a
+ * staff session (handled by the workspace's own code, loaded only when needed)
+ * or a further step (authenticator code / choose your own password).
+ */
+export async function signInAnyone(email: string, password: string, remember = false): Promise<SignInOutcome> {
+  type Response =
+    | ({ kind: "customer" } & CustomerAuthResponse)
+    | { kind: "staff"; user: AdminUserSummary; token?: string }
+    | { kind: "two-factor"; challenge: string }
+    | { kind: "password-change"; challenge: string; name: string };
+  const response = await customerFetch<Response>("/sign-in", { method: "POST", body: JSON.stringify({ email, password, remember }) });
+  if (response.kind === "customer") return { kind: "customer", session: await finishSignIn(response, remember) };
+  if (response.kind === "staff") {
+    await completeStaffSignIn(response, remember);
+    return { kind: "staff" };
+  }
+  return response;
+}
+
+/** Stores a staff session the same way the workspace's own sign-in does. */
+export async function completeStaffSignIn(response: { user: AdminUserSummary; token?: string }, remember: boolean): Promise<void> {
+  clearCustomerSession();
+  const { user } = await finishAdminSignIn(response, remember);
+  setStoredUser(user);
 }
 
 /** "Continue with Google": `credential` is the signed ID token Google's button hands back. */
@@ -264,7 +308,7 @@ export function cancelHireRequest(id: string) {
   return customerFetch<{ status: string }>(`/hire-requests/${id}/cancel`, { method: "PATCH" });
 }
 
-export function updateCustomerProfile(updates: { name?: string; email?: string }) {
+export function updateCustomerProfile(updates: { name?: string; email?: string; phone?: string }) {
   return customerFetch<CustomerUser>("/customers/me", {
     method: "PATCH",
     body: JSON.stringify(updates),
@@ -285,11 +329,25 @@ export async function changeCustomerPassword(currentPassword: string, newPasswor
   return { updated: response.updated };
 }
 
-export function forgotPassword(email: string) {
-  return customerFetch<{ requested: boolean }>("/customers/forgot-password", {
+/**
+ * The website's "Forgot your password?" serves customers and staff alike:
+ * both reset requests are sent. Each always answers the same way whether or
+ * not an account exists, so this reveals nothing. A staff member's email links
+ * to the workspace's reset page.
+ */
+export async function forgotPassword(email: string) {
+  const staff = fetchWithCsrf(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  }).catch(() => undefined);
+  const result = await customerFetch<{ requested: boolean }>("/customers/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
   });
+  await staff;
+  return result;
 }
 
 export function resetPassword(token: string, newPassword: string) {
@@ -349,4 +407,95 @@ export function getMyMessages() {
 
 export function markMessagesRead() {
   return customerFetch<{ marked: number }>("/customers/me/messages/read", { method: "POST", body: JSON.stringify({}) });
+}
+
+/** Signs out every other device and browser; this one stays signed in with a fresh session. */
+export async function signOutEverywhere(): Promise<void> {
+  const response = await customerFetch<CustomerAuthResponse>("/customers/me/sign-out-everywhere", { method: "POST", body: JSON.stringify({}) });
+  await settleSession("customer", response.token, isCustomerRemembered());
+}
+
+/** "Email me when a matching vehicle is listed." */
+export interface VehicleAlert {
+  id: string;
+  make: string | null;
+  model: string | null;
+  bodyType: string | null;
+  maxPrice: number | null;
+  minYear: number | null;
+  isActive: boolean;
+  label: string;
+  sentCount: number;
+  lastSentAt: string | null;
+  createdAt: string;
+}
+
+export interface NewVehicleAlert {
+  make?: string;
+  model?: string;
+  bodyType?: string;
+  maxPrice?: number;
+  minYear?: number;
+}
+
+export function getVehicleAlerts() {
+  return customerFetch<VehicleAlert[]>("/customers/me/alerts");
+}
+
+export function createVehicleAlert(alert: NewVehicleAlert) {
+  return customerFetch<VehicleAlert>("/customers/me/alerts", { method: "POST", body: JSON.stringify(alert) });
+}
+
+export function setVehicleAlertActive(id: string, isActive: boolean) {
+  return customerFetch<{ updated: boolean }>(`/customers/me/alerts/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ isActive }),
+  });
+}
+
+export function deleteVehicleAlert(id: string) {
+  return customerFetch<{ deleted: boolean }>(`/customers/me/alerts/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export interface MobilePaymentView {
+  txRef: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "success" | "failed";
+  purpose: string;
+  confirmedAt: string | null;
+}
+
+/** Whether mobile money payments are switched on (public). */
+export async function mobileMoneyEnabled(): Promise<boolean> {
+  try {
+    return (await customerFetch<{ enabled: boolean }>("/payments/mobile/status")).enabled;
+  } catch {
+    return false;
+  }
+}
+
+/** Starts a mobile money payment; the browser then goes to the returned checkout page. */
+export function startMobilePayment(amount: number, purpose: string, note?: string) {
+  return customerFetch<{ txRef: string; checkoutUrl: string }>("/payments/mobile", { method: "POST", body: JSON.stringify({ amount, purpose, note }) });
+}
+
+export function confirmMobilePayment(txRef: string) {
+  return customerFetch<MobilePaymentView>(`/payments/mobile/${encodeURIComponent(txRef)}/confirm`, { method: "POST", body: "{}" });
+}
+
+export function getMyMobilePayments() {
+  return customerFetch<Array<MobilePaymentView & { note: string; createdAt: string }>>("/payments/mobile/mine");
+}
+
+export interface MyReferral {
+  code: string;
+  link: string;
+  invited: number;
+  rewarded: number;
+  rewardsTotal: number;
+}
+
+export function getMyReferral() {
+  return customerFetch<MyReferral>("/customers/me/referral");
 }

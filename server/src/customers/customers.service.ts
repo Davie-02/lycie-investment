@@ -3,7 +3,7 @@ import * as bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { EmailService } from "../email/email.service";
-import { passwordChangedEmail, passwordResetEmail, verifyEmailEmail } from "../email/email-templates";
+import { emailChangedNoticeEmail, passwordChangedEmail, passwordResetEmail, verifyEmailEmail } from "../email/email-templates";
 import { CLEARED_LOCK_STATE, isLocked, lockedMessage, stateAfterFailure } from "../security/lockout";
 import { checkEmailDeliverable, normalizeEmail } from "../security/email-check";
 import type { VerifiedIdentity } from "../auth/social-identity";
@@ -13,6 +13,7 @@ import { CreateCustomerCaseDto } from "./dto/create-customer-case.dto";
 import { CreateCustomerCaseUpdateDto } from "./dto/create-customer-case-update.dto";
 import { UpdateCustomerProfileDto } from "./dto/update-customer-profile.dto";
 import { ChangeCustomerPasswordDto } from "./dto/change-customer-password.dto";
+import { ReferralsService } from "../referrals/referrals.service";
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -49,6 +50,7 @@ const CUSTOMER_SELECT = {
   isActive: true,
   createdAt: true,
   emailVerifiedAt: true,
+  phone: true,
 } as const;
 
 @Injectable()
@@ -56,7 +58,8 @@ export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-    private readonly sessions: SessionService
+    private readonly sessions: SessionService,
+    private readonly referrals: ReferralsService
   ) {}
 
   /** Mints the signed session for a customer. Used by every way of signing in. */
@@ -86,7 +89,7 @@ export class CustomersService {
 
     // Refuse addresses whose domain can't receive mail (typos, made-up or
     // throwaway domains) before creating anything we could never contact.
-    const verdict = await checkEmailDeliverable(email);
+    const verdict = await checkEmailDeliverable(email, { verifyMailbox: true });
     if (!verdict.ok) throw new BadRequestException(verdict.reason);
 
     const existing = await this.prisma.customerUser.findUnique({ where: { email } });
@@ -116,6 +119,9 @@ export class CustomersService {
       return created;
     });
 
+    // A friend's share link: never blocks signing up if the code is wrong.
+    await this.referrals.linkNewCustomer(customer.id, dto.referralCode).catch(() => undefined);
+
     // Fire and forget: the account exists either way, and can ask for another link later.
     void this.sendVerificationEmail(customer).catch(() => undefined);
     return customer;
@@ -127,20 +133,28 @@ export class CustomersService {
    * account is refused even with the right password until the lock ends.
    */
   async authenticate(email: string, password: string) {
-    const customer = await this.prisma.customerUser.findUnique({ where: { email: normalizeEmail(email) } });
-
-    if (customer?.lockedUntil && isLocked(customer.lockedUntil)) {
-      throw new UnauthorizedException(lockedMessage(customer.lockedUntil));
-    }
-
-    const passwordMatches = await bcrypt.compare(password, customer?.passwordHash ?? DUMMY_HASH);
-    if (!customer || !customer.isActive || !passwordMatches) {
-      if (customer) {
-        await this.prisma.customerUser.update({ where: { id: customer.id }, data: stateAfterFailure(customer.failedLoginCount) });
-      }
+    const check = await this.checkPassword(email, password);
+    if (check.customer && check.locked) throw new UnauthorizedException(lockedMessage(check.customer.lockedUntil!));
+    if (!check.customer || !check.matches) {
+      if (check.customer) await this.recordFailure(check.customer);
       throw new UnauthorizedException("Invalid email or password.");
     }
+    return this.completePasswordSignIn(check.customer);
+  }
 
+  /** Checks a password against the customer account with this email, without deciding anything (one bcrypt compare always). */
+  async checkPassword(email: string, password: string) {
+    const customer = await this.prisma.customerUser.findUnique({ where: { email: normalizeEmail(email) } });
+    const locked = Boolean(customer?.lockedUntil && isLocked(customer.lockedUntil));
+    const matches = await bcrypt.compare(password, customer?.passwordHash ?? DUMMY_HASH);
+    return { customer, locked, matches: Boolean(customer && customer.isActive && matches && !locked) };
+  }
+
+  async recordFailure(customer: { id: string; failedLoginCount: number }): Promise<void> {
+    await this.prisma.customerUser.update({ where: { id: customer.id }, data: stateAfterFailure(customer.failedLoginCount) });
+  }
+
+  async completePasswordSignIn(customer: { id: string; name: string; email: string; emailVerifiedAt: Date | null }) {
     await this.prisma.customerUser.update({ where: { id: customer.id }, data: { ...CLEARED_LOCK_STATE, lastLoginAt: new Date() } });
     return { id: customer.id, name: customer.name, email: customer.email, role: "CUSTOMER", emailVerifiedAt: customer.emailVerifiedAt };
   }
@@ -170,11 +184,22 @@ export class CustomersService {
 
     const byEmail = await this.prisma.customerUser.findUnique({ where: { email: identity.email } });
     if (byEmail) {
+      // Account "pre-hijacking" defence: if nobody ever proved they own this
+      // email, the existing account may have been registered by someone else
+      // with a password they know, waiting for the real owner to sign in with
+      // Google. The real owner has now proven the address, so that unproven
+      // password is replaced (and any sessions it opened are signed out).
+      const unproven = !byEmail.emailVerifiedAt;
       const linkedNow = await this.prisma.customerUser.update({
         where: { id: byEmail.id },
         // The provider verified the email, so it counts as verified here too.
-        data: { ...providerLink, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date() },
+        data: {
+          ...providerLink,
+          emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
+          ...(unproven ? { passwordHash: await bcrypt.hash(randomBytes(32).toString("hex"), 12), passwordChangedAt: new Date() } : {}),
+        },
       });
+      if (unproven) this.sessions.forget("CUSTOMER", byEmail.id);
       return this.finishSocialSignIn(linkedNow);
     }
 
@@ -213,14 +238,17 @@ export class CustomersService {
 
   /** Consumes an emailed confirmation link. */
   async verifyEmail(rawToken: string): Promise<{ verified: true }> {
+    const invalid = () =>
+      new BadRequestException("This confirmation link is invalid or has expired. Request a new one from your account page.");
     const token = await this.prisma.emailVerificationToken.findUnique({ where: { tokenHash: hashToken(rawToken) } });
-    if (!token || token.usedAt || token.expiresAt < new Date()) {
-      throw new BadRequestException("This confirmation link is invalid or has expired. Request a new one from your account page.");
-    }
-    await this.prisma.$transaction([
-      this.prisma.customerUser.update({ where: { id: token.customerId }, data: { emailVerifiedAt: new Date() } }),
-      this.prisma.emailVerificationToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }),
-    ]);
+    if (!token || token.usedAt || token.expiresAt < new Date()) throw invalid();
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.emailVerificationToken.updateMany({ where: { id: token.id, usedAt: null }, data: { usedAt: now } });
+      if (claimed.count !== 1) throw invalid();
+      await tx.customerUser.update({ where: { id: token.customerId }, data: { emailVerifiedAt: now } });
+    });
     return { verified: true };
   }
 
@@ -240,7 +268,7 @@ export class CustomersService {
    */
   async requestPasswordReset(email: string): Promise<{ requested: true }> {
     const customer = await this.prisma.customerUser.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: normalizeEmail(email) },
     });
 
     if (customer && customer.isActive) {
@@ -256,7 +284,8 @@ export class CustomersService {
       const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
       const resetUrl = `${frontendUrl}/account/reset-password?token=${rawToken}`;
       const template = passwordResetEmail(resetUrl);
-      await this.emailService.send({ to: customer.email, ...template });
+      // Not awaited, so "account exists" isn't measurably slower than "no such account".
+      void this.emailService.send({ to: customer.email, ...template }).catch(() => undefined);
     }
 
     return { requested: true };
@@ -271,30 +300,40 @@ export class CustomersService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await this.prisma.$transaction([
-      this.prisma.customerUser.update({
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      // Claim the link atomically so two simultaneous uses can't both succeed.
+      const claimed = await tx.passwordResetToken.updateMany({
+        where: { id: resetToken.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      });
+      if (claimed.count !== 1) throw new BadRequestException("This password reset link is invalid or has expired.");
+
+      await tx.customerUser.update({
         where: { id: resetToken.customerId },
         // A reset also lifts any lockout and signs the account out everywhere.
-        data: { passwordHash, passwordChangedAt: new Date(), ...CLEARED_LOCK_STATE },
-      }),
-      this.prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { usedAt: new Date() },
-      }),
-    ]);
+        // Opening the emailed link also proves the customer owns the address.
+        data: { passwordHash, passwordChangedAt: now, ...CLEARED_LOCK_STATE, emailVerifiedAt: now },
+      });
+      // Other reset links still sitting in the inbox stop working too.
+      await tx.passwordResetToken.updateMany({ where: { customerId: resetToken.customerId, usedAt: null }, data: { usedAt: now } });
+    });
+    this.sessions.forget("CUSTOMER", resetToken.customerId);
 
     return { reset: true };
   }
 
   async updateProfile(customerId: string, dto: UpdateCustomerProfileDto) {
     let emailChanged = false;
+    let previous: { name: string; email: string } | null = null;
     if (dto.email) {
       const email = normalizeEmail(dto.email);
       const current = await this.prisma.customerUser.findUnique({ where: { id: customerId } });
+      previous = current ? { name: current.name, email: current.email } : null;
       emailChanged = Boolean(current && current.email !== email);
 
       if (emailChanged) {
-        const verdict = await checkEmailDeliverable(email);
+        const verdict = await checkEmailDeliverable(email, { verifyMailbox: true });
         if (!verdict.ok) throw new BadRequestException(verdict.reason);
       }
       const existing = await this.prisma.customerUser.findUnique({ where: { email } });
@@ -308,13 +347,22 @@ export class CustomersService {
       data: {
         name: dto.name?.trim(),
         email: dto.email ? normalizeEmail(dto.email) : undefined,
+        phone: dto.phone === undefined ? undefined : dto.phone.trim() || null,
         // A different address hasn't been proven yet.
         ...(emailChanged ? { emailVerifiedAt: null } : {}),
       },
       select: CUSTOMER_SELECT,
     });
 
-    if (emailChanged) void this.sendVerificationEmail(updated).catch(() => undefined);
+    if (emailChanged) {
+      void this.sendVerificationEmail(updated).catch(() => undefined);
+      // Tell the OLD address, so a change made by someone else is spotted.
+      if (previous) {
+        void this.emailService
+          .send({ to: previous.email, ...emailChangedNoticeEmail({ name: previous.name, newEmail: updated.email }) })
+          .catch(() => undefined);
+      }
+    }
     return updated;
   }
 
@@ -340,8 +388,16 @@ export class CustomersService {
     await this.prisma.customerUser.update({ where: { id: customerId }, data: { passwordHash, passwordChangedAt: new Date() } });
     this.sessions.forget("CUSTOMER", customerId);
 
-    void this.emailService.send({ to: customer.email, ...passwordChangedEmail(customer.name) });
+    void this.emailService.send({ to: customer.email, ...passwordChangedEmail(customer.name) }).catch(() => undefined);
     return { session: await this.issueSession(customer, remember), user: { id: customer.id, name: customer.name, email: customer.email } };
+  }
+
+  /** "Sign out everywhere" for customers. Returns a fresh session so this device stays signed in. */
+  async signOutEverywhere(customerId: string, remember: boolean) {
+    const customer = await this.prisma.customerUser.findUnique({ where: { id: customerId }, select: CUSTOMER_SELECT });
+    if (!customer) throw new NotFoundException("Customer not found.");
+    await this.sessions.revokeAll("CUSTOMER", customerId);
+    return { session: await this.issueSession(customer, remember), user: customer };
   }
 
   async findMyRequests(customerId: string): Promise<CustomerRequestSummary[]> {
@@ -436,7 +492,8 @@ export class CustomersService {
     return this.prisma.savedVehicle.upsert({
       where: { customerId_vehicleId: { customerId, vehicleId } },
       update: {},
-      create: { customerId, vehicleId },
+      // The price at saving time is the baseline for "price dropped" emails (see alerts.service.ts).
+      create: { customerId, vehicleId, notifiedPrice: vehicle.price },
     });
   }
 

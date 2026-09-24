@@ -87,3 +87,19 @@ export function mailtoLink(email: string | null | undefined): string | null {
   const value = (email ?? "").trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? `mailto:${value}` : null;
 }
+
+/**
+ * A web address that is safe to put in a link: only http(s). Anything else —
+ * notably "javascript:" addresses, which run code when clicked — gives null.
+ * Use for every link whose address comes from stored or outside data
+ * (admin-edited social links, social-network inbox items).
+ */
+export function safeHttpUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}

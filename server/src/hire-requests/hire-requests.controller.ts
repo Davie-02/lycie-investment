@@ -21,6 +21,13 @@ export class HireRequestsController {
     return this.hireRequestsService.create(dto, customerId);
   }
 
+  /** Public: dates a hire vehicle is already booked, for the booking form's calendar. No personal details. */
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  @Get("availability/:vehicleId")
+  availability(@Param("vehicleId") vehicleId: string) {
+    return this.hireRequestsService.availability(vehicleId.slice(0, 64));
+  }
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("OWNER", "MANAGER")
   @Get()

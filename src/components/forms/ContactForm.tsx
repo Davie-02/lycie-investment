@@ -6,6 +6,7 @@
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitContactMessage } from "@/services/inquiries.service";
@@ -92,7 +93,7 @@ export default function ContactForm() {
 
       <div className="form-grid form-grid--2col">
         <FormField id="fullName" label="Full Name" required value={values.fullName} onChange={handleChange("fullName")} error={errors.fullName} />
-        <FormField id="email" label="Email" type="email" required value={values.email} onChange={handleChange("email")} error={errors.email} />
+        <EmailField id="email" value={values.email} onChange={(email) => setValues((prev) => ({ ...prev, email }))} error={errors.email} autoComplete="email" />
         <FormField id="phone" label="Phone (optional)" value={values.phone} onChange={handleChange("phone")} />
         <FormField id="subject" label="Subject" required value={values.subject} onChange={handleChange("subject")} error={errors.subject} />
         <FormField

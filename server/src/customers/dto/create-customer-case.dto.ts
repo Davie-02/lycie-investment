@@ -17,12 +17,13 @@ export class CreateCustomerCaseDto {
   @IsString()
   details?: string;
 
+  // Vehicle ids are cuids, not UUIDs.
   @IsOptional()
-  @IsUUID()
+  @IsString()
   vehicleId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
   hireVehicleId?: string;
 
   @IsOptional()

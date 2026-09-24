@@ -39,6 +39,28 @@ services:
       # Lycie chat widget simply hides itself.
       - key: GEMINI_API_KEY
         sync: false
+      # Optional mailbox check at sign-up: kickbox, zerobounce or abstract (+ its API key).
+      # Leave blank and the free DNS/typo/throwaway checks still run.
+      - key: EMAIL_VERIFICATION_PROVIDER
+        sync: false
+      - key: EMAIL_VERIFICATION_API_KEY
+        sync: false
+      # System administrator (Owner) protection. Two-step sign-in is required unless set to "false".
+      # Optionally limit administrators to your office/home addresses: "41.70.1.2, 102.68.3.4".
+      - key: SYSTEM_ADMIN_ALLOWED_IPS
+        sync: false
+      # Mobile money (Airtel Money / TNM Mpamba) through PayChangu — optional.
+      - key: PAYCHANGU_SECRET_KEY
+        sync: false
+      - key: PAYCHANGU_WEBHOOK_SECRET
+        sync: false
+      # WhatsApp notifications (Meta Cloud API) — optional; needs an approved one-variable template.
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_TEMPLATE_NAME
+        sync: false
       # Social media desk (optional — the tools stay hidden until these are set).
       - key: META_PAGE_ID
         sync: false

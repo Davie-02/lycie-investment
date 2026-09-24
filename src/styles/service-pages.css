@@ -184,3 +184,33 @@
 .about-content p {
   margin-top: var(--space-3);
 }
+
+/* Hire form: dates the vehicle is already booked (HireRequestForm.tsx). */
+.hire-form__availability p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.hire-form__availability ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hire-form__booked {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background);
+  font-size: var(--fs-sm);
+  font-family: var(--font-mono);
+}
+
+.hire-form__booked--clash {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}

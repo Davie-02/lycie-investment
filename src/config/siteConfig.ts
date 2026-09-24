@@ -59,7 +59,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       heading: "What our customers say",
       body: "Honest feedback from people who've bought, hired, imported or cleared a vehicle with us.",
     },
-    login: { heading: "Customer account", body: "Sign in to view your balance and transaction history." },
+    login: { heading: "Sign in", body: "Customers: see your requests, vehicles and payments. Staff: open your workspace." },
     register: { heading: "Open an account", body: "Create a secure customer account to keep track of your transactions." },
   },
   homeSections: {

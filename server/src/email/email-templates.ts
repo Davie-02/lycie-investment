@@ -204,3 +204,136 @@ export function profileMessageNotificationEmail(input: { customerName: string; s
     `),
   };
 }
+
+/** Sent to an admin each time their account signs in, so a sign-in they didn't make is noticed at once. */
+export function adminSignInAlertEmail(input: { name: string; when: Date; ip: string; device: string; securityUrl: string }) {
+  return {
+    subject: "New sign-in to your Lycie Investments admin account",
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Your admin account was just signed in to.</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+        <tr><td style="padding: 6px 0; color: #667085;">When</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(input.when.toUTCString())}</td></tr>
+        <tr><td style="padding: 6px 0; color: #667085;">Network address</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(input.ip)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #667085;">Device</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(input.device)}</td></tr>
+      </table>
+      <p style="color: #667085; font-size: 13px;">If this was you, there's nothing to do. If it wasn't, open
+        <a href="${escapeHtml(input.securityUrl)}">My Security</a>, choose <strong>Sign out everywhere</strong> and change your password.</p>
+    `),
+  };
+}
+
+/** Sent to the OLD address when a customer's sign-in email is changed, so a hijacked account is noticed. */
+export function emailChangedNoticeEmail(input: { name: string; newEmail: string }) {
+  return {
+    subject: "The email on your Lycie Investments account was changed",
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>The email address you sign in with was just changed to <strong>${escapeHtml(input.newEmail)}</strong>.</p>
+      <p style="color: #667085; font-size: 13px;">If this was you, there's nothing more to do. If it wasn't, contact us straight away so we can secure your account.</p>
+    `),
+  };
+}
+
+export interface AlertVehicle {
+  label: string;
+  price: string;
+  url: string;
+}
+
+/** "A vehicle matching your alert has just been listed." */
+export function vehicleAlertEmail(input: { name: string; alertLabel: string; vehicles: AlertVehicle[]; manageUrl: string }) {
+  return {
+    subject: input.vehicles.length === 1 ? `Just listed: ${input.vehicles[0].label}` : `${input.vehicles.length} new vehicles match your alert`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Good news — ${input.vehicles.length === 1 ? "a vehicle" : "vehicles"} matching your alert <strong>${escapeHtml(input.alertLabel)}</strong> just arrived:</p>
+      <ul style="font-size: 14px; padding-left: 18px;">
+        ${input.vehicles.map((v) => `<li style="margin-bottom: 6px;"><a href="${escapeHtml(v.url)}">${escapeHtml(v.label)}</a> — ${escapeHtml(v.price)}</li>`).join("")}
+      </ul>
+      <p style="color: #667085; font-size: 13px;">You're getting this because you set up a vehicle alert. <a href="${escapeHtml(input.manageUrl)}">Change or stop your alerts</a>.</p>
+    `),
+  };
+}
+
+/** "A vehicle you saved is now cheaper." */
+export function priceDropEmail(input: { name: string; vehicle: AlertVehicle; oldPrice: string; manageUrl: string }) {
+  return {
+    subject: `Price drop: ${input.vehicle.label}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>A vehicle you saved just dropped in price:</p>
+      <p style="font-size: 16px;"><a href="${escapeHtml(input.vehicle.url)}"><strong>${escapeHtml(input.vehicle.label)}</strong></a><br>
+        <span style="text-decoration: line-through; color: #667085;">${escapeHtml(input.oldPrice)}</span> → <strong>${escapeHtml(input.vehicle.price)}</strong></p>
+      <p style="color: #667085; font-size: 13px;">You're getting this because you saved this vehicle. <a href="${escapeHtml(input.manageUrl)}">Manage saved vehicles</a>.</p>
+    `),
+  };
+}
+
+/**
+ * Invitation for a new staff member (or a re-sent one): how to sign in, the
+ * one-time password, and that it must be changed at first sign-in.
+ */
+export function staffInviteEmail(input: {
+  name: string;
+  invitedBy: string;
+  position: string;
+  email: string;
+  tempPassword: string;
+  signInUrl: string;
+  expiresAt: Date;
+  isSystemAdmin: boolean;
+}) {
+  return {
+    subject: input.isSystemAdmin ? "Your Lycie Investments system administrator account" : "You're invited to the Lycie Investments staff workspace",
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>${escapeHtml(input.invitedBy)} has set up your ${input.isSystemAdmin ? "system administrator" : "staff"} account${input.position ? ` (${escapeHtml(input.position)})` : ""}.</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+        <tr><td style="padding: 6px 0; color: #667085;">Sign in at</td><td style="padding: 6px 0; text-align: right;"><a href="${escapeHtml(input.signInUrl)}">${escapeHtml(input.signInUrl)}</a></td></tr>
+        <tr><td style="padding: 6px 0; color: #667085;">Email</td><td style="padding: 6px 0; text-align: right;">${escapeHtml(input.email)}</td></tr>
+        <tr><td style="padding: 6px 0; color: #667085;">One-time password</td><td style="padding: 6px 0; text-align: right; font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 1px;"><strong>${escapeHtml(input.tempPassword)}</strong></td></tr>
+      </table>
+      <p>When you first sign in you'll be asked to choose your own password. This one-time password stops working on ${escapeHtml(input.expiresAt.toUTCString())}.</p>
+      ${input.isSystemAdmin ? "<p>System administrator accounts must also turn on two-step verification (an authenticator app) straight after signing in.</p>" : ""}
+      <p style="color: #667085; font-size: 13px;">Never share this password. If you weren't expecting this email, you can ignore it, or let us know.</p>
+    `),
+  };
+}
+
+/** Tells an employee their leave request was decided. */
+export function leaveDecisionEmail(input: { name: string; approved: boolean; period: string; note?: string | null; reviewer: string }) {
+  return {
+    subject: `Your leave request was ${input.approved ? "approved" : "declined"}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Your leave request for <strong>${escapeHtml(input.period)}</strong> was <strong>${input.approved ? "approved" : "declined"}</strong> by ${escapeHtml(input.reviewer)}.</p>
+      ${input.note ? `<p>Note: ${escapeHtml(input.note)}</p>` : ""}
+    `),
+  };
+}
+
+/** Shipment progress for an import or clearing customer. */
+export function shipmentUpdateEmail(input: { name: string; title: string; stageLabel: string; message: string; trackUrl: string }) {
+  return {
+    subject: `Update on ${input.title}: ${input.stageLabel}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>There's news on <strong>${escapeHtml(input.title)}</strong> — it's now at <strong>${escapeHtml(input.stageLabel)}</strong>.</p>
+      <p style="line-height: 1.55;">${escapeHtml(input.message).replace(/\n/g, "<br>")}</p>
+      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Track it</a></p>
+    `),
+  };
+}
+
+/** Receipt for a mobile-money payment. */
+export function mobilePaymentReceiptEmail(input: { name: string; amount: string; reference: string; purpose: string }) {
+  return {
+    subject: `Payment received: ${input.amount}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>We've received your mobile money payment of <strong>${escapeHtml(input.amount)}</strong> (${escapeHtml(input.purpose)}). Reference: <span style="font-family: monospace;">${escapeHtml(input.reference)}</span>.</p>
+      <p style="color: #667085; font-size: 13px;">It shows in your account's transaction history.</p>
+    `),
+  };
+}

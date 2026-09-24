@@ -11,7 +11,12 @@ import { parseErrorMessage } from "@/utils/apiError";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001/api";
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status?: number) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    /** Machine-readable reason some API errors carry (e.g. "STEP_UP_REQUIRED", "UNDO_CONFLICT"). */
+    public readonly code?: string
+  ) {
     super(message);
     this.name = "ApiError";
   }

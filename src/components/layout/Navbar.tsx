@@ -12,24 +12,28 @@ import { useAsyncData } from "@/hooks/useAsyncData";
 import { getDeals } from "@/services/deals.service";
 import "./Navbar.css";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import LanguageSwitch from "@/i18n/LanguageSwitch";
+import { useT } from "@/i18n/LanguageContext";
+import type { StringKey } from "@/i18n/strings";
 
-const BASE_NAV_LINKS = [
-  { to: "/", label: "Home" },
-  { to: "/vehicles", label: "Vehicles" },
-  { to: "/import", label: "Import" },
-  { to: "/clearing", label: "Clearing" },
-  { to: "/hire", label: "Hire" },
-  { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
+const BASE_NAV_LINKS: Array<{ to: string; label: StringKey }> = [
+  { to: "/", label: "nav.home" },
+  { to: "/vehicles", label: "nav.vehicles" },
+  { to: "/import", label: "nav.import" },
+  { to: "/clearing", label: "nav.clearing" },
+  { to: "/hire", label: "nav.hire" },
+  { to: "/about", label: "nav.about" },
+  { to: "/contact", label: "nav.contact" },
 ];
 
 export default function Navbar() {
   // A "Deals" link appears only while at least one deal is published (updates live).
   const { data: deals } = useAsyncData(getDeals, [], ["deals"]);
-  const NAV_LINKS = deals && deals.length > 0 ? [...BASE_NAV_LINKS.slice(0, 5), { to: "/deals", label: "Deals" }, ...BASE_NAV_LINKS.slice(5)] : BASE_NAV_LINKS;
+  const NAV_LINKS = deals && deals.length > 0 ? [...BASE_NAV_LINKS.slice(0, 5), { to: "/deals", label: "nav.deals" as StringKey }, ...BASE_NAV_LINKS.slice(5)] : BASE_NAV_LINKS;
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { isAuthenticated } = useCustomerAuth();
+  const t = useT();
 
   useEffect(() => {
     function onScroll() {
@@ -57,20 +61,21 @@ export default function Navbar() {
                 isActive ? "navbar__link navbar__link--active" : "navbar__link"
               }
             >
-              {link.label}
+              {t(link.label)}
             </NavLink>
           ))}
         </nav>
 
+        <LanguageSwitch className="navbar__lang" />
         <ThemeToggle />
         <NavLink to="/vehicles" className="btn btn-primary navbar__cta">
-          Get a Quote
+          {t("nav.quote")}
         </NavLink>
         <NavLink
           to={isAuthenticated ? "/account" : "/account/login"}
           className="navbar__account-link"
         >
-          {isAuthenticated ? "My account" : "Sign in"}
+          {isAuthenticated ? t("nav.account") : t("nav.signIn")}
         </NavLink>
 
         <button
@@ -101,22 +106,23 @@ export default function Navbar() {
               className="navbar__mobile-link"
               onClick={() => setIsOpen(false)}
             >
-              {link.label}
+              {t(link.label)}
             </NavLink>
           ))}
+          <LanguageSwitch className="navbar__mobile-lang" />
           <NavLink
             to="/vehicles"
             className="btn btn-primary navbar__mobile-cta"
             onClick={() => setIsOpen(false)}
           >
-            Get a Quote
+            {t("nav.quote")}
           </NavLink>
           <NavLink
             to={isAuthenticated ? "/account" : "/account/login"}
             className="btn-ghost navbar__mobile-account"
             onClick={() => setIsOpen(false)}
           >
-            {isAuthenticated ? "My account" : "Sign in"}
+            {isAuthenticated ? t("nav.account") : t("nav.signIn")}
           </NavLink>
         </div>
       </nav>

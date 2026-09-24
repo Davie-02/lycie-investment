@@ -19,7 +19,7 @@ interface Overview {
 
 /** What is waiting on a person right now, plus setup problems worth fixing — refreshed while the dashboard is open. */
 export default function AttentionPanel() {
-  const { currentUser } = useAdminAuth();
+  const { isSystemAdmin } = useAdminAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [failed, setFailed] = useState(false);
   const [testState, setTestState] = useState<{ ok: boolean; text: string } | null>(null);
@@ -65,14 +65,14 @@ export default function AttentionPanel() {
       {overview.setup.map((item) => (
         <div key={item.key} className={`attention__setup attention__setup--${item.severity}`} role="status">
           <span>{item.text}</span>
-          {item.key === "email" && currentUser?.role === "OWNER" && (
+          {item.key === "email" && isSystemAdmin && (
             <button type="button" className="btn-ghost" onClick={sendTest} disabled={testing}>
               {testing ? "Sending…" : "Send a test email"}
             </button>
           )}
         </div>
       ))}
-      {currentUser?.role === "OWNER" && !overview.setup.some((s) => s.key === "email") && (
+      {isSystemAdmin && !overview.setup.some((s) => s.key === "email") && (
         <p className="attention__test">
           <button type="button" className="btn-ghost" onClick={sendTest} disabled={testing}>
             {testing ? "Sending…" : "Send a test email to me"}

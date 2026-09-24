@@ -8,9 +8,10 @@ datasource db {
 }
 
 enum AdminRole {
-  OWNER // full access, including managing other admin accounts
-  MANAGER // vehicles, hire vehicles, site content, requests — not user management
-  VIEWER // read-only on submitted requests
+  OWNER // system administrator: everything, signs in only through the hardened admin portal
+  MANAGER // legacy: broad edit access (see server/src/access/modules.ts presets)
+  VIEWER // legacy: read-only on operations
+  EMPLOYEE // a staff member whose access comes from their department + per-person overrides
 }
 
 model AdminUser {
@@ -43,6 +44,31 @@ model AdminUser {
   totpEnabled        Boolean  @default(false)
   /// SHA-256 hashes of the one-time recovery codes shown once at setup.
   recoveryCodeHashes String[] @default([])
+  /// The 30-second time step of the last authenticator code accepted, so a
+  /// code that was seen (shoulder-surfed, phished) can't be used a second time.
+  lastTotpStep       Int?
+
+  /// "Sign out everywhere": sessions issued before this moment are rejected,
+  /// without changing the password.
+  sessionsRevokedAt DateTime?
+
+  /// Staff profile. `department` picks the default module access (server/src/access/modules.ts).
+  department  String?
+  jobTitle    String?
+  phone       String?
+  /// Per-person access overrides set by a system administrator: { moduleKey: "none"|"view"|"edit"|"manage" }.
+  permissions Json?
+
+  /// Invited with a one-time password that must be replaced at first sign-in.
+  mustChangePassword    Boolean   @default(false)
+  tempPasswordExpiresAt DateTime?
+  invitedById           String?
+  invitedAt             DateTime?
+
+  /// Recently re-confirmed identity (password + code) — required for the most sensitive actions.
+  stepUpUntil DateTime?
+
+  leaveRequests LeaveRequest[]
 }
 
 /// Mirrors PasswordResetToken (customer side) for admin accounts — kept as
@@ -85,6 +111,15 @@ model CustomerUser {
   /// email, or an identity provider that already verified it, e.g. Google).
   emailVerifiedAt DateTime?
 
+  /// Same purpose as AdminUser.sessionsRevokedAt.
+  sessionsRevokedAt DateTime?
+
+  /// Referral programme: this customer's share code, and who invited them.
+  referralCode String? @unique
+  referredById String? @db.Uuid
+  /// Phone for WhatsApp notifications (optional).
+  phone        String?
+
   /// Provider user ids for "Continue with Google / Facebook". Unique so one
   /// provider account can only ever belong to one customer.
   googleId   String? @unique
@@ -105,6 +140,10 @@ model CustomerUser {
   savedVehicles       SavedVehicle[]
   reviews             Review[]
   messages            CustomerMessage[]
+  vehicleAlerts       VehicleAlert[]
+  mobilePayments      MobilePayment[]
+  referralsMade       Referral[]           @relation("ReferralsMade")
+  referredBy          Referral?            @relation("ReferredCustomer")
 }
 
 /// A password-reset link is only ever useful to the customer it was issued
@@ -157,6 +196,11 @@ model CustomerCase {
   title         String
   status        CustomerCaseStatus @default(REQUESTED)
   details       String?
+  /// Shipment tracking (imports/clearing): current stage key, public tracking code, expected arrival.
+  kind          String             @default("general")
+  stage         String?
+  trackingCode  String?            @unique
+  eta           DateTime?
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
@@ -174,6 +218,9 @@ model CustomerCaseUpdate {
   caseId    String             @db.Uuid
   status    CustomerCaseStatus
   message   String
+  /// Shipment stage reached with this update, and photos (e.g. at the port).
+  stage     String?
+  photos    String[]           @default([])
   createdAt DateTime           @default(now())
 
   customerCase CustomerCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
@@ -329,6 +376,10 @@ model SavedVehicle {
 
   customer CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
   vehicle  Vehicle      @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  /// Price the customer was last told about (or saw when saving), so a price
+  /// drop is emailed once, not on every edit.
+  notifiedPrice Int?
 
   @@unique([customerId, vehicleId])
   @@index([customerId, createdAt])
@@ -772,6 +823,15 @@ model AdminActivity {
   targetId  String?
   createdAt DateTime @default(now())
 
+  /// True when the database changes this action made were captured, so it can be undone.
+  undoable Boolean   @default(false)
+  undoneAt DateTime?
+  undoneBy String?
+  /// Set on the entry recorded BY an undo: the action it reversed.
+  undoOfId String?
+
+  changes ChangeRecord[]
+
   @@index([createdAt])
   @@index([adminId, createdAt])
 }
@@ -836,4 +896,123 @@ model SocialPost {
   updatedAt    DateTime  @updatedAt
 
   @@index([status, scheduledFor])
+}
+
+/// One row changed by an admin action: its state before and after, so the
+/// action can be reversed (see server/src/undo/). Server-side only — never
+/// returned by the API, because rows can hold customer details and hashes.
+model ChangeRecord {
+  id         String        @id @default(cuid())
+  activityId String
+  activity   AdminActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  /// Order the change happened in within the action.
+  seq        Int
+  /// Prisma model name, e.g. "Vehicle".
+  model      String
+  recordId   String
+  /// Null = the row did not exist before (it was created).
+  before     Json?
+  /// Null = the row no longer exists after (it was deleted).
+  after      Json?
+  createdAt  DateTime      @default(now())
+
+  @@index([activityId, seq])
+}
+
+/// A signed-out session. Sessions are signed tokens that stay valid until
+/// they expire, so signing out records the token's id here until then.
+model RevokedSession {
+  jti       String   @id
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+/// "Email me when a matching vehicle is listed." Saved by signed-in customers
+/// with a confirmed email address; checked whenever a vehicle is published.
+model VehicleAlert {
+  id             String       @id @default(cuid())
+  customerId     String       @db.Uuid
+  customer       CustomerUser @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  make           String?
+  model          String?
+  bodyType       String?
+  /// Upper price limit in the vehicle's stored currency units (USD by default).
+  maxPrice       Int?
+  minYear        Int?
+  isActive       Boolean      @default(true)
+  lastSentAt     DateTime?
+  /// Vehicles already emailed for this alert, so each is announced once.
+  sentVehicleIds String[]     @default([])
+  createdAt      DateTime     @default(now())
+
+  @@index([customerId])
+  @@index([isActive])
+}
+
+/// A staff member's request for time off (HR module).
+model LeaveRequest {
+  id           String    @id @default(cuid())
+  employeeId   String
+  employee     AdminUser @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// annual | sick | family | unpaid | other
+  type         String
+  startDate    DateTime  @db.Date
+  endDate      DateTime  @db.Date
+  days         Int
+  reason       String    @default("")
+  /// pending | approved | declined | cancelled
+  status       String    @default("pending")
+  reviewedById String?
+  reviewedBy   String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([employeeId, startDate])
+  @@index([status, startDate])
+}
+
+/// A mobile-money payment (Airtel Money / TNM Mpamba) made through the payment gateway (PayChangu).
+model MobilePayment {
+  id           String        @id @default(cuid())
+  customerId   String?       @db.Uuid
+  customer     CustomerUser? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  /// Our reference, sent to the gateway and used to verify the payment.
+  txRef        String        @unique
+  amount       Int
+  currency     String        @default("MWK")
+  /// deposit | hire | import | clearing | other
+  purpose      String        @default("deposit")
+  note         String        @default("")
+  /// pending | success | failed
+  status       String        @default("pending")
+  provider     String        @default("paychangu")
+  checkoutUrl  String?
+  /// The gateway's answer when verified (method, network, charges). Admin reference only.
+  providerData Json?
+  confirmedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([customerId, createdAt])
+  @@index([status, createdAt])
+}
+
+/// One customer inviting another. Rewarded by staff once the new customer does business.
+model Referral {
+  id           String       @id @default(cuid())
+  referrerId   String       @db.Uuid
+  referrer     CustomerUser @relation("ReferralsMade", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId   String       @unique @db.Uuid
+  referred     CustomerUser @relation("ReferredCustomer", fields: [referredId], references: [id], onDelete: Cascade)
+  /// pending | rewarded | declined
+  status       String       @default("pending")
+  rewardAmount Int?
+  rewardNote   String?
+  rewardedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([referrerId])
+  @@index([status, createdAt])
 }

@@ -5,13 +5,16 @@
  * visit downloads less. To add a page: create it, add a <Route> here, and link to it.
  */
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 import { AdminAuthProvider } from "@/admin/context/AdminAuthContext";
 import ProtectedRoute from "@/admin/components/ProtectedRoute";
-import RequireRole from "@/admin/components/RequireRole";
+import RequireAccess from "@/admin/components/RequireAccess";
+import { EXTRA_PAGES, MODULES, MODULE_HOME, WORKSPACE_PAGES, lazyPage } from "@/admin/modules";
+
+const ModuleHome = lazyPage(MODULE_HOME);
 
 const Home = lazy(() => import("@/pages/Home/Home"));
 const About = lazy(() => import("@/pages/About/About"));
@@ -22,6 +25,7 @@ const Clearing = lazy(() => import("@/pages/Clearing/Clearing"));
 const Hire = lazy(() => import("@/pages/Hire/Hire"));
 const Contact = lazy(() => import("@/pages/Contact/Contact"));
 const Deals = lazy(() => import("@/pages/Deals/Deals"));
+const Compare = lazy(() => import("@/pages/Compare/Compare"));
 const Faq = lazy(() => import("@/pages/Faq/Faq"));
 const Reviews = lazy(() => import("@/pages/Reviews/Reviews"));
 const BlogList = lazy(() => import("@/pages/Blog/BlogList"));
@@ -36,26 +40,8 @@ const AdminLayout = lazy(() => import("@/admin/components/AdminLayout"));
 const AdminLogin = lazy(() => import("@/admin/pages/AdminLogin"));
 const AdminForgotPassword = lazy(() => import("@/admin/pages/AdminForgotPassword"));
 const AdminResetPassword = lazy(() => import("@/admin/pages/AdminResetPassword"));
-const AdminSecurity = lazy(() => import("@/admin/pages/AdminSecurity"));
-const AdminDashboard = lazy(() => import("@/admin/pages/AdminDashboard"));
-const AdminVehicles = lazy(() => import("@/admin/pages/AdminVehicles"));
-const AdminHireVehicles = lazy(() => import("@/admin/pages/AdminHireVehicles"));
-const AdminRequests = lazy(() => import("@/admin/pages/AdminRequests"));
-const AdminBookings = lazy(() => import("@/admin/pages/AdminBookings"));
-const AdminBookingDetail = lazy(() => import("@/admin/pages/AdminBookingDetail"));
-const AdminSiteContent = lazy(() => import("@/admin/pages/AdminSiteContent"));
-const AdminNotices = lazy(() => import("@/admin/pages/AdminNotices"));
-const AdminUsers = lazy(() => import("@/admin/pages/AdminUsers"));
-const AdminPayments = lazy(() => import("@/admin/pages/AdminPayments"));
-const AdminTestimonials = lazy(() => import("@/admin/pages/AdminTestimonials"));
-const AdminFaq = lazy(() => import("@/admin/pages/AdminFaq"));
-const AdminBlogPosts = lazy(() => import("@/admin/pages/AdminBlogPosts"));
-const AdminReviews = lazy(() => import("@/admin/pages/AdminReviews"));
-const AdminInsights = lazy(() => import("@/admin/pages/AdminInsights"));
-const AdminLycie = lazy(() => import("@/admin/pages/AdminLycie"));
-const AdminDeals = lazy(() => import("@/admin/pages/AdminDeals"));
-const AdminSocial = lazy(() => import("@/admin/pages/AdminSocial"));
-const AdminActivity = lazy(() => import("@/admin/pages/AdminActivity"));
+const TrackShipment = lazy(() => import("@/pages/Track/Track"));
+const PaymentReturn = lazy(() => import("@/pages/Customer/PaymentReturn"));
 
 function CustomerAccountRoute() {
   const { isAuthenticated } = useCustomerAuth();
@@ -76,6 +62,9 @@ export default function AppRoutes() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/deals" element={<Deals />} />
+        <Route path="/compare" element={<Compare />} />
+        <Route path="/track" element={<TrackShipment />} />
+        <Route path="/account/payment-return" element={<PaymentReturn />} />
         <Route path="/faq" element={<Faq />} />
         <Route path="/reviews" element={<Reviews />} />
         <Route path="/blog" element={<BlogList />} />
@@ -99,32 +88,34 @@ export default function AppRoutes() {
               <Route path="forgot-password" element={<AdminForgotPassword />} />
               <Route path="reset-password" element={<AdminResetPassword />} />
               <Route element={<ProtectedRoute />}>
+                {/* Every page comes from the module map (admin/modules.ts), each guarded by its module access. */}
                 <Route element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="vehicles" element={<AdminVehicles />} />
-                  <Route path="hire-vehicles" element={<AdminHireVehicles />} />
-                  <Route path="requests" element={<AdminRequests />} />
-                  <Route path="bookings" element={<AdminBookings />} />
-                  <Route path="bookings/:id" element={<AdminBookingDetail />} />
-                  {/* Every signed-in admin manages their own password and two-factor here. */}
-                  <Route path="security" element={<AdminSecurity />} />
-                  <Route element={<RequireRole roles={["OWNER", "MANAGER"]} />}>
-                    <Route path="payments" element={<AdminPayments />} />
-                    <Route path="site-content" element={<AdminSiteContent />} />
-                    <Route path="notices" element={<AdminNotices />} />
-                    <Route path="testimonials" element={<AdminTestimonials />} />
-                    <Route path="faq" element={<AdminFaq />} />
-                    <Route path="blog" element={<AdminBlogPosts />} />
-                    <Route path="reviews" element={<AdminReviews />} />
-                    <Route path="insights" element={<AdminInsights />} />
-                    <Route path="lycie" element={<AdminLycie />} />
-                    <Route path="deals" element={<AdminDeals />} />
-                    <Route path="social" element={<AdminSocial />} />
-                  </Route>
-                  <Route element={<RequireRole roles={["OWNER"]} />}>
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="activity" element={<AdminActivity />} />
-                  </Route>
+                  {[...WORKSPACE_PAGES, ...EXTRA_PAGES].map((page) => {
+                    const Page = lazyPage(page.load);
+                    return page.path === "/admin" ? (
+                      <Route key={page.path} index element={<Page />} />
+                    ) : (
+                      <Route key={page.path} path={page.path.replace(/^\/admin\//, "")} element={<Page />} />
+                    );
+                  })}
+                  <Route path="m/:module" element={<ModuleHome />} />
+                  {MODULES.flatMap((module) =>
+                    module.pages.map((page) => {
+                      const Page = lazyPage(page.load);
+                      return (
+                        <Route
+                          key={`${module.key}${page.path}`}
+                          path={page.path.replace(/^\/admin\//, "")}
+                          element={
+                            <RequireAccess module={module.key} level={page.level} systemAdminOnly={page.systemAdminOnly}>
+                              <Page />
+                            </RequireAccess>
+                          }
+                        />
+                      );
+                    })
+                  )}
+                  <Route path="*" element={<Navigate to="/admin" replace />} />
                 </Route>
               </Route>
               </Routes>

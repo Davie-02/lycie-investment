@@ -4,12 +4,14 @@
  * through services/inquiries.service.ts to POST /api/hire-requests, where the server
  * recalculates the price.
  */
-import { useMemo, useState, type FormEvent, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitHireRequest } from "@/services/inquiries.service";
 import { calculateHireCost } from "@/utils/hirePricing";
+import { apiGet } from "@/services/http";
 
 import type { HireRequest } from "@/types/requests";
 import type { HireVehicle } from "@/types/vehicle";
@@ -36,7 +38,27 @@ const INITIAL_VALUES: FormValues = {
   additionalRequirements: "",
 };
 
-function validate(values: FormValues) {
+/** A date range the vehicle is already booked for (from GET /hire-requests/availability/:id). */
+interface BookedRange {
+  from: string;
+  to: string;
+}
+
+/** "YYYY-MM-DD" of a date in the visitor's own calendar, the format date inputs use. */
+function dayKey(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+/** The first booked range the chosen dates run into, if any (same rule the server uses). */
+function findClash(pickup: string, returnDate: string, booked: BookedRange[]): BookedRange | undefined {
+  if (!pickup || !returnDate) return undefined;
+  return booked.find((range) => pickup < dayKey(new Date(range.to)) && returnDate > dayKey(new Date(range.from)));
+}
+
+function validate(values: FormValues, booked: BookedRange[] = []) {
   const errors: Partial<Record<keyof FormValues, string>> = {};
   if (!values.fullName.trim()) errors.fullName = "Full name is required.";
   if (!values.phone.trim()) errors.phone = "Phone number is required.";
@@ -49,6 +71,13 @@ function validate(values: FormValues) {
   if (!values.returnDate) errors.returnDate = "Return date is required.";
   if (values.pickupDate && values.returnDate && values.returnDate < values.pickupDate) {
     errors.returnDate = "Return date cannot be before pickup date.";
+  }
+  if (values.pickupDate && values.pickupDate < dayKey(new Date())) {
+    errors.pickupDate = "Pickup date can't be in the past.";
+  }
+  const clash = findClash(values.pickupDate, values.returnDate, booked);
+  if (clash && !errors.returnDate) {
+    errors.returnDate = `Already booked ${shortDate(clash.from)} – ${shortDate(clash.to)}. Please choose other dates.`;
   }
   if (!values.pickupLocation.trim()) errors.pickupLocation = "Pickup location is required.";
   return errors;
@@ -63,6 +92,16 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const { status, errorMessage, submit } = useFormSubmission<HireRequest>(submitHireRequest);
+  const [booked, setBooked] = useState<BookedRange[]>([]);
+
+  // Dates already taken, so customers can pick free ones instead of being turned down later.
+  useEffect(() => {
+    apiGet<{ booked: BookedRange[] }>(`/hire-requests/availability/${encodeURIComponent(vehicle.id)}`)
+      .then((result) => setBooked(result.booked))
+      .catch(() => setBooked([])); // unknown availability: the server still checks on submit
+  }, [vehicle.id]);
+
+  const clash = findClash(values.pickupDate, values.returnDate, booked);
 
   const estimate = useMemo(() => {
     if (!values.pickupDate || !values.returnDate) return null;
@@ -82,7 +121,7 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const validationErrors = validate(values);
+    const validationErrors = validate(values, booked);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -124,10 +163,26 @@ export default function HireRequestForm({ vehicle, onCancel }: HireRequestFormPr
       <div className="form-grid form-grid--2col">
         <FormField id="fullName" label="Full Name" required value={values.fullName} onChange={handleChange("fullName")} error={errors.fullName} />
         <FormField id="phone" label="Phone" required value={values.phone} onChange={handleChange("phone")} error={errors.phone} />
-        <FormField id="email" label="Email" type="email" required value={values.email} onChange={handleChange("email")} error={errors.email} />
+        <EmailField id="email" value={values.email} onChange={(email) => setValues((prev) => ({ ...prev, email }))} error={errors.email} autoComplete="email" />
         <FormField id="pickupLocation" label="Pickup Location" required value={values.pickupLocation} onChange={handleChange("pickupLocation")} error={errors.pickupLocation} />
-        <FormField id="pickupDate" label="Pickup Date" type="date" required value={values.pickupDate} onChange={handleChange("pickupDate")} error={errors.pickupDate} />
-        <FormField id="returnDate" label="Return Date" type="date" required value={values.returnDate} onChange={handleChange("returnDate")} error={errors.returnDate} />
+        <FormField id="pickupDate" label="Pickup Date" type="date" required min={dayKey(new Date())} value={values.pickupDate} onChange={handleChange("pickupDate")} error={errors.pickupDate} />
+        <FormField id="returnDate" label="Return Date" type="date" required min={values.pickupDate || dayKey(new Date())} value={values.returnDate} onChange={handleChange("returnDate")} error={errors.returnDate} />
+        <div className="form-grid__full hire-form__availability" aria-live="polite">
+          {booked.length === 0 ? (
+            <p className="text-muted">No confirmed bookings yet — any dates are open.</p>
+          ) : (
+            <>
+              <p className="text-muted">Already booked (choose dates outside these):</p>
+              <ul>
+                {booked.map((range) => (
+                  <li key={range.from} className={clash === range ? "hire-form__booked hire-form__booked--clash" : "hire-form__booked"}>
+                    {shortDate(range.from)} – {shortDate(range.to)}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
         <FormField
           id="additionalRequirements"
           label="Additional Requirements"

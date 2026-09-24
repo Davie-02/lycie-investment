@@ -1,0 +1,75 @@
+/* Bottom-centre bar offering to undo the last admin change. */
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-primary-dark);
+  color: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(16, 42, 71, 0.28);
+  font-size: var(--fs-sm);
+}
+
+.undo-toast__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.undo-toast__text a {
+  color: var(--color-accent);
+}
+
+.undo-toast__note {
+  display: block;
+  margin-top: var(--space-1);
+  opacity: 0.8;
+  font-size: var(--fs-xs);
+}
+
+.undo-toast__action {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.undo-toast__action:hover,
+.undo-toast__action:focus-visible {
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
+}
+
+.undo-toast__close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  opacity: 0.7;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+
+.undo-toast__close:hover {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  .undo-toast {
+    bottom: var(--space-3);
+    width: calc(100vw - 2 * var(--space-4));
+  }
+}

@@ -32,8 +32,8 @@ function readChoice(): VisitorChoice {
 
 /**
  * Applies the site theme by setting <html data-theme="…"> (the colours themselves live in
- * styles/variables.css). The admin dashboard is deliberately always Classic — themes are for the
- * public site — so no theme is applied on /admin pages.
+ * styles/variables.css). Site themes are for the
+ * public site — on /admin pages the workspace's own light/dark setting applies instead.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const { content } = useSiteContent();
@@ -53,8 +53,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const inAdmin = location.pathname.startsWith("/admin");
 
   useEffect(() => {
+    // The staff workspace has its own light/dark switch (admin/hooks/useAdminTheme.ts).
+    if (inAdmin) return;
     const root = document.documentElement;
-    if (inAdmin || theme === "classic") root.removeAttribute("data-theme");
+    if (theme === "classic") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", theme);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR);
   }, [theme, inAdmin]);

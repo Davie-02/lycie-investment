@@ -12,10 +12,12 @@ import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { SavedVehiclesProvider } from "@/context/SavedVehiclesContext";
 import { LikesProvider } from "@/context/LikesContext";
 import AppRoutes from "@/routes/AppRoutes";
+import { LanguageProvider } from "@/i18n/LanguageContext";
 
 export default function App() {
   return (
     <BrowserRouter>
+      <LanguageProvider>
       <SiteContentProvider>
         <PricingProvider>
         <ThemeProvider>
@@ -31,6 +33,7 @@ export default function App() {
         </ThemeProvider>
         </PricingProvider>
       </SiteContentProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

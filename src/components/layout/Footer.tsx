@@ -6,11 +6,12 @@
  */
 import { Link } from "react-router-dom";
 import { companyName } from "@/config/siteConfig";
-import { mailtoLink, mapQueryFor, mapsSearchUrl } from "@/utils/contactLinks";
+import { mailtoLink, mapQueryFor, mapsSearchUrl, safeHttpUrl } from "@/utils/contactLinks";
 import { useSiteContent } from "@/context/SiteContentContext";
 import WhatsAppIcon from "@/components/common/WhatsAppIcon";
 import PhoneLinks from "@/components/company/PhoneLinks";
 import "./Footer.css";
+import { useT } from "@/i18n/LanguageContext";
 
 const SOCIAL_LABELS: Record<string, string> = {
   facebook: "Facebook",
@@ -20,13 +21,14 @@ const SOCIAL_LABELS: Record<string, string> = {
 };
 
 export default function Footer() {
+  const t = useT();
   const { content } = useSiteContent();
   const year = new Date().getFullYear();
 
-  const socialLinks = Object.entries(content.social).filter(([, url]) => Boolean(url)) as [
-    string,
-    string,
-  ][];
+  // Only real web addresses become links (a "javascript:" address saved in the admin would run code when clicked).
+  const socialLinks = Object.entries(content.social)
+    .map(([key, url]) => [key, safeHttpUrl(typeof url === "string" ? url : null)] as const)
+    .filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
   const whatsappNumber = content.contact.whatsappNumber;
   // Email and address become tappable: mail app / Google Maps. Placeholder text
   // that isn't a real email or address stays plain text.
@@ -69,29 +71,30 @@ export default function Footer() {
         </div>
 
         <div>
-          <h3 className="footer__heading">Company</h3>
+          <h3 className="footer__heading">{t("footer.company")}</h3>
           <ul className="footer__list">
-            <li><Link to="/about">About</Link></li>
-            <li><Link to="/vehicles">Vehicles</Link></li>
-            <li><Link to="/blog">Blog</Link></li>
-            <li><Link to="/faq">FAQ</Link></li>
-            <li><Link to="/reviews">Reviews</Link></li>
-            <li><Link to="/contact">Contact</Link></li>
+            <li><Link to="/about">{t("footer.about")}</Link></li>
+            <li><Link to="/vehicles">{t("footer.vehicles")}</Link></li>
+            <li><Link to="/blog">{t("footer.blog")}</Link></li>
+            <li><Link to="/faq">{t("footer.faq")}</Link></li>
+            <li><Link to="/reviews">{t("footer.reviews")}</Link></li>
+            <li><Link to="/contact">{t("nav.contact")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <h3 className="footer__heading">Services</h3>
+          <h3 className="footer__heading">{t("footer.services")}</h3>
           <ul className="footer__list">
-            <li><Link to="/import">Vehicle Importing</Link></li>
-            <li><Link to="/vehicles">Vehicle Sales</Link></li>
-            <li><Link to="/hire">Vehicle Hire</Link></li>
-            <li><Link to="/clearing">Vehicle Clearing</Link></li>
+            <li><Link to="/import">{t("footer.importing")}</Link></li>
+            <li><Link to="/vehicles">{t("footer.sales")}</Link></li>
+            <li><Link to="/hire">{t("footer.hire")}</Link></li>
+            <li><Link to="/clearing">{t("footer.clearing")}</Link></li>
+            <li><Link to="/track">{t("footer.track")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <h3 className="footer__heading">Contact</h3>
+          <h3 className="footer__heading">{t("footer.contact")}</h3>
           <ul className="footer__list text-muted">
             <li>
               <PhoneLinks value={content.contact.phone} separator=" · " />

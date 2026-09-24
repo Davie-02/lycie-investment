@@ -3,9 +3,10 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import FormField from "@/components/forms/FormField";
 import EmailField from "@/components/forms/EmailField";
-import RememberMe from "@/components/forms/RememberMe";
+import NewPasswordField from "@/components/forms/NewPasswordField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { emailError } from "@/utils/email";
+import { checkPassword } from "@/utils/password";
 import { offerToSavePassword } from "@/utils/credentials";
 import "../components/AdminLayout.css";
 
@@ -15,18 +16,22 @@ const REASON_MESSAGES: Record<string, string> = {
 };
 
 /**
- * Admin sign-in. Two steps when the account has two-factor switched on:
- *  1. email + password  → the server replies "code needed" (no session yet)
- *  2. the 6-digit authenticator code (or a one-time recovery code) → signed in.
+ * The SYSTEM ADMINISTRATOR PORTAL — sign-in for Owner accounts only (other
+ * staff sign in on the website's normal sign-in page and are sent to the
+ * workspace). Steps: email + password → [choose your own password, if invited]
+ * → authenticator code → signed in. No "keep me signed in" here: administrator
+ * sessions are always short, and two-step verification is mandatory.
  */
 export default function AdminLogin() {
-  const { isAuthenticated, isLoggingIn, loginError, needsTwoFactor, login, submitTwoFactor, cancelTwoFactor } = useAdminAuth();
+  const { isAuthenticated, isLoggingIn, loginError, needsTwoFactor, needsPasswordChange, login, submitTwoFactor, submitFirstPassword, cancelTwoFactor } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
   const [emailProblem, setEmailProblem] = useState<string | undefined>();
 
   const reason = (location.state as { reason?: string } | null)?.reason;
@@ -42,10 +47,27 @@ export default function AdminLogin() {
     setEmailProblem(problem ?? undefined);
     if (problem) return;
 
-    if (await login(email, password, remember)) {
+    if (await login(email, password, false)) {
       // Ask the browser to offer to save the password (see utils/credentials.ts).
       void offerToSavePassword(email, password);
       navigate("/admin");
+    }
+  }
+
+  async function handleNewPassword(e: FormEvent) {
+    e.preventDefault();
+    if (!checkPassword(newPassword, [needsPasswordChange?.name, email]).acceptable) {
+      setLocalError("Your new password doesn't meet all the requirements listed under it.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setLocalError("The two passwords don't match.");
+      return;
+    }
+    setLocalError(null);
+    if (await submitFirstPassword(newPassword)) {
+      void offerToSavePassword(email, newPassword);
+      navigate("/admin/security");
     }
   }
 
@@ -56,7 +78,36 @@ export default function AdminLogin() {
 
   return (
     <div className="admin-login">
-      {needsTwoFactor ? (
+      {needsPasswordChange ? (
+        <form className="form-card admin-login__card" onSubmit={handleNewPassword} noValidate name="admin-first-password">
+          <h1 className="admin-login__title">Choose your password</h1>
+          <p className="text-muted admin-login__subtitle">Welcome, {needsPasswordChange.name}. Replace the one-time password from your invitation with your own.</p>
+          {(localError || loginError) && <FormStatusBanner status="error" successMessage="" errorMessage={localError ?? loginError} />}
+          <input type="text" name="username" autoComplete="username" value={email} readOnly hidden />
+          <div className="form-grid">
+            <NewPasswordField
+              id="admin-new-password"
+              label="New password"
+              value={newPassword}
+              onChange={setNewPassword}
+              onSuggest={(suggested) => {
+                setNewPassword(suggested);
+                setConfirmPassword(suggested);
+              }}
+              personalData={[needsPasswordChange.name, email]}
+            />
+            <FormField id="admin-new-password-confirm" label="Confirm new password" type="password" autoComplete="new-password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary" disabled={isLoggingIn}>
+              {isLoggingIn ? "Saving…" : "Set password"}
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={cancelTwoFactor}>
+              Back
+            </button>
+          </div>
+        </form>
+      ) : needsTwoFactor ? (
         <form className="form-card admin-login__card" onSubmit={handleCodeStep} noValidate name="admin-2fa">
           <h1 className="admin-login__title">Two-step verification</h1>
           <p className="text-muted admin-login__subtitle">
@@ -90,14 +141,14 @@ export default function AdminLogin() {
         </form>
       ) : (
         <form className="form-card admin-login__card" onSubmit={handlePasswordStep} noValidate name="admin-login">
-          <h1 className="admin-login__title">Admin Login</h1>
-          <p className="text-muted admin-login__subtitle">Lycie Investments content management</p>
+          <h1 className="admin-login__title">System administrator portal</h1>
+          <p className="text-muted admin-login__subtitle">For Lycie Investments system administrators only. Every sign-in is logged and emailed to the account owner.</p>
 
           {reasonMessage && !loginError && <FormStatusBanner status="error" successMessage="" errorMessage={reasonMessage} />}
           {loginError && <FormStatusBanner status="error" successMessage="" errorMessage={loginError} />}
 
           <div className="form-grid">
-            <EmailField id="email" name="email" value={email} onChange={setEmail} error={emailProblem} autoComplete="username" />
+            <EmailField id="email" name="email" verify={false} value={email} onChange={setEmail} error={emailProblem} autoComplete="username" />
             <FormField
               id="password"
               name="password"
@@ -108,7 +159,6 @@ export default function AdminLogin() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
-            <RememberMe id="admin-remember" checked={remember} onChange={setRemember} label="Keep me signed in (only on your own device)" />
           </div>
 
           <div className="form-actions">
@@ -119,6 +169,9 @@ export default function AdminLogin() {
 
           <p className="text-muted admin-login__switch">
             <Link to="/admin/forgot-password">Forgot your password?</Link>
+          </p>
+          <p className="text-muted admin-login__switch">
+            Staff member? <Link to="/account/login">Sign in on the main sign-in page</Link>.
           </p>
         </form>
       )}

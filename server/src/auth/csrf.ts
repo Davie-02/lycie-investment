@@ -73,7 +73,7 @@ export function hasValidCsrfToken(request: Request): boolean {
   return timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
 }
 
-const AUTH_FORM_PATH = /\/(login|login\/2fa|register|forgot-password|reset-password|verify-email|social\/[a-z]+)\/?$/;
+const AUTH_FORM_PATH = /\/(login|login\/2fa|sign-in|first-password|register|forgot-password|reset-password|verify-email|social\/[a-z]+)\/?$/;
 
 /**
  * CSRF only matters when the browser would attach credentials on its own: a

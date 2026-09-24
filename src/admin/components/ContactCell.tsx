@@ -47,8 +47,8 @@ const METHOD_LABEL: Record<Method, string> = {
  * contact is recorded so the team can see who reached out and how.
  */
 export default function ContactCell({ kind, row, topic, onContacted }: ContactCellProps) {
-  const { currentUser } = useAdminAuth();
-  const canContact = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { currentUser, can } = useAdminAuth();
+  const canContact = (["customers", "sales", "hire", "imports"] as const).some((module) => can(module, "edit"));
   const [dialog, setDialog] = useState<"email" | "message" | "history" | null>(null);
   const [error, setError] = useState<string | null>(null);
 

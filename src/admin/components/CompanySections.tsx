@@ -215,10 +215,10 @@ export function FleetSectionEditor({ initial, onSaved }: { initial: FleetContent
 
 /** Owner-only: fills About, Services, Contact, Team, Clients and Fleet from the company profile. */
 export function LoadProfileButton({ onDone }: { onDone: () => void }) {
-  const { currentUser } = useAdminAuth();
+  const { can } = useAdminAuth();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  if (currentUser?.role !== "OWNER") return null;
+  if (!can("marketing", "manage")) return null;
 
   async function load() {
     if (!window.confirm("Load the company profile?\n\nThis replaces the About, Services, Contact details, Team, Clients and Fleet text with the company profile. You can edit everything afterwards.")) return;

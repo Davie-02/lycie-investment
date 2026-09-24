@@ -12,6 +12,7 @@ import {
   adminChangePassword,
   adminDisableTwoFactor,
   adminEnableTwoFactor,
+  adminSignOutEverywhere,
   fetchAdminSession,
 } from "../adminApi";
 import "../components/AdminLayout.css";
@@ -19,19 +20,59 @@ import "../components/AdminLayout.css";
 /**
  * "My Security" — what every signed-in admin can do for their OWN account:
  *  1. change their password (which signs out their other devices), and
- *  2. switch two-factor sign-in (authenticator app) on or off.
+ *  2. switch two-factor sign-in (authenticator app) on or off, and
+ *  3. sign out every other device at once (lost phone, or a sign-in alert
+ *     email they don't recognise).
  * Owners can also reset someone else's two-factor from Admin Users if that
  * person loses their phone.
  */
 export default function AdminSecurity() {
-  const { currentUser, updateCurrentUser } = useAdminAuth();
+  const { currentUser, updateCurrentUser, refreshUser } = useAdminAuth();
 
   return (
     <div>
       <h1>My Security</h1>
       <p className="admin-page-intro">Keep your account safe: use a strong password and turn on two-step verification.</p>
       <ChangePasswordCard email={currentUser?.email ?? ""} name={currentUser?.name ?? ""} />
-      <TwoFactorCard enabled={Boolean(currentUser?.twoFactorEnabled)} onChanged={(enabled) => currentUser && updateCurrentUser({ ...currentUser, twoFactorEnabled: enabled })} />
+      <TwoFactorCard enabled={Boolean(currentUser?.twoFactorEnabled)} onChanged={(enabled) => {
+          if (currentUser) updateCurrentUser({ ...currentUser, twoFactorEnabled: enabled, mustSetUpTwoFactor: currentUser.mustSetUpTwoFactor && !enabled });
+          // Re-read access (a system administrator's workspace unlocks once two-step is on).
+          void refreshUser().catch(() => undefined);
+        }} />
+      <SignOutEverywhereCard />
+    </div>
+  );
+}
+
+/** Signs out every other browser and device on this account. Every sign-in also emails an alert. */
+function SignOutEverywhereCard() {
+  const [status, setStatus] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function run() {
+    if (!window.confirm("Sign out of every other browser and device? You'll stay signed in here.")) return;
+    setStatus("working");
+    try {
+      await adminSignOutEverywhere();
+      setStatus("done");
+    } catch (error) {
+      setMessage(error instanceof ApiError ? error.message : "Couldn't sign out other devices. Please try again.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="form-card" style={{ marginTop: "var(--space-6)" }}>
+      <h2>Signed-in devices</h2>
+      <p className="text-muted">
+        We email you every time your account signs in. If you get one you don't recognise, or you lost a phone or laptop,
+        sign out everywhere and then change your password.
+      </p>
+      {status === "done" && <FormStatusBanner status="success" successMessage="Every other device has been signed out." errorMessage={null} />}
+      {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={message} />}
+      <button type="button" className="btn btn-secondary" disabled={status === "working"} onClick={() => void run()}>
+        {status === "working" ? "Signing out…" : "Sign out everywhere else"}
+      </button>
     </div>
   );
 }

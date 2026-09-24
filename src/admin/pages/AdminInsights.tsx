@@ -247,6 +247,8 @@ export default function AdminInsights() {
         <p className="insights-table-note">Sorted by how wanted each vehicle is — an inquiry counts for far more than a view.</p>
       </section>
 
+      <WaitingForSection />
+
       <section className="insights-section" aria-labelledby="hire-heading">
         <h2 id="hire-heading">Hire demand</h2>
         {hireVehicles.length === 0 ? (
@@ -277,5 +279,53 @@ export default function AdminInsights() {
         )}
       </section>
     </div>
+  );
+}
+
+
+interface AlertDemand {
+  totalActive: number;
+  wanted: Array<{ label: string; count: number; typicalBudget: number | null }>;
+}
+
+/**
+ * What customers have asked to be emailed about (their vehicle alerts) — stock
+ * people are waiting for but you don't have yet. A direct guide to what to import next.
+ */
+function WaitingForSection() {
+  const { data } = useAsyncData(() => adminApi.get<AlertDemand>("/alerts/demand"), []);
+  return (
+    <section className="insights-section" aria-labelledby="waiting-heading">
+      <h2 id="waiting-heading">What customers are waiting for</h2>
+      {!data || data.wanted.length === 0 ? (
+        <p className="insights-empty">No vehicle alerts yet. Customers create them from their account page ("email me when it arrives").</p>
+      ) : (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Wanted</th>
+                <th className="num">Customers waiting</th>
+                <th className="num">Typical budget</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.wanted.map((item) => (
+                <tr key={item.label}>
+                  <td><strong>{item.label}</strong></td>
+                  <td className="num mono">{item.count}</td>
+                  <td className="num mono">{item.typicalBudget ? `USD ${item.typicalBudget.toLocaleString("en-US")}` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {data && data.totalActive > 0 && (
+        <p className="insights-table-note">
+          {data.totalActive} active alert{data.totalActive === 1 ? "" : "s"}. Everyone waiting is emailed automatically when a match is listed.
+        </p>
+      )}
+    </section>
   );
 }

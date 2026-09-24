@@ -1,96 +1,101 @@
 /**
- * Admin home: for Owners and Managers the 'needs your attention' panel, then shortcut
- * cards to each area the signed-in role is allowed to use.
+ * Workspace home: a greeting, what needs attention across the modules this
+ * person can use, each module's key numbers (one cached request, see
+ * useWorkspaceSummary), and shortcuts into every module.
  */
 import { Link } from "react-router-dom";
-import "../components/AdminLayout.css";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import { useWorkspaceSummary, type Stat } from "../hooks/useWorkspaceSummary";
+import { MODULES, moduleHomePath, prefetch } from "../modules";
+import { Icon } from "../components/AdminLayout";
 import AttentionPanel from "../components/AttentionPanel";
+import "../components/AdminLayout.css";
 
-const BASE_CARDS = [
-  {
-    to: "/admin/vehicles",
-    title: "Vehicles",
-    description: "Add, edit, or remove vehicles for sale.",
-  },
-  {
-    to: "/admin/hire-vehicles",
-    title: "Hire Vehicles",
-    description: "Manage the hire fleet and daily/weekly rates.",
-  },
-  {
-    to: "/admin/requests",
-    title: "Submitted Requests",
-    description: "View inquiries, import, clearing, hire, and contact submissions.",
-  },
-  {
-    to: "/admin/bookings",
-    title: "Bookings",
-    description: "See confirmed hire bookings with live countdowns to pickup/return.",
-  },
-];
+function greeting(): string {
+  const hour = new Date().getHours();
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
 
-const SITE_CONTENT_CARD = {
-  to: "/admin/site-content",
-  title: "Site Content",
-  description: "Edit contact info, social links, and About page copy — no redeploy needed.",
-};
-
-const NOTICES_CARD = {
-  to: "/admin/notices",
-  title: "Notices",
-  description: "Manage site-wide banners, warnings, and special-offer popups.",
-};
-
-const INSIGHTS_CARD = {
-  to: "/admin/insights",
-  title: "Insights",
-  description: "Customer sentiment, vehicle demand, and recommendations on what to do next.",
-};
-
-const LYCIE_CARD = {
-  to: "/admin/lycie",
-  title: "Lycie AI",
-  description: "Teach the customer assistant your policies and see the questions she couldn't answer.",
-};
-
-const REVIEWS_CARD = {
-  to: "/admin/reviews",
-  title: "Reviews",
-  description: "Approve or reject customer reviews before they appear on the site.",
-};
-
-const OWNER_CARD = {
-  to: "/admin/users",
-  title: "Admin Users",
-  description: "Add, edit, or remove admin accounts and their roles.",
-};
+export function StatTile({ stat }: { stat: Stat }) {
+  return (
+    <Link to={stat.path} className={stat.attention ? "ws-stat ws-stat--attention" : "ws-stat"} onMouseEnter={() => prefetch(stat.path)}>
+      <span className="ws-stat__value">{stat.value.toLocaleString()}</span>
+      <span className="ws-stat__label">{stat.label}</span>
+    </Link>
+  );
+}
 
 export default function AdminDashboard() {
-  const { currentUser } = useAdminAuth();
-  const canEditContent = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
-
-  const cards = [
-    ...BASE_CARDS,
-    ...(canEditContent ? [INSIGHTS_CARD, LYCIE_CARD, REVIEWS_CARD, SITE_CONTENT_CARD, NOTICES_CARD] : []),
-    ...(currentUser?.role === "OWNER" ? [OWNER_CARD] : []),
-  ];
+  const { currentUser, can, isSystemAdmin } = useAdminAuth();
+  const { data, error } = useWorkspaceSummary();
+  const modules = MODULES.filter((module) => can(module.key));
+  const urgent = modules.flatMap((module) => (data?.[module.key] ?? []).filter((stat) => stat.attention && stat.value > 0).map((stat) => ({ ...stat, module: module.label })));
 
   return (
     <div>
-      <h1>Dashboard</h1>
-      <p className="admin-page-intro">Manage what's shown on the public site from here.</p>
-
-      {canEditContent && <AttentionPanel />}
-
-      <div className="admin-dashboard-grid">
-        {cards.map((card) => (
-          <Link to={card.to} className="admin-dashboard-card" key={card.to}>
-            <h2>{card.title}</h2>
-            <p className="text-muted">{card.description}</p>
-          </Link>
-        ))}
+      <div className="ws-hero">
+        <div>
+          <h1>
+            {greeting()}, {currentUser?.name.split(" ")[0]}
+          </h1>
+          <p>{new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
+        </div>
+        <Link className="btn btn-secondary" to="/admin/me">
+          My work & leave
+        </Link>
       </div>
+
+      {modules.length === 0 && (
+        <div className="admin-empty-state">
+          You haven't been given access to any department modules yet. Your system administrator decides what each person can use. Meanwhile
+          you can request leave and see the team directory from the menu.
+        </div>
+      )}
+
+      {urgent.length > 0 && (
+        <section className="ws-section" aria-labelledby="urgent-heading">
+          <div className="ws-section__head">
+            <h2 id="urgent-heading">Needs attention</h2>
+          </div>
+          <div className="ws-stats">
+            {urgent.map((stat) => (
+              <StatTile key={`${stat.module}-${stat.key}`} stat={{ ...stat, label: `${stat.label} · ${stat.module}` }} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {isSystemAdmin && <AttentionPanel />}
+      {error && !data && <p className="text-muted" role="alert">Couldn't load the numbers just now.</p>}
+
+      {modules.map((module) => {
+        const stats = data?.[module.key];
+        return (
+          <section key={module.key} className="ws-section" aria-labelledby={`mod-${module.key}`}>
+            <div className="ws-section__head">
+              <h2 id={`mod-${module.key}`}>
+                <Icon name={module.icon} /> {module.label}
+              </h2>
+              <Link to={moduleHomePath(module.key)} onMouseEnter={() => prefetch(moduleHomePath(module.key))}>
+                Open →
+              </Link>
+            </div>
+            {stats ? (
+              <div className="ws-stats">
+                {stats.map((stat) => (
+                  <StatTile key={stat.key} stat={stat} />
+                ))}
+              </div>
+            ) : (
+              <div className="ws-skeleton__grid" aria-busy="true">
+                <div className="ws-skeleton__card" />
+                <div className="ws-skeleton__card" />
+                <div className="ws-skeleton__card" />
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

@@ -501,3 +501,94 @@ answers finish in about 2.3 s and start showing words sooner.
 **If it's slow:** check `GEMINI` warnings in the API log — a line like "model X failed (quota exhausted)" means that model's
 daily free quota is used up (it rests and the others carry on). Free-tier limits are the usual cause of slowness; a paid
 Google AI plan removes them.
+
+
+---
+
+## Undo for admin actions (added 2026-09-24)
+
+**What:** after almost any change in the admin (add/edit/delete/publish/archive, bulk actions, site content,
+bookings, request statuses, prices, admin accounts…) a bar appears: *"Archived 3 vehicles · Undo"* (also
+Ctrl/⌘+Z while it shows). **Admin → Activity & Undo** lists every action with an Undo button: Owners can undo
+anyone's action, Managers their own, for 30 days. An undo is itself logged and can be redone. If part of the
+change was edited again since, the undo stops and offers *Undo anyway*. Deleted items come back with what was
+deleted along with them (e.g. a vehicle's reviews). Emails and social posts already sent can't be recalled.
+
+**Where:** `server/src/undo/` — `change-tracker.ts` (a Prisma middleware that, inside an admin write request,
+snapshots every row before it changes), `undo.service.ts` (saves before/after per action in `ChangeRecord`,
+reverses in one transaction, conflict check), `model-meta.ts` (reads ids/JSON/cascades from the schema, so new
+tables are covered automatically). `admin-tools/activity.interceptor.ts` runs requests inside tracking and
+returns `X-Undo-Id`. Frontend: `adminApi.ts` (event + `undoAdminAction`), `components/UndoToast.tsx`,
+`pages/AdminActivity.tsx`.
+
+**If it breaks:** "can't be undone" → the action didn't change the database, used a bulk insert, or touched
+more than 1,000 rows. "Couldn't undo this because something else now uses the same…" → e.g. a new vehicle took
+the deleted one's web address; rename it and retry.
+
+## Vehicle alerts and price-drop emails (added 2026-09-24)
+
+**What:** signed-in customers with a confirmed email create alerts on their account page (make, model, type,
+top price, oldest year). Every 10 minutes new or newly published matching vehicles are emailed (each once),
+and saved vehicles whose price drops trigger a "Price drop" email. **Admin → Insights → What customers are
+waiting for** ranks what people want with their typical budget, which is a guide to what to import.
+
+**Where:** `server/src/alerts/` (matching in `alert-match.ts`, job in `alerts.cron.ts`), table `VehicleAlert`,
+`SavedVehicle.notifiedPrice`; frontend `components/customer/VehicleAlerts.tsx`. Needs email configured.
+
+## Hire availability (added 2026-09-24)
+
+**What:** the hire form lists dates the vehicle is already booked and won't accept overlapping, past or
+over-365-day dates. The API refuses them too, so customers aren't turned down after waiting.
+**Where:** `GET /api/hire-requests/availability/:vehicleId` (dates only, no names), `HireRequestForm.tsx`.
+
+## Compare vehicles (added 2026-09-24)
+
+**What:** *Add to compare* on a vehicle page (up to 3, remembered in the browser) or *Compare* on saved
+vehicles opens `/compare`, a side-by-side table with the best price, year and mileage highlighted.
+**Where:** `src/pages/Compare/`, `src/utils/compareList.ts`, `components/vehicles/CompareButton.tsx`.
+
+
+## Staff workspace, departments and access (added 2026-09-25)
+
+See [STAFF-AND-ACCESS.md](STAFF-AND-ACCESS.md): invitations with one-time passwords, department modules,
+per-person access, the hardened administrator portal, HR leave, and the redesigned workspace.
+
+## Mobile money payments (added 2026-09-25)
+
+**What:** customers pay with Airtel Money or TNM Mpamba from their account page ("Pay with mobile money")
+through PayChangu's secure page. The server confirms each payment with PayChangu itself (never trusting the
+browser or the webhook body), then credits the account ledger exactly once and sends a receipt (email +
+WhatsApp). **Finance → Mobile money** lists every attempt, with *Check again* for waiting ones.
+**Setup:** create a PayChangu business account; set `PAYCHANGU_SECRET_KEY` (a `sec-test-…` key for the
+sandbox first) and optionally `PAYCHANGU_WEBHOOK_SECRET` (webhook URL: `https://<site>/api/mobile-payments/webhook`).
+Check field names against PayChangu's current API docs in the sandbox before going live.
+**Where:** `server/src/mobile-payments/`, `src/components/customer/MobileMoneyCard.tsx`, `src/pages/Customer/PaymentReturn.tsx`.
+
+## Shipment tracking (added 2026-09-25)
+
+**What:** **Imports & Clearing → Shipments**: open a shipment for a customer (gets a code like `LYC-7K2M9Q`),
+then post progress through 8 stages (purchased → shipped → port → road → border → customs → ready → delivered)
+with a message and photos. The customer is emailed (and WhatsApped) each time and sees a timeline on their
+account page; anyone with the code can follow it at `/track` (no personal details shown).
+**Where:** `server/src/shipments/`, `src/admin/pages/AdminShipments.tsx`, `src/components/common/ShipmentTimeline.tsx`, `src/pages/Track/`.
+
+## WhatsApp notifications (added 2026-09-25)
+
+**What:** booking confirmations/cancellations, shipment updates and payment receipts also go by WhatsApp to
+customers with a phone number (unless they chose email only). Customers can add their number on their account page.
+**Setup:** WhatsApp Business (Meta Cloud API): approve a *Utility* template with one variable `{{1}}`, then set
+`WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_TEMPLATE_NAME` (and `WHATSAPP_TEMPLATE_LANG`, default `en`).
+**Where:** `server/src/notifications/`.
+
+## Referrals (added 2026-09-25)
+
+**What:** every customer has a share link (`/account/register?ref=CODE`) on their account page, with a WhatsApp
+share button. Friends who join through it are linked; **Finance → Referrals** shows whether the friend has done
+business yet and lets Finance reward the referrer — credited to their account balance, once.
+**Where:** `server/src/referrals/`, `src/components/customer/ReferralCard.tsx`.
+
+## Chichewa (added 2026-09-25)
+
+**What:** an EN | NY switch in the site header translates the menus, footer, sign-in and tracking pages (remembered
+per device; sets `<html lang>`). Text edited in Website content stays as written. **Have a native speaker review
+`src/i18n/strings.ts` before launch.**

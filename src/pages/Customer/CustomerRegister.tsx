@@ -4,7 +4,7 @@
  * Google/Facebook buttons (when configured). The server re-checks every rule.
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Seo from "@/components/common/Seo";
 import FormField from "@/components/forms/FormField";
 import EmailField from "@/components/forms/EmailField";
@@ -43,6 +43,9 @@ export default function CustomerRegister() {
   const [values, setValues] = useState<FormValues>({ name: "", email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [remember, setRemember] = useState(false);
+  // A friend's share link (/account/register?ref=CODE) links the new account to them for a reward.
+  const [searchParams] = useSearchParams();
+  const referralCode = (searchParams.get("ref") ?? "").slice(0, 20);
 
   function handleChange(field: keyof FormValues) {
     return (e: ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +59,7 @@ export default function CustomerRegister() {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
-    if (await register(values.name, values.email, values.password, remember)) {
+    if (await register(values.name, values.email, values.password, remember, referralCode || undefined)) {
       // Ask the browser to offer to save the new password (see utils/credentials.ts).
       void offerToSavePassword(values.email, values.password, values.name);
       navigate("/account", { replace: true });
@@ -75,6 +78,7 @@ export default function CustomerRegister() {
       <section className="section container customer-auth">
         <form className="form-card customer-auth__form" onSubmit={handleSubmit} noValidate name="customer-register">
           <h2>Create account</h2>
+          {referralCode && <p className="form-status form-status--info">A friend invited you — welcome! Your account will be linked to their invitation.</p>}
 
           {errorMessage && (
             <FormStatusBanner status="error" successMessage="" errorMessage={errorMessage} />

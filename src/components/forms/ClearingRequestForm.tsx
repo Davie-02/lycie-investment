@@ -5,6 +5,7 @@
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitClearingRequest } from "@/services/inquiries.service";
@@ -113,7 +114,7 @@ export default function ClearingRequestForm() {
       <div className="form-grid form-grid--2col">
         <FormField id="fullName" label="Full Name" required value={values.fullName} onChange={handleChange("fullName")} error={errors.fullName} />
         <FormField id="phone" label="Phone" required value={values.phone} onChange={handleChange("phone")} error={errors.phone} />
-        <FormField id="email" label="Email" type="email" required value={values.email} onChange={handleChange("email")} error={errors.email} />
+        <EmailField id="email" value={values.email} onChange={(email) => setValues((prev) => ({ ...prev, email }))} error={errors.email} autoComplete="email" />
         <FormField id="vehicleMake" label="Vehicle Make" required value={values.vehicleMake} onChange={handleChange("vehicleMake")} error={errors.vehicleMake} />
         <FormField id="vehicleModel" label="Vehicle Model" value={values.vehicleModel} onChange={handleChange("vehicleModel")} />
         <FormField id="year" label="Year" type="number" value={values.year} onChange={handleChange("year")} />

@@ -74,6 +74,23 @@ export function describeAction({ method, route, params, body }: ActionInput): st
     [/^\/financial\/payments\/:id\/approve$/, "Approved a payment"],
     [/^\/financial\/payments\/:id\/reject$/, "Rejected a payment"],
     [/^\/notices/, "Changed a notice"],
+    [/^\/admin-tools\/activity\/:id\/undo$/, "Undid an action"],
+    [/^\/deal-admin\/:id\/publish$/, "Published a deal"],
+    [/^\/deal-admin\/:id\/unpublish$/, "Unpublished a deal"],
+    [/^\/deal-admin\/:id\/dismiss$/, "Dismissed a deal"],
+    [/^\/deal-admin\/scan$/, "Ran the deals finder"],
+    [/^\/deal-admin/, method === "POST" ? "Added a deal" : method === "DELETE" ? "Deleted a deal" : "Edited a deal"],
+    [/^\/social\/posts\/:id\/publish$/, "Published a social media post"],
+    [/^\/social\/posts$/, "Created a social media post"],
+    [/^\/social\/posts\/:id$/, "Deleted a social media post"],
+    [/^\/social\/reply$/, "Replied on social media"],
+    [/^\/pricing\/settings$/, "Changed currency and price settings"],
+    [/^\/pricing\/convert-listings$/, "Converted listing prices to US dollars"],
+    [/^\/pricing\/refresh$/, "Refreshed the exchange rate"],
+    [/^\/site-content\/apply-profile$/, "Loaded the company profile into the site"],
+    [/^\/customer-cases\/:id\/updates$/, "Posted an update on a customer case"],
+    [/^\/customer-cases$/, "Opened a customer case"],
+    [/^\/market\/report$/, "Generated a market briefing"],
   ];
   for (const [pattern, text] of known) if (pattern.test(r)) return text;
   return `${method} ${r}`;

@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { Request } from "express";
 import { readCookie } from "./cookies";
 import { CUSTOMER_SESSION_COOKIE } from "./session-cookie";
+import { SessionService, type SessionClaims } from "./session.service";
 
 interface CustomerJwtPayload {
   sub: string;
@@ -20,7 +21,10 @@ interface CustomerJwtPayload {
  */
 @Injectable()
 export class OptionalCustomerGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly sessions: SessionService
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request & { customerId?: string }>();
@@ -33,10 +37,12 @@ export class OptionalCustomerGuard implements CanActivate {
     try {
       const payload = await this.jwtService.verifyAsync<CustomerJwtPayload>(token);
       if (payload.role === "CUSTOMER" && typeof payload.sub === "string") {
+        // A signed-out, deactivated or password-reset session doesn't count either.
+        await this.sessions.assertStillValid(payload as SessionClaims);
         request.customerId = payload.sub;
       }
     } catch {
-      // Expired/invalid/tampered token — treat the same as not logged in.
+      // Expired/invalid/tampered/revoked token — treat the same as not logged in.
     }
 
     return true;

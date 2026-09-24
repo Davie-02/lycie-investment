@@ -5,6 +5,7 @@
  */
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import FormField from "@/components/forms/FormField";
+import EmailField from "@/components/forms/EmailField";
 import FormStatusBanner from "@/components/forms/FormStatusBanner";
 import { useFormSubmission } from "@/hooks/useFormSubmission";
 import { submitImportRequest } from "@/services/inquiries.service";
@@ -125,14 +126,12 @@ export default function ImportRequestForm() {
           onChange={handleChange("phone")}
           error={errors.phone}
         />
-        <FormField
+        <EmailField
           id="email"
-          label="Email"
-          type="email"
-          required
           value={values.email}
-          onChange={handleChange("email")}
+          onChange={(email) => setValues((prev) => ({ ...prev, email }))}
           error={errors.email}
+          autoComplete="email"
         />
         <FormField
           id="preferredMake"

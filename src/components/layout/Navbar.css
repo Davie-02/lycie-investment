@@ -50,6 +50,7 @@
 .navbar__link {
   font-size: var(--fs-sm);
   font-weight: 500;
+  white-space: nowrap;
   color: var(--color-muted);
   padding-block: var(--space-2);
   border-bottom: 2px solid transparent;
@@ -188,4 +189,41 @@
 
 .theme-toggle:hover {
   background: var(--color-tint);
+}
+
+/* English / Chichewa switch (i18n/LanguageSwitch.tsx). */
+.language-switch {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.language-switch__option {
+  padding: 2px 8px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.language-switch__option--on {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.navbar__mobile-lang {
+  align-self: flex-start;
+  margin-block: var(--space-2);
+}
+
+@media (max-width: 859px) {
+  .navbar__lang {
+    display: none;
+  }
 }

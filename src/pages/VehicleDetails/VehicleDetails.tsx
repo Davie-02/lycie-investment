@@ -9,6 +9,8 @@ import Seo from "@/components/common/Seo";
 import VehicleGallery from "@/components/vehicles/VehicleGallery";
 import VehicleSpecifications from "@/components/vehicles/VehicleSpecifications";
 import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
+import CompareButton from "@/components/vehicles/CompareButton";
+import "@/pages/Compare/Compare.css";
 import InquiryForm from "@/components/forms/InquiryForm";
 import Reveal from "@/components/common/Reveal";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
@@ -106,6 +108,7 @@ export default function VehicleDetails() {
             altBase={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
           />
           <ShareButtons text={`${vehicleLabel} — ${content.seo.siteName}`} />
+          <CompareButton slug={vehicle.slug} />
           {whatsappLink && (
             <p style={{ marginTop: "var(--space-4)" }}>
               <a className="btn btn-whatsapp" href={whatsappLink} target="_blank" rel="noopener noreferrer">

@@ -1,7 +1,7 @@
 /**
  * Logic behind the admin extras: the 'needs your attention' counts and setup warnings,
  * global search (vehicles, hire vehicles, the request types, contact messages, blog
- * posts and FAQ), CSV export of requests and reviews, and the activity log.
+ * posts and FAQ), CSV export of requests and reviews, and the activity log's clean-up (listing and undo live in server/src/undo/).
  */
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
@@ -10,6 +10,19 @@ import { GeminiClient } from "../lycie/gemini.client";
 import { UploadsService } from "../uploads/uploads.service";
 import { PUBLIC } from "../content-admin/content-state";
 import { toCsv } from "./csv.util";
+import { atLeast, type AccessMap, type ModuleKey } from "../access/modules";
+import { ownerTwoFactorRequired } from "../access/system-admin-policy";
+
+/** Which module each attention item and search group belongs to (people only see what they can open). */
+const ATTENTION_MODULE: Record<string, ModuleKey> = {
+  inquiries: "sales", import: "imports", clearing: "imports", contact: "customers", hire: "hire", overdue: "hire",
+  payments: "finance", reviews: "customers", faq: "ai", testimonials: "ai", visitor: "customers", gaps: "ai", drafts: "sales",
+};
+const SEARCH_MODULE: Record<string, ModuleKey> = {
+  Vehicles: "sales", "Hire vehicles": "hire", "Vehicle inquiries": "sales", "Import requests": "imports", "Clearing requests": "imports",
+  Bookings: "hire", "Contact messages": "customers", Blog: "marketing", FAQ: "marketing",
+};
+const canSee = (access: AccessMap | undefined, module: ModuleKey | undefined) => !access || !module || atLeast(access[module], "view");
 
 export const EXPORT_TYPES = ["inquiries", "import-requests", "clearing-requests", "hire-requests", "contact-messages", "reviews"] as const;
 export type ExportType = (typeof EXPORT_TYPES)[number];
@@ -31,7 +44,7 @@ export class AdminToolsService {
   ) {}
 
   /** Everything that's waiting on a person, plus setup problems worth fixing. */
-  async overview() {
+  async overview(access?: AccessMap) {
     const now = new Date();
     const since7d = new Date(now.getTime() - 7 * 24 * 60 * 60_000);
     const [
@@ -79,7 +92,7 @@ export class AdminToolsService {
         { key: "visitor", label: "New visitor messages", count: newVisitorMessages, path: "/admin/lycie" },
         { key: "gaps", label: "Questions Lycie couldn't answer (7 days)", count: lycieGaps, path: "/admin/lycie" },
         { key: "drafts", label: "Vehicles saved as drafts", count: draftVehicles, path: "/admin/vehicles" },
-      ].filter((item) => item.count > 0),
+      ].filter((item) => item.count > 0 && canSee(access, ATTENTION_MODULE[item.key])),
       setup: [
         ...(this.email.isConfigured
           ? []
@@ -92,7 +105,11 @@ export class AdminToolsService {
     };
   }
 
-  async search(q: string): Promise<SearchHit[]> {
+  async search(q: string, access?: AccessMap): Promise<SearchHit[]> {
+    return (await this.searchAll(q)).filter((hit) => canSee(access, SEARCH_MODULE[hit.group]));
+  }
+
+  private async searchAll(q: string): Promise<SearchHit[]> {
     const term = q.trim();
     if (term.length < 2) return [];
     const like = { contains: term, mode: "insensitive" as const };
@@ -153,17 +170,39 @@ export class AdminToolsService {
     }
   }
 
-  async activity(page: number, pageSize: number) {
-    const [items, total] = await Promise.all([
-      this.prisma.adminActivity.findMany({ orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
-      this.prisma.adminActivity.count(),
-    ]);
-    return { items, total, page, pageSize };
-  }
-
   async purgeOldActivity(days = 180): Promise<number> {
     const result = await this.prisma.adminActivity.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - days * 24 * 60 * 60_000) } } });
     return result.count;
+  }
+
+  async systemStatus() {
+    const [admins, adminsWithout2fa, staffWithout2fa] = await Promise.all([
+      this.prisma.adminUser.count({ where: { role: "OWNER", isActive: true } }),
+      this.prisma.adminUser.count({ where: { role: "OWNER", isActive: true, totpEnabled: false } }),
+      this.prisma.adminUser.count({ where: { role: { not: "OWNER" }, isActive: true, totpEnabled: false } }),
+    ]);
+    const on = (value: string | undefined) => Boolean(value && value.trim());
+    return {
+      security: {
+        adminTwoFactorRequired: ownerTwoFactorRequired(),
+        adminIpAllowlist: on(process.env.SYSTEM_ADMIN_ALLOWED_IPS),
+        admins,
+        adminsWithout2fa,
+        staffWithout2fa,
+        sessionHours: process.env.JWT_EXPIRES_IN || "2h",
+      },
+      services: {
+        email: this.email.isConfigured,
+        emailVerification: on(process.env.EMAIL_VERIFICATION_PROVIDER) && on(process.env.EMAIL_VERIFICATION_API_KEY),
+        whatsapp: on(process.env.WHATSAPP_PHONE_NUMBER_ID) && on(process.env.WHATSAPP_ACCESS_TOKEN) && on(process.env.WHATSAPP_TEMPLATE_NAME),
+        mobileMoney: on(process.env.PAYCHANGU_SECRET_KEY),
+        mobileMoneyWebhook: on(process.env.PAYCHANGU_WEBHOOK_SECRET),
+        ai: this.gemini.isConfigured,
+        imageStorage: this.uploads.isUsingObjectStorage,
+        googleSignIn: on(process.env.GOOGLE_CLIENT_ID),
+        facebookSignIn: on(process.env.FACEBOOK_APP_ID),
+      },
+    };
   }
 
   /** Public counts used by the sidebar badge (cheap, no personal data). */

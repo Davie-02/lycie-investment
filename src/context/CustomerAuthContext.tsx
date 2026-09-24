@@ -10,10 +10,12 @@ import {
   loginWithGoogle,
   logoutCustomer,
   registerCustomer,
+  signInAnyone,
   storeCustomerSession,
   CUSTOMER_SESSION_EXPIRED_EVENT,
   type CustomerSession,
   type CustomerUser,
+  type SignInOutcome,
 } from "@/services/customer.service";
 
 interface CustomerAuthContextValue {
@@ -22,7 +24,9 @@ interface CustomerAuthContextValue {
   isSubmitting: boolean;
   errorMessage: string | null;
   login: (email: string, password: string, remember?: boolean) => Promise<boolean>;
-  register: (name: string, email: string, password: string, remember?: boolean) => Promise<boolean>;
+  /** The shared customer/staff sign-in; null = failed (see errorMessage). */
+  signIn: (email: string, password: string, remember?: boolean) => Promise<SignInOutcome | null>;
+  register: (name: string, email: string, password: string, remember?: boolean, referralCode?: string) => Promise<boolean>;
   /** "Continue with Google" — `credential` is the ID token Google's button returns. */
   loginGoogle: (credential: string, remember?: boolean) => Promise<boolean>;
   /** "Continue with Facebook" — `accessToken` comes from Facebook's login dialog. */
@@ -134,8 +138,35 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const login = (email: string, password: string, remember = false) => authenticate(() => loginCustomer(email, password, remember));
-  const register = (name: string, email: string, password: string, remember = false) =>
-    authenticate(() => registerCustomer(name, email, password, remember));
+
+  /**
+   * The website's shared sign-in: customers are signed in here; staff are
+   * handed to the workspace (outcome "staff") or need a further step.
+   */
+  async function signIn(email: string, password: string, remember = false): Promise<SignInOutcome | null> {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const outcome = await signInAnyone(email, password, remember);
+      if (outcome.kind === "customer") {
+        storeCustomerSession(outcome.session);
+        setCurrentUser(outcome.session.user);
+        setIsAuthenticated(true);
+      } else if (outcome.kind === "staff") {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+      return outcome;
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : "Something went wrong. Please try again.");
+      return null;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const register = (name: string, email: string, password: string, remember = false, referralCode?: string) =>
+    authenticate(() => registerCustomer(name, email, password, remember, referralCode));
   const loginGoogle = (credential: string, remember = false) => authenticate(() => loginWithGoogle(credential, remember));
   const loginFacebook = (accessToken: string, remember = false) => authenticate(() => loginWithFacebook(accessToken, remember));
 
@@ -162,6 +193,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
         isSubmitting,
         errorMessage,
         login,
+        signIn,
         register,
         loginGoogle,
         loginFacebook,

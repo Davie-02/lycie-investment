@@ -2,6 +2,9 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import { ROLES_KEY } from "./roles.decorator";
+import { ADMIN_ROLES, type StaffContext } from "./session.service";
+import { accessForRoute } from "../access/route-access";
+import { atLeast, MODULES } from "../access/modules";
 
 interface JwtPayload {
   sub: string;
@@ -10,33 +13,54 @@ interface JwtPayload {
   email: string;
 }
 
+const STAFF_ROLES = new Set<string>(ADMIN_ROLES);
+
 /**
- * Must run after JwtAuthGuard (which attaches req.user) — see the combined
- * usage pattern: @UseGuards(JwtAuthGuard, RolesGuard). If a route has no
- * @Roles() decorator, this guard allows any authenticated user through;
- * it only restricts routes that explicitly declare required roles.
+ * Must run after JwtAuthGuard (which attaches req.user and, for staff,
+ * req.staff with their module access). If a route has no @Roles() decorator,
+ * any authenticated user passes.
+ *
+ * Customers: the route's role list decides, as before.
+ *
+ * Staff: when a route is open to staff at all (its @Roles lists any staff
+ * role), what decides is MODULE ACCESS — the route's module and level from
+ * access/route-access.ts, checked against the person's department defaults
+ * and overrides. The system administrator (OWNER) passes everything. A staff
+ * route the table doesn't know falls back to its role list, so a new
+ * endpoint is never accidentally opened to everyone.
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [context.getHandler(), context.getClass()]);
+    if (!requiredRoles || requiredRoles.length === 0) return true;
 
-    if (!requiredRoles || requiredRoles.length === 0) {
+    const request = context.switchToHttp().getRequest<Request & { user?: JwtPayload; staff?: StaffContext | null }>();
+    const user = request.user;
+    const denied = () => new ForbiddenException("You don't have permission to perform this action.");
+    if (!user) throw denied();
+
+    const routeIsForStaff = requiredRoles.some((role) => STAFF_ROLES.has(role));
+    if (!STAFF_ROLES.has(user.role) || !routeIsForStaff) {
+      if (!requiredRoles.includes(user.role)) throw denied();
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<Request & { user?: JwtPayload }>();
-    const user = request.user;
+    if (user.role === "OWNER") return true;
 
-    if (!user || !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException("You don't have permission to perform this action.");
+    const rule = accessForRoute(request.method, `${request.baseUrl ?? ""}${request.path}`);
+    if (!rule) {
+      if (!requiredRoles.includes(user.role)) throw denied();
+      return true;
     }
+    if (rule.kind === "staff") return true;
 
-    return true;
+    const access = request.staff?.access;
+    if (access && rule.modules.some((module) => atLeast(access[module], rule.level))) return true;
+
+    const names = rule.modules.map((key) => MODULES.find((m) => m.key === key)?.label ?? key).join(" or ");
+    throw new ForbiddenException(`You need ${rule.level} access to ${names} for this. Ask your system administrator.`);
   }
 }

@@ -1,4 +1,4 @@
-import { base32Decode, base32Encode, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, otpauthUri, totpAt, verifyTotp } from "./totp";
+import { base32Decode, base32Encode, generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, matchTotpStep, otpauthUri, totpAt, verifyTotp } from "./totp";
 
 // RFC 6238 appendix B uses the ASCII secret "12345678901234567890".
 const RFC_SECRET = base32Encode(Buffer.from("12345678901234567890"));
@@ -23,6 +23,17 @@ describe("totp", () => {
     expect(verifyTotp(RFC_SECRET, code, now)).toBe(true);
     expect(verifyTotp(RFC_SECRET, code, now + 30_000)).toBe(true);
     expect(verifyTotp(RFC_SECRET, code, now + 90_000)).toBe(false);
+  });
+
+  it("refuses a code from a step that was already used (no replay)", () => {
+    const now = 1_234_567_890_000;
+    const code = totpAt(RFC_SECRET, now);
+    const step = matchTotpStep(RFC_SECRET, code, now);
+    expect(step).toBe(Math.floor(now / 30_000));
+    expect(matchTotpStep(RFC_SECRET, code, now, 1, step)).toBeNull();
+    // The next code is still fine.
+    const next = totpAt(RFC_SECRET, now + 30_000);
+    expect(matchTotpStep(RFC_SECRET, next, now + 30_000, 1, step)).toBe(step! + 1);
   });
 
   it("rejects malformed codes without throwing", () => {

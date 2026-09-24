@@ -15,6 +15,7 @@ import { adminApi } from "../adminApi";
 import AiWriteButton from "../components/AiWriteButton";
 import ImageUploader from "../components/ImageUploader";
 import "../components/AdminLayout.css";
+import { safeHttpUrl } from "@/utils/contactLinks";
 
 type Tab = "compose" | "inbox";
 type Channel = "facebook" | "instagram";
@@ -267,7 +268,7 @@ function InboxRow({ item }: { item: InboxItem }) {
       <p className="text-muted" style={{ fontSize: "var(--fs-xs)" }}>
         {item.channel === "facebook" ? "Facebook" : "Instagram"} {item.kind} · <strong>{item.author}</strong> · {new Date(item.createdAt).toLocaleString()}
         {item.onPost ? ` · on “${item.onPost}”` : ""}
-        {item.link && <> · <a href={item.link} target="_blank" rel="noopener noreferrer">open</a></>}
+        {safeHttpUrl(item.link) && <> · <a href={safeHttpUrl(item.link)!} target="_blank" rel="noopener noreferrer">open</a></>}
       </p>
       <p style={{ overflowWrap: "anywhere" }}>{item.text}</p>
       {state === "sent" ? (

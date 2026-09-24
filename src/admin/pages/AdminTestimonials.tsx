@@ -9,8 +9,8 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import type { Testimonial } from "@/types/testimonial";
 
 export default function AdminTestimonials() {
-  const { currentUser } = useAdminAuth();
-  const canEdit = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canEdit = can("marketing", "edit");
 
   return (
     <ContentManager<Testimonial>

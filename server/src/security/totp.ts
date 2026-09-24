@@ -75,14 +75,27 @@ export function totpAt(secret: string, timeMs: number): string {
  * perfectly in step.
  */
 export function verifyTotp(secret: string, code: string, nowMs: number = Date.now(), window = 1): boolean {
-  const cleaned = code.replace(/\s+/g, "");
-  if (!/^\d{6}$/.test(cleaned)) return false;
+  return matchTotpStep(secret, code, nowMs, window) !== null;
+}
 
+/**
+ * Like verifyTotp, but returns WHICH 30-second step the code belongs to (or
+ * null). Sign-in stores the step and refuses any code from that step or an
+ * earlier one, so a code that has been used — or watched being typed — can't
+ * be replayed within its validity window.
+ */
+export function matchTotpStep(secret: string, code: string, nowMs: number = Date.now(), window = 1, notAfterStep?: number | null): number | null {
+  const cleaned = code.replace(/\s+/g, "");
+  if (!/^\d{6}$/.test(cleaned)) return null;
+
+  const currentStep = Math.floor(nowMs / 1000 / STEP_SECONDS);
   for (let drift = -window; drift <= window; drift++) {
-    const expected = totpAt(secret, nowMs + drift * STEP_SECONDS * 1000);
-    if (timingSafeEqual(Buffer.from(expected), Buffer.from(cleaned))) return true;
+    const step = currentStep + drift;
+    if (notAfterStep !== undefined && notAfterStep !== null && step <= notAfterStep) continue;
+    const expected = totpAt(secret, step * STEP_SECONDS * 1000);
+    if (timingSafeEqual(Buffer.from(expected), Buffer.from(cleaned))) return step;
   }
-  return false;
+  return null;
 }
 
 /** The `otpauth://` address that authenticator apps read from a QR code (or accept as a link). */

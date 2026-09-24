@@ -35,6 +35,12 @@ import { SeoModule } from "./seo/seo.module";
 import { DealsModule } from "./deals/deals.module";
 import { MarketModule } from "./market/market.module";
 import { SocialModule } from "./social/social.module";
+import { AlertsModule } from "./alerts/alerts.module";
+import { HrModule } from "./hr/hr.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { MobilePaymentsModule } from "./mobile-payments/mobile-payments.module";
+import { ShipmentsModule } from "./shipments/shipments.module";
+import { ReferralsModule } from "./referrals/referrals.module";
 
 @Module({
   imports: [
@@ -79,6 +85,12 @@ import { SocialModule } from "./social/social.module";
     DealsModule,
     MarketModule,
     SocialModule,
+    AlertsModule,
+    HrModule,
+    NotificationsModule,
+    MobilePaymentsModule,
+    ShipmentsModule,
+    ReferralsModule,
   ],
   controllers: [HealthController],
   providers: [

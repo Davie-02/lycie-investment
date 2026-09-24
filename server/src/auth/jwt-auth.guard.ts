@@ -1,9 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type { Request } from "express";
 import { readCookie } from "./cookies";
 import { ADMIN_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE } from "./session-cookie";
 import { SESSION_ROLES, SessionService, type SessionClaims } from "./session.service";
+import { allowedBeforeTwoFactorSetup, ownerIpAllowed, ownerTwoFactorRequired } from "../access/system-admin-policy";
 
 /**
  * Lets a request through only if it carries a genuine, current sign-in.
@@ -41,10 +42,24 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException("Invalid authentication token.");
     }
 
-    await this.sessions.assertStillValid(payload);
+    const staff = await this.sessions.assertStillValid(payload);
 
-    // Attach the decoded payload so route handlers can read who is calling.
-    (request as Request & { user?: unknown }).user = payload;
+    if (payload.role === "OWNER") {
+      if (!ownerIpAllowed(request.ip)) {
+        throw new ForbiddenException("System administrator accounts can't be used from this network.");
+      }
+      if (ownerTwoFactorRequired() && staff && !staff.totpEnabled && !allowedBeforeTwoFactorSetup(request.path)) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          code: "TWO_FACTOR_SETUP_REQUIRED",
+          message: "System administrators must turn on two-step verification before continuing. Open My Security to set it up.",
+        });
+      }
+    }
+
+    // Attach the decoded payload (and, for staff, their module access) so guards and handlers can read who is calling.
+    (request as Request & { user?: unknown; staff?: unknown }).user = payload;
+    (request as Request & { staff?: unknown }).staff = staff;
     return true;
   }
 

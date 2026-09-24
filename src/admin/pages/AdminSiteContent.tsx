@@ -25,6 +25,7 @@ import PricingSettings from "../components/PricingSettings";
 import ThemeSettings from "../components/ThemeSettings";
 import ImportCalculatorSettings from "../components/ImportCalculatorSettings";
 import ImageUploader from "../components/ImageUploader";
+import { useAdminAuth } from "../context/AdminAuthContext";
 import { ClientsSectionEditor, CompanySection, FleetSectionEditor, LoadProfileButton, TeamSectionEditor } from "../components/CompanySections";
 
 const SECTION_LINKS = [
@@ -61,6 +62,8 @@ export default function AdminSiteContent() {
   // whatever the admin had typed anywhere else on the page. Once the
   // first load completes, the gate never comes back.
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  // Prices belong to Finance; only shown here to people who have it.
+  const { can } = useAdminAuth();
   // After "Load company profile" the section forms must restart from the new content
   // (they keep their own local state), so they are remounted once it has been refetched.
   const [formsVersion, setFormsVersion] = useState(0);
@@ -109,7 +112,7 @@ export default function AdminSiteContent() {
             <ImportPageSection initial={content.importPage} onSaved={refresh} />
             <ClearingPageSection initial={content.clearingPage} onSaved={refresh} />
             <HirePageSection initial={content.hirePage} onSaved={refresh} />
-            <PricingSettings />
+            {can("finance") && <PricingSettings />}
             <ThemeSettings initial={content.theme} onSaved={refresh} />
             <ImportCalculatorSettings initial={content.importCalculator} onSaved={refresh} />
             <ContactSection initial={content.contact} onSaved={refresh} />

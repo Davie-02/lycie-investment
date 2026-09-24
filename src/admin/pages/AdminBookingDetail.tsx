@@ -49,8 +49,8 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 
 export default function AdminBookingDetail() {
   const { id } = useParams<{ id: string }>();
-  const { currentUser } = useAdminAuth();
-  const canManage = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canManage = can("hire", "edit");
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);

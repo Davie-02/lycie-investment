@@ -1,26 +1,55 @@
-import { IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
-import { AdminRole } from "@prisma/client";
-import { IsStrongPassword } from "../../security/password-policy";
+import { Transform } from "class-transformer";
+import { IsBoolean, IsIn, IsObject, IsOptional, IsString, MaxLength, ValidateIf } from "class-validator";
+
+const trim = ({ value }: { value: unknown }) => (typeof value === "string" ? value.trim() : value);
 
 export class UpdateAdminUserDto {
-  @IsString()
   @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(120)
   name?: string;
 
-  @IsEnum(AdminRole)
+  /** EMPLOYEE or OWNER; legacy MANAGER/VIEWER accepted so old accounts can be left as they are. */
   @IsOptional()
-  role?: AdminRole;
+  @IsIn(["EMPLOYEE", "OWNER", "MANAGER", "VIEWER"])
+  role?: "EMPLOYEE" | "OWNER" | "MANAGER" | "VIEWER";
 
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 
-  @IsStrongPassword()
   @IsOptional()
-  password?: string;
+  @ValidateIf((_o, value) => value !== null)
+  @IsString()
+  @MaxLength(40)
+  department?: string | null;
 
-  /** Owner-only recovery: clear this person's two-factor setup (lost phone, no recovery codes). */
-  @IsBoolean()
   @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(120)
+  jobTitle?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  /** Per-person access overrides; null clears them (back to department defaults). System administrators only. */
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @IsObject()
+  permissions?: Record<string, string> | null;
+
+  /** Clears this person's two-factor setup (lost phone). System administrators only. */
+  @IsOptional()
+  @IsBoolean()
   resetTwoFactor?: boolean;
+
+  /** Emails a new one-time password (forgotten password, expired invitation). */
+  @IsOptional()
+  @IsBoolean()
+  resendInvite?: boolean;
 }

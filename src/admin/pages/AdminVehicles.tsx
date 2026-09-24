@@ -11,8 +11,8 @@ import type { Vehicle } from "@/types/vehicle";
 import Price from "@/components/common/Price";
 
 export default function AdminVehicles() {
-  const { currentUser } = useAdminAuth();
-  const canEdit = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canEdit = can("sales", "edit");
 
   return (
     <ContentManager<Vehicle>

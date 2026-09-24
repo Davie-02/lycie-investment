@@ -10,8 +10,8 @@ import type { HireVehicle } from "@/types/vehicle";
 import Price from "@/components/common/Price";
 
 export default function AdminHireVehicles() {
-  const { currentUser } = useAdminAuth();
-  const canEdit = currentUser?.role === "OWNER" || currentUser?.role === "MANAGER";
+  const { can } = useAdminAuth();
+  const canEdit = can("hire", "edit");
 
   return (
     <ContentManager<HireVehicle>

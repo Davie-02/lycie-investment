@@ -37,6 +37,11 @@ import SaveVehicleButton from "@/components/vehicles/SaveVehicleButton";
 import MyMessages from "@/components/customer/MyMessages";
 import "./customer.css";
 import Price from "@/components/common/Price";
+import VehicleAlerts from "@/components/customer/VehicleAlerts";
+import MobileMoneyCard from "@/components/customer/MobileMoneyCard";
+import ReferralCard from "@/components/customer/ReferralCard";
+import ShipmentTimeline from "@/components/common/ShipmentTimeline";
+import SignOutEverywhere from "@/components/customer/SignOutEverywhere";
 
 const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
   inquiry: "Vehicle inquiry",
@@ -49,6 +54,7 @@ const REQUEST_TYPE_LABELS: Record<CustomerRequestSummary["type"], string> = {
 interface ProfileFormValues {
   name: string;
   email: string;
+  phone: string;
 }
 
 interface PasswordFormValues {
@@ -115,6 +121,7 @@ export default function CustomerAccount() {
   const [profileValues, setProfileValues] = useState<ProfileFormValues>({
     name: currentUser?.name ?? "",
     email: currentUser?.email ?? "",
+    phone: currentUser?.phone ?? "",
   });
   const [profileErrors, setProfileErrors] = useState<Partial<Record<keyof ProfileFormValues, string>>>({});
   const [profileStatus, setProfileStatus] = useState<"idle" | "success" | "error">("idle");
@@ -429,6 +436,14 @@ export default function CustomerAccount() {
                   Nothing saved yet. Tap the heart icon on any vehicle to shortlist it here.
                 </p>
               ) : (
+                <>
+                {savedVehicles.length >= 2 && (
+                  <p>
+                    <Link className="btn btn-secondary" to={`/compare?v=${savedVehicles.slice(0, 3).map(({ vehicle }) => encodeURIComponent(vehicle.slug)).join(",")}`}>
+                      Compare {Math.min(savedVehicles.length, 3)} side by side
+                    </Link>
+                  </p>
+                )}
                 <div className="customer-saved-vehicles">
                   {savedVehicles.map(({ vehicle }) => (
                     <article className="customer-saved-vehicle" key={vehicle.id}>
@@ -457,8 +472,13 @@ export default function CustomerAccount() {
                     </article>
                   ))}
                 </div>
+                </>
               )}
             </div>
+
+            <MobileMoneyCard />
+            <ReferralCard />
+            <VehicleAlerts emailConfirmed={Boolean(currentUser?.emailVerifiedAt)} />
 
             <div className="customer-account__history">
               <h2>Vehicle updates</h2>
@@ -480,14 +500,28 @@ export default function CustomerAccount() {
                         <strong>{customerCase.status.replace("_", " ")}</strong>
                       </div>
                       {customerCase.details && <p>{customerCase.details}</p>}
-                      <ul>
-                        {customerCase.updates.map((update) => (
-                          <li key={update.id}>
-                            <span className="mono">{new Date(update.createdAt).toLocaleDateString()}</span>{" "}
-                            {update.message}
-                          </li>
-                        ))}
-                      </ul>
+                      {customerCase.trackingCode ? (
+                        <>
+                          <p className="text-muted">
+                            Tracking code <span className="mono">{customerCase.trackingCode}</span> ·{" "}
+                            <Link to={`/track?code=${customerCase.trackingCode}`}>share tracking page</Link>
+                          </p>
+                          <ShipmentTimeline
+                            stage={customerCase.stage ?? null}
+                            eta={customerCase.eta}
+                            updates={[...customerCase.updates].reverse().map((update) => ({ ...update, stage: update.stage ?? null, photos: update.photos ?? [] }))}
+                          />
+                        </>
+                      ) : (
+                        <ul>
+                          {customerCase.updates.map((update) => (
+                            <li key={update.id}>
+                              <span className="mono">{new Date(update.createdAt).toLocaleDateString()}</span>{" "}
+                              {update.message}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </article>
                   ))}
                 </div>
@@ -577,6 +611,16 @@ export default function CustomerAccount() {
                     error={profileErrors.email}
                     autoComplete="username"
                   />
+                  <FormField
+                    id="profile-phone"
+                    label="Phone (for WhatsApp updates)"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="0991 234 567"
+                    value={profileValues.phone}
+                    onChange={handleProfileChange("phone")}
+                    autoComplete="tel"
+                  />
                 </div>
 
                 <div className="form-actions">
@@ -655,6 +699,8 @@ export default function CustomerAccount() {
                 </div>
               </form>
             </div>
+
+            <SignOutEverywhere />
           </>
         )}
       </section>

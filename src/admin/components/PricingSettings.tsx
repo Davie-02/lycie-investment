@@ -33,7 +33,7 @@ const SOURCE_LABEL: Record<Overview["effective"]["source"], string> = {
  * buying rates. Everything here goes live on visitors' open pages within moments.
  */
 export default function PricingSettings() {
-  const { currentUser } = useAdminAuth();
+  const { can } = useAdminAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [values, setValues] = useState<Settings | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "refreshing" | "converting" | "saved" | "error">("idle");
@@ -171,7 +171,7 @@ export default function PricingSettings() {
         </button>
       </div>
 
-      {currentUser?.role === "OWNER" && (
+      {can("finance", "manage") && (
         <div className="site-content-fieldset" style={{ marginTop: "var(--space-5)" }}>
           <h3>Older listings entered in kwacha</h3>
           <p className="text-muted">

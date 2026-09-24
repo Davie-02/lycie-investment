@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mailtoLink, mapQueryFor, mapsDirectionsUrl, mapsEmbedUrl, mapsSearchUrl, messageTemplate, telUrl, toInternationalDigits, whatsappUrl } from "./contactLinks";
+import { mailtoLink, mapQueryFor, mapsDirectionsUrl, mapsEmbedUrl, mapsSearchUrl, messageTemplate, safeHttpUrl, telUrl, toInternationalDigits, whatsappUrl } from "./contactLinks";
 
 describe("toInternationalDigits", () => {
   it("keeps numbers already in international format", () => {
@@ -69,5 +69,19 @@ describe("mailtoLink", () => {
     expect(mailtoLink(" info@example.com ")).toBe("mailto:info@example.com");
     expect(mailtoLink("Contact our team")).toBeNull();
     expect(mailtoLink(null)).toBeNull();
+  });
+});
+
+describe("safeHttpUrl", () => {
+  it("keeps normal web addresses", () => {
+    expect(safeHttpUrl("https://facebook.com/lycie")).toBe("https://facebook.com/lycie");
+  });
+
+  it("refuses script and other non-web addresses", () => {
+    expect(safeHttpUrl("javascript:alert(1)")).toBeNull();
+    expect(safeHttpUrl(" JaVaScRiPt:alert(1)")).toBeNull();
+    expect(safeHttpUrl("data:text/html,<script>alert(1)</script>")).toBeNull();
+    expect(safeHttpUrl("not a url")).toBeNull();
+    expect(safeHttpUrl(undefined)).toBeNull();
   });
 });

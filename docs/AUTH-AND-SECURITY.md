@@ -3,6 +3,10 @@
 Everything about how people (customers and admins) prove who they are, how that
 stays working on every browser and device, and what protects the accounts.
 
+> **Update 2026-09-25:** staff now sign in on the website's normal sign-in page and only system
+> administrators (Owners) use `/admin/login`. Staff are invited with emailed one-time passwords, and
+> access is per module. See [STAFF-AND-ACCESS.md](STAFF-AND-ACCESS.md).
+
 ## The two kinds of account
 
 | | Customers | Admins |
@@ -145,6 +149,28 @@ prompt (single-page sites otherwise sometimes skip it).
   customers can still use the site; a banner on their account page offers to resend.
   Google/Facebook sign-ups count as confirmed.
 
+### Stronger email checks (added 2026-09-24)
+
+`server/src/security/email-check.ts` now checks, cheapest first:
+
+1. **Shape** — length limits, no double dots, a real top-level domain.
+2. **Typos of big providers** — `gmial.com`, `gmail.con`, `yahooo.com`, `outlok.com`… are refused with
+   "Did you mean …?". Many typo domains are owned by squatters *with* mail servers, so the DNS check alone
+   would accept them and the customer's mail would go to a stranger.
+3. **Throwaway inboxes** — ~200 known services, including their subdomains.
+4. **DNS** — the domain must publish mail servers that resolve to a *public* address, and must not publish a
+   "null MX" (RFC 7505, "this domain never receives mail").
+5. **Optional mailbox check** — set `EMAIL_VERIFICATION_PROVIDER` (`kickbox`, `zerobounce` or `abstract`) and
+   `EMAIL_VERIFICATION_API_KEY` on Render. The service asks the provider's mail server whether that exact
+   mailbox exists. Used only when an **account** is created or its email changed (customers and new admins),
+   because each check costs a credit. Only a clear "doesn't exist" rejects.
+
+Every network step **fails open**: if DNS or the service is down, the address is accepted. We don't probe
+mail servers ourselves (hosts block port 25, big providers treat it as abuse). The confirmation email stays
+the final proof. Forms ask `POST /api/auth/check-email` when the person leaves the email field, so problems
+show before submitting (`EmailField.tsx`, now used by every public form). That endpoint never says whether
+an account exists.
+
 ## Protection against guessing and misuse
 
 | Protection | Where | Detail |
@@ -157,6 +183,29 @@ prompt (single-page sites otherwise sometimes skip it).
 | Secure cookies | `session-cookie.ts` | `HttpOnly`, `Secure` in production, `SameSite=None` (or `lax` with same-domain setup) |
 | Security headers | `main.ts` (helmet), `vercel.json` | |
 | Input validation | global `ValidationPipe` | unknown fields rejected |
+
+### Hardening added 2026-09-24
+
+| Weakness found | Fix |
+| --- | --- |
+| A demoted admin (e.g. Owner → Viewer) kept their old powers until the token expired (up to 30 days) | `assertStillValid` compares the token's role with the database and refuses stale tokens |
+| "Log out" only removed the cookie; a copied token kept working | Tokens carry an id (`jti`); logout records it in `RevokedSession` until expiry |
+| No way to end sessions on a lost device | **Sign out everywhere** (admin My Security, customer account page) sets `sessionsRevokedAt` |
+| An authenticator code could be reused within its 90-second window | The accepted time step is stored (`lastTotpStep`); a used code is refused. Recovery codes are claimed atomically |
+| Reset/confirmation links could be used twice by simultaneous requests; other reset links stayed valid | Links are claimed with a conditional update; a reset cancels every other reset link |
+| "Forgot password" answered slower when the email existed (it waited for the email to send), revealing accounts | Email is sent in the background, so both answers take the same time |
+| **Account pre-hijacking**: someone registers your email with their password, then you sign in with Google and get linked to their account | If the existing account's email was never confirmed, linking replaces the unknown password and signs out its sessions |
+| Changing a customer's email was silent | The old address gets a "your email was changed" notice |
+| Tokens with another algorithm were not explicitly refused | JWT verification is pinned to HS256 |
+| A short `JWT_SECRET` would make sessions forgeable | The API refuses to start in production with a secret under 32 characters |
+| Public forms accepted unlimited text | Every public field now has a length limit |
+| A `javascript:` address saved as a social link would run code for visitors | Only http(s) links are rendered (`safeHttpUrl`) |
+| Hire requests allowed past dates, 100-year hires and already-booked dates | Refused with a clear message; the form shows booked dates |
+| Nobody noticed an admin sign-in from elsewhere | Every admin sign-in emails an alert (time, network address, device) |
+| Deactivated or signed-out customers could still have forms linked to their account | `OptionalCustomerGuard` checks the session is still valid |
+
+Known and accepted: with `TRUST_PROXY=2`, direct callers to the Render address can fake their IP for per-IP
+rate limits (lockout, strong passwords and 2FA still apply).
 
 ## Two-step verification (admins)
 
@@ -230,6 +279,7 @@ and not expired; Facebook's token against Facebook's Graph API. Then
 | `GOOGLE_CLIENT_ID` | unset | enables Google button |
 | `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` | unset | enables Facebook button |
 | `EMAIL_*`, `RESEND_API_KEY` / `BREVO_API_KEY` | unset | confirmation and reset emails (see DEPLOYMENT.md) |
+| `EMAIL_VERIFICATION_PROVIDER`, `EMAIL_VERIFICATION_API_KEY` | unset | optional mailbox check at sign-up (`kickbox`, `zerobounce` or `abstract`) |
 
 ## Troubleshooting
 
