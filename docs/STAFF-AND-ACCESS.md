@@ -44,7 +44,8 @@ Each **department** has defaults (`DEPARTMENTS` in `server/src/access/modules.ts
 
 | Department | Default access |
 | --- | --- |
-| Management | Edit on all operational modules, view Insights and HR |
+| Director | Edit on all operational modules, view Insights and HR, **Tracking codes** |
+| Management | Edit on all operational modules, view Insights and HR, **Tracking codes** |
 | Sales | Sales + Customer Care edit; Hire, Lycie AI, Insights view |
 | Hire & Fleet | Hire edit; Customer Care, Insights view |
 | Imports & Clearing | Imports edit; Customer Care, Sales view |
@@ -70,6 +71,16 @@ with the person's access, recalculated from the database at most every 15
 seconds. A staff route that isn't in that table falls back to its role list, so
 a new endpoint is never accidentally open to everyone. The workspace only hides
 what the server would refuse anyway.
+
+## Tracking codes are private
+
+Shipment tracking codes work like a password for a customer's shipment. Only people with the **Tracking
+codes** privilege — the Director, Managers, system administrators, or anyone a system administrator gives it
+to in Staff & access — see the list of all shipments and their codes. Everyone else (Imports & Clearing,
+Customer Care, Sales…) asks the customer for their code and enters it (Shipments, or Customer Care → *Look up
+a shipment*) to see that one shipment; Imports staff can then post progress. When a shipment is opened the
+code is emailed (and WhatsApped) straight to the customer, so staff without the privilege never see it.
+Look-ups are limited to 20 a minute so codes can't be guessed by trying many.
 
 ## Who can manage accounts
 

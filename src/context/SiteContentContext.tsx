@@ -7,6 +7,8 @@ import type { SiteContent } from "@/types/siteContent";
 interface SiteContentContextValue {
   content: SiteContent;
   isLoading: boolean;
+  /** True once the admin's saved content has actually been received (false while loading or if the server couldn't be reached). */
+  hasLoaded: boolean;
   refresh: () => void;
 }
 
@@ -56,6 +58,7 @@ function mergeWithDefaults(partial: Record<string, unknown>): SiteContent {
 export function SiteContentProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
@@ -65,7 +68,10 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
 
     getSiteContent()
       .then((data) => {
-        if (!cancelled) setContent(mergeWithDefaults(data));
+        if (!cancelled) {
+          setContent(mergeWithDefaults(data));
+          setHasLoaded(true);
+        }
       })
       .catch(() => {
         // Network or server error — keep showing DEFAULT_SITE_CONTENT rather
@@ -86,7 +92,7 @@ export function SiteContentProvider({ children }: { children: ReactNode }) {
 
   return (
     <SiteContentContext.Provider
-      value={{ content, isLoading, refresh: () => setRefreshKey((k) => k + 1) }}
+      value={{ content, isLoading, hasLoaded, refresh: () => setRefreshKey((k) => k + 1) }}
     >
       {children}
     </SiteContentContext.Provider>

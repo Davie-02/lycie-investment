@@ -5,7 +5,7 @@
 export const LEVELS = ["none", "view", "edit", "manage"] as const;
 export type Level = (typeof LEVELS)[number];
 
-export const MODULE_KEYS = ["sales", "hire", "imports", "finance", "customers", "marketing", "ai", "insights", "hr", "system"] as const;
+export const MODULE_KEYS = ["sales", "hire", "imports", "finance", "customers", "marketing", "ai", "insights", "hr", "system", "tracking"] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 export type AccessMap = Record<ModuleKey, Level>;
 

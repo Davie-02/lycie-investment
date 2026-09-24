@@ -5,9 +5,13 @@ import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 import { ADMIN_ROLES } from "../auth/session.service";
 import { ShipmentsService } from "./shipments.service";
+import { CurrentStaff, type StaffActor } from "../access/current-staff.decorator";
 import { CreateShipmentDto, ShipmentProgressDto, UpdateShipmentDto } from "./shipments.dto";
 
-/** Staff: Imports & Clearing module (see access/route-access.ts). */
+/**
+ * Staff: Imports & Clearing. The full list needs the tracking privilege; others
+ * look shipments up by code (see access/route-access.ts).
+ */
 @Controller("shipments")
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(...ADMIN_ROLES)
@@ -24,9 +28,16 @@ export class ShipmentsController {
     return this.shipments.summary();
   }
 
+  /** Find one shipment by the code the customer gives (limited, so codes can't be guessed by trying many). */
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Get("lookup/:code")
+  lookup(@Param("code") code: string) {
+    return this.shipments.lookup(code.slice(0, 20));
+  }
+
   @Post()
-  create(@Body() dto: CreateShipmentDto) {
-    return this.shipments.create(dto);
+  create(@Body() dto: CreateShipmentDto, @CurrentStaff() actor: StaffActor) {
+    return this.shipments.create(dto, actor);
   }
 
   @Patch(":id")

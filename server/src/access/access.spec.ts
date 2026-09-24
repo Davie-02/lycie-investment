@@ -15,6 +15,15 @@ describe("module access", () => {
     expect(access.customers).toBe("none");
   });
 
+  it("gives the tracking privilege only to the Director and Managers by default", () => {
+    expect(baseAccess("EMPLOYEE", "director").tracking).toBe("view");
+    expect(baseAccess("EMPLOYEE", "management").tracking).toBe("view");
+    expect(baseAccess("MANAGER", null).tracking).toBe("view");
+    for (const dept of ["sales", "hire", "imports", "finance", "customer_care", "marketing", "hr", "general"]) {
+      expect(baseAccess("EMPLOYEE", dept).tracking).toBe("none");
+    }
+  });
+
   it("gives staff with no department nothing but the dashboard", () => {
     expect(Object.values(effectiveAccess("EMPLOYEE", null, null)).every((level) => level === "none")).toBe(true);
   });
@@ -33,6 +42,11 @@ describe("module access", () => {
     expect(accessForRoute("POST", "/api/admin-users")).toEqual({ kind: "modules", modules: ["system", "hr"], level: "manage" });
     expect(accessForRoute("GET", "/api/auth/session")).toEqual({ kind: "staff" });
     expect(accessForRoute("GET", "/api/something-new")).toBeNull();
+    // Shipments: listing every code needs the tracking privilege; looking one up by code doesn't.
+    expect(accessForRoute("GET", "/api/shipments")).toEqual({ kind: "modules", modules: ["tracking"], level: "view" });
+    expect(accessForRoute("POST", "/api/shipments")).toEqual({ kind: "modules", modules: ["imports"], level: "edit" });
+    expect(accessForRoute("GET", "/api/shipments/lookup/LYC-ABC123")).toEqual({ kind: "modules", modules: ["imports", "customers"], level: "view" });
+    expect(accessForRoute("POST", "/api/shipments/x/progress")).toEqual({ kind: "modules", modules: ["imports"], level: "edit" });
     // Guide editing is deliberately unmapped: only the OWNER role list on the controller can open it.
     expect(accessForRoute("PUT", "/api/guides/page:/admin")).toBeNull();
     expect(accessForRoute("GET", "/api/workspace/guides")).toEqual({ kind: "staff" });

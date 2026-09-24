@@ -76,7 +76,7 @@ export default function MyAccount() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
             {granted.map((key) => (
               <span key={key} className="ws-chip">
-                {MODULES.find((m) => m.key === key)?.label}: {isSystemAdmin ? "Everything" : LEVEL_LABELS[currentUser!.access![key]]}
+                {key === "tracking" ? "Tracking codes" : MODULES.find((m) => m.key === key)?.label}: {isSystemAdmin ? "Everything" : LEVEL_LABELS[currentUser!.access![key]]}
               </span>
             ))}
           </div>

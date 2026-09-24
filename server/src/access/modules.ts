@@ -17,7 +17,7 @@
 export const LEVELS = ["none", "view", "edit", "manage"] as const;
 export type Level = (typeof LEVELS)[number];
 
-export const MODULE_KEYS = ["sales", "hire", "imports", "finance", "customers", "marketing", "ai", "insights", "hr", "system"] as const;
+export const MODULE_KEYS = ["sales", "hire", "imports", "finance", "customers", "marketing", "ai", "insights", "hr", "system", "tracking"] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export interface ModuleInfo {
@@ -37,12 +37,29 @@ export const MODULES: ModuleInfo[] = [
   { key: "insights", label: "Insights & Market", description: "Analytics, customer demand and market briefings" },
   { key: "hr", label: "People (HR)", description: "Staff directory, inviting staff, leave requests" },
   { key: "system", label: "System", description: "Staff accounts and access, activity log, security" },
+  // Not a workspace area of its own: a privilege. Without it, staff must ask the customer for their
+  // tracking code and enter it to see a shipment (Imports & Clearing, Customer Care).
+  {
+    key: "tracking",
+    label: "Tracking codes",
+    description: "See every shipment and its tracking code without asking the customer (View is enough)",
+  },
 ];
 
 export const DEPARTMENTS: Record<string, { label: string; access: Partial<Record<ModuleKey, Level>> }> = {
+  director: {
+    label: "Director",
+    access: {
+      sales: "edit", hire: "edit", imports: "edit", finance: "edit", customers: "edit", marketing: "edit",
+      ai: "edit", insights: "view", hr: "view", tracking: "view",
+    },
+  },
   management: {
     label: "Management",
-    access: { sales: "edit", hire: "edit", imports: "edit", finance: "edit", customers: "edit", marketing: "edit", ai: "edit", insights: "view", hr: "view" },
+    access: {
+      sales: "edit", hire: "edit", imports: "edit", finance: "edit", customers: "edit", marketing: "edit",
+      ai: "edit", insights: "view", hr: "view", tracking: "view",
+    },
   },
   sales: { label: "Sales", access: { sales: "edit", customers: "edit", hire: "view", ai: "view", insights: "view" } },
   hire: { label: "Hire & Fleet", access: { hire: "edit", customers: "view", insights: "view" } },

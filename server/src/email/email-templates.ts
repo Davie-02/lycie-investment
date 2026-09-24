@@ -337,3 +337,17 @@ export function mobilePaymentReceiptEmail(input: { name: string; amount: string;
     `),
   };
 }
+
+/** Sent when staff open a shipment: the customer's own tracking code (staff without the privilege never see it). */
+export function shipmentOpenedEmail(input: { name: string; title: string; trackingCode: string; trackUrl: string }) {
+  return {
+    subject: `Your tracking code for ${input.title}`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>We've started tracking <strong>${escapeHtml(input.title)}</strong> for you. Your tracking code is:</p>
+      <p style="font-family: 'Courier New', monospace; font-size: 22px; letter-spacing: 2px; margin: 16px 0;"><strong>${escapeHtml(input.trackingCode)}</strong></p>
+      <p>Keep it safe — our team will ask for it when you contact us about this vehicle, and you can follow its progress any time:</p>
+      <p style="margin: 20px 0;"><a href="${escapeHtml(input.trackUrl)}" style="background: ${BRAND_NAVY}; color: #fff; padding: 10px 18px; border-radius: 4px; text-decoration: none; display: inline-block;">Track it</a></p>
+    `),
+  };
+}

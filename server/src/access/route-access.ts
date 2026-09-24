@@ -62,6 +62,12 @@ const RULES: Rule[] = [
   [/^\/deal-admin(\/|$)/, (_m, w) => one("sales", w)],
   [/^\/hire-vehicles(\/|$)/, (_m, w) => one("hire", w)],
   [/^\/hire-requests(\/|$)/, (_m, w) => one("hire", w)],
+  // Shipments: the full list (with every tracking code) is for people with the "tracking" privilege
+  // (Director, Managers, or given by a system administrator). Everyone else looks a shipment up by
+  // the code the customer gives them.
+  [/^\/shipments\/lookup\/[^/]+$/, () => any(["imports", "customers"], false)],
+  [/^\/shipments\/summary$/, () => any(["imports", "tracking"], false)],
+  [/^\/shipments$/, (_m, w) => (w ? one("imports", true) : one("tracking", false))],
   [/^\/(import-requests|clearing-requests|customer-cases|shipments)(\/|$)/, (_m, w) => one("imports", w)],
   [/^\/customer-lookup$/, () => any(["imports", "finance", "customers", "sales", "hire"], false)],
   [/^\/financial\/payments(\/|$)/, (_m, w) => one("finance", w)],

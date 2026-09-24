@@ -36,7 +36,8 @@ export class WorkspaceService {
   }
 
   async summary(access: AccessMap): Promise<Partial<Record<ModuleKey, Stat[]>>> {
-    const visible = MODULE_KEYS.filter((key) => atLeast(access[key], "view"));
+    // "tracking" is a privilege, not a workspace area, so it has no dashboard numbers.
+    const visible = MODULE_KEYS.filter((key) => key !== "tracking" && atLeast(access[key], "view"));
     const entries = await Promise.all(visible.map(async (key) => [key, await this.statsFor(key)] as const));
     return Object.fromEntries(entries);
   }
@@ -194,6 +195,8 @@ export class WorkspaceService {
           { key: "inactive", label: "Deactivated accounts", value: inactive, path: "/admin/users" },
         ];
       }
+      case "tracking":
+        return [];
     }
   }
 }

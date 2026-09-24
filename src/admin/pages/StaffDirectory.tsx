@@ -15,6 +15,7 @@ interface Person {
 }
 
 const DEPARTMENT_LABEL: Record<string, string> = {
+  director: "Director",
   management: "Management",
   sales: "Sales",
   hire: "Hire & Fleet",

@@ -1,11 +1,20 @@
 /**
- * Imports & Clearing → Shipments: every vehicle on its way to a customer.
+ * Imports & Clearing → Shipments (and Customer Care → Look up a shipment).
+ *
+ * Tracking codes are private. People with the "tracking" privilege (Director,
+ * Managers, system administrators, or anyone given it) see the full list with
+ * every code. Everyone else asks the customer for their code and enters it to
+ * see that one shipment; opening a shipment sends its code straight to the
+ * customer, so they never see it.
+ *
+ * Every vehicle on its way to a customer.
  * Open a shipment (it gets a tracking code), then post progress through the
  * stages with a message and photos. Each update is emailed to the customer
  * (and sent by WhatsApp when set up); they follow it on their account page or
  * at /track with the code.
  */
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { subscribeLive } from "@/services/liveContent";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import FormField from "@/components/forms/FormField";
 import ShipmentTimeline from "@/components/common/ShipmentTimeline";
@@ -22,7 +31,8 @@ interface Shipment {
   kind: string;
   stage: string | null;
   status: string;
-  trackingCode: string | null;
+  /** Only sent to people with the tracking privilege. */
+  trackingCode?: string | null;
   eta: string | null;
   details: string | null;
   updatedAt: string;
@@ -31,6 +41,115 @@ interface Shipment {
 }
 
 export default function AdminShipments() {
+  const { can } = useAdminAuth();
+  return can("tracking") ? <AllShipments /> : <ShipmentLookup allowCreate={can("imports", "edit")} />;
+}
+
+/** Customer Care → Look up a shipment: status by the customer's tracking code only. */
+export function ShipmentLookupPage() {
+  const { can } = useAdminAuth();
+  return can("tracking") ? <AllShipments /> : <ShipmentLookup allowCreate={false} />;
+}
+
+/**
+ * For staff without the tracking privilege: enter the code the customer gives
+ * you to see that shipment (and, with Imports edit access, post progress).
+ */
+function ShipmentLookup({ allowCreate }: { allowCreate: boolean }) {
+  const { can } = useAdminAuth();
+  const [code, setCode] = useState("");
+  const [active, setActive] = useState<string | null>(null);
+  const [shipment, setShipment] = useState<Shipment | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const load = useCallback(async (value: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      setShipment(await adminApi.get<Shipment>(`/shipments/lookup/${encodeURIComponent(value)}`));
+      setActive(value);
+    } catch (err) {
+      setShipment(null);
+      setError(err instanceof Error ? err.message : "Couldn't find that shipment.");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  // New progress posted by a colleague appears while this is open.
+  useEffect(() => (active ? subscribeLive(["shipments"], () => void load(active)) : undefined), [active, load]);
+
+  return (
+    <div>
+      <div className="ws-hero">
+        <div>
+          <h1>Shipments</h1>
+          <p>Ask the customer for their tracking code (it looks like LYC-7K2M9Q) and enter it to see their shipment.</p>
+        </div>
+        {allowCreate && (
+          <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
+            + New shipment
+          </button>
+        )}
+      </div>
+
+      {creating && (
+        <NewShipment
+          onDone={(id) => {
+            setCreating(false);
+            if (id) setNotice("Shipment opened. Its tracking code has been sent to the customer by email (and WhatsApp when set up).");
+          }}
+        />
+      )}
+      {notice && <p className="form-status form-status--success" role="status">{notice}</p>}
+
+      <form
+        className="ws-toolbar"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (code.trim()) void load(code.trim().toUpperCase());
+        }}
+      >
+        <input
+          type="search"
+          placeholder="Tracking code, e.g. LYC-7K2M9Q"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          aria-label="Tracking code"
+          autoCapitalize="characters"
+          autoComplete="off"
+          style={{ minWidth: 240 }}
+        />
+        <button type="submit" className="btn btn-primary" disabled={busy || !code.trim()}>
+          {busy ? "Looking up…" : "Look up"}
+        </button>
+      </form>
+
+      {error && <p className="form-status form-status--error" role="alert">{error}</p>}
+
+      {shipment && (
+        <section className="form-card">
+          <div className="ws-section__head">
+            <h2>{shipment.title}</h2>
+            <span className="ws-chip">{shipment.kind === "clearing" ? "Clearing" : "Import"}</span>
+          </div>
+          <p className="text-muted">
+            Customer: <strong>{shipment.customer.name}</strong> · {shipment.customer.email}
+            {shipment.customer.phone ? ` · ${shipment.customer.phone}` : ""}
+          </p>
+          <ShipmentTimeline stage={shipment.stage} eta={shipment.eta} updates={shipment.updates.slice().reverse()} />
+          {can("imports", "edit") && <PostProgress shipment={shipment} onPosted={() => active && void load(active)} />}
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** Directors, Managers and administrators: every shipment with its tracking code. */
+function AllShipments() {
   const { can } = useAdminAuth();
   const canEdit = can("imports", "edit");
   const [query, setQuery] = useState("");

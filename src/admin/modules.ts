@@ -74,6 +74,7 @@ const L = {
   referrals: () => import("./pages/AdminReferrals"),
   pricing: () => import("./pages/AdminPricing"),
   contactMessages: () => import("./pages/requests/ContactMessages"),
+  shipmentLookup: () => import("./pages/requests/ShipmentLookup"),
   reviews: () => import("./pages/AdminReviews"),
   siteContent: () => import("./pages/AdminSiteContent"),
   notices: () => import("./pages/AdminNotices"),
@@ -156,6 +157,7 @@ export const MODULES: ModuleDef[] = [
     pages: [
       page("/admin/messages", "Contact messages", L.contactMessages, { description: "Messages from the contact form" }),
       page("/admin/reviews", "Reviews", L.reviews, { description: "Approve customer reviews" }),
+      page("/admin/shipment-lookup", "Look up a shipment", L.shipmentLookup, { description: "A customer's shipment status, by their tracking code" }),
     ],
   },
   {

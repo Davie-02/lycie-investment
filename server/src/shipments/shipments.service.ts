@@ -2,17 +2,24 @@
  * Shipment tracking for imports and clearing (Imports & Clearing module).
  *
  * Staff open a shipment for a customer (it gets a tracking code like
- * LYC-7K2M9Q), then post progress through the stages in stages.ts — with a
+ * LYC-7K2M9Q, sent straight to the customer), then post progress through the stages in stages.ts — with a
  * message and optional photos (e.g. at the port). Each update is emailed and,
  * when set up, sent by WhatsApp. Customers follow it on their account page or,
  * without signing in, at /track with the code (which shows no personal details).
+ *
+ * Tracking codes are private. Only people with the "tracking" privilege (the
+ * Director, Managers, system administrators, or anyone they grant it to) can
+ * list shipments and see codes. Everyone else — Imports staff, Customer Care —
+ * asks the customer for their code and looks the shipment up with it.
  */
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomInt } from "crypto";
 import { CustomerCaseStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { shipmentUpdateEmail } from "../email/email-templates";
+import { shipmentOpenedEmail, shipmentUpdateEmail } from "../email/email-templates";
+import { atLeast } from "../access/modules";
+import type { StaffActor } from "../access/current-staff.decorator";
 import { CreateShipmentDto, ShipmentProgressDto, UpdateShipmentDto } from "./shipments.dto";
 import { STAGES, stageInfo } from "./stages";
 
@@ -22,6 +29,13 @@ function newTrackingCode(): string {
   let code = "LYC-";
   for (let i = 0; i < 6; i++) code += CODE_CHARS[randomInt(CODE_CHARS.length)];
   return code;
+}
+
+/** A copy without the tracking code, for staff who don't hold the tracking privilege. */
+function withoutCode<T extends { trackingCode: string | null }>(shipment: T): Omit<T, "trackingCode"> {
+  const copy: Partial<T> = { ...shipment };
+  delete copy.trackingCode;
+  return copy as Omit<T, "trackingCode">;
 }
 
 /** Only our own uploaded images may be attached (no outside links shown to customers). */
@@ -72,12 +86,36 @@ export class ShipmentsService {
     });
   }
 
-  async create(dto: CreateShipmentDto) {
+  /** Does this person hold the tracking privilege (see every shipment and code)? */
+  canSeeCodes(actor: StaffActor): boolean {
+    return actor.role === "OWNER" || atLeast(actor.access.tracking, "view");
+  }
+
+  /**
+   * Staff without the privilege: the customer tells them their code, and this
+   * finds that one shipment (with the customer's name, to confirm who they're
+   * helping). The code itself isn't sent back.
+   */
+  async lookup(code: string) {
+    const shipment = await this.prisma.customerCase.findUnique({
+      where: { trackingCode: code.trim().toUpperCase() },
+      include: {
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        updates: { orderBy: { createdAt: "desc" } },
+      },
+    });
+    if (!shipment || !["import", "clearing"].includes(shipment.kind)) {
+      throw new NotFoundException("No shipment has that tracking code. Please check it with the customer.");
+    }
+    return withoutCode(shipment);
+  }
+
+  async create(dto: CreateShipmentDto, actor: StaffActor) {
     const customer = await this.prisma.customerUser.findUnique({ where: { id: dto.customerId } });
     if (!customer) throw new NotFoundException("Customer not found.");
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        return await this.prisma.customerCase.create({
+        const created = await this.prisma.customerCase.create({
           data: {
             customerId: dto.customerId,
             title: dto.title,
@@ -90,6 +128,17 @@ export class ShipmentsService {
             trackingCode: newTrackingCode(),
           },
         });
+        // The customer receives their code directly; staff without the privilege never see it.
+        const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+        const trackUrl = `${frontendUrl}/track?code=${encodeURIComponent(created.trackingCode!)}`;
+        void this.notifications.notify({
+          email: customer.email,
+          phone: customer.phone,
+          ...shipmentOpenedEmail({ name: customer.name, title: created.title, trackingCode: created.trackingCode!, trackUrl }),
+          text: `We're now tracking ${created.title} for you. Your tracking code is ${created.trackingCode}. Keep it safe — we'll ask for it when you contact us. Track it: ${trackUrl}`,
+        });
+        if (this.canSeeCodes(actor)) return created;
+        return { ...withoutCode(created), codeSentToCustomer: true };
       } catch (error) {
         // Another shipment already has this random code — pick another.
         if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;

@@ -30,6 +30,7 @@ const COLLAPSE_KEY = "lycie_admin_sidebar";
 
 const ROLE_LABEL: Record<string, string> = { OWNER: "System administrator", MANAGER: "Manager", VIEWER: "Viewer", EMPLOYEE: "Staff" };
 const DEPARTMENT_LABEL: Record<string, string> = {
+  director: "Director",
   management: "Management",
   sales: "Sales",
   hire: "Hire & Fleet",

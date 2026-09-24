@@ -39,6 +39,7 @@ const AUDIENCE_LABEL: Record<Audience, string> = {
 };
 
 const DEPARTMENTS: Array<[string, string]> = [
+  ["director", "Director"],
   ["management", "Management"],
   ["sales", "Sales"],
   ["hire", "Hire & Fleet"],
