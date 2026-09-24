@@ -645,3 +645,22 @@ the balance). Each website payment's reference is unique in `sourceRef`, so it c
 another currency keep the amount received and the rate used (default: Finance → Prices & currency). Refunds, voids
 and exports need Finance **manage**; everything else Finance **edit**/**view**. Dollars and kwacha are never added together
 — totals are shown per currency.
+
+## Paying: choose what for, compared with what's owed (added 2026-09-27)
+
+**What:** every customer payment says what it's for — a purchase with a balance, a hire booking (turned into a purchase
+priced from the booking, once), or an advance deposit that must be described. Customers use **My account → Payments →
+Make a payment** (what for → how: mobile money / account balance / proof → how much). As they type, the amount is
+compared with what's owed (minus proofs already waiting): part, exact, or more. More than owed needs them to tick that
+the extra goes to their account balance.
+
+**Rules (enforced on the server, whatever the page shows):** a purchase never gets more than it owes — the extra goes to
+the customer's account balance with its own ledger entry (`EXCESS-…`) and they're told by account message, email and
+WhatsApp. This covers staff-recorded payments, approved proofs, and two mobile payments racing each other. Staff approve
+the amount that actually arrived (the customer's claim is kept in the note), and the customer is told of every approval
+or rejection. An overpaid purchase (price lowered after payment) has **Move the extra to their balance**. Proof uploads
+and payment lookups are rate-limited; hire bookings and purchases must belong to the signed-in customer.
+
+**Where:** `PurchasesService.addPayment/splitPayment/checkAgainstOwed/payTargets/purchaseForHireRequest/notifyExcess`,
+`GET /customers/me/purchases/pay-targets`, `POST /customers/me/purchases/pay-from-balance`, `POST /purchases/:id/move-credit`;
+`src/pages/Customer/portal/PaymentFlow.tsx`; `src/admin/pages/AdminPayments.tsx`. Migration `20260927100000_purchase_source_unique`.

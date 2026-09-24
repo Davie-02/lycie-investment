@@ -1,75 +1,36 @@
 /**
- * Payments: the account balance, paying by mobile money, uploading proof of
- * another payment (approved by staff) — optionally for one purchase, which it
- * then pays directly — and the history of both.
+ * Payments: the account balance, "Make a payment" (choose what for, then how:
+ * mobile money, the balance, or proof of a bank/cash payment — see PaymentFlow),
+ * and the history of money in and out, mobile-money attempts and proofs sent.
  */
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import FormField from "@/components/forms/FormField";
-import FormStatusBanner from "@/components/forms/FormStatusBanner";
-import MobileMoneyCard from "@/components/customer/MobileMoneyCard";
-import { submitPayment } from "@/services/customer.service";
-import { ApiError } from "@/services/http";
+import { getMyMobilePayments, type MobilePaymentView } from "@/services/customer.service";
 import { formatCurrency } from "@/utils/format";
 import { usePortal } from "./PortalContext";
 import PortalHeading from "./PortalHeading";
+import PaymentFlow from "./PaymentFlow";
 import { statusTone } from "./shared";
-import { money } from "@/utils/purchases";
 
-interface PaymentFormValues {
-  amount: string;
-  description: string;
-}
+const MOBILE_STATUS: Record<string, string> = { success: "Paid", pending: "Waiting", failed: "Didn't go through" };
 
 export default function Payments() {
-  const { account, purchases, isLoading, reloadPurchases } = usePortal();
+  const { account, purchases, isLoading } = usePortal();
   const [params] = useSearchParams();
-  const owing = purchases.filter((p) => p.status === "active" && Number(p.balance) > 0);
-  const [purchaseId, setPurchaseId] = useState(() => {
-    const wanted = params.get("purchase");
-    return wanted && owing.some((p) => p.id === wanted) ? wanted : "";
-  });
-  const [values, setValues] = useState<PaymentFormValues>({ amount: "", description: "" });
-  const [proof, setProof] = useState<File | null>(null);
-  const [amountError, setAmountError] = useState<string | undefined>();
-  const [proofError, setProofError] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobile, setMobile] = useState<Array<MobilePaymentView & { note: string; createdAt: string }>>([]);
+
+  useEffect(() => {
+    getMyMobilePayments()
+      .then(setMobile)
+      .catch(() => setMobile([]));
+  }, [account?.balance]);
 
   if (isLoading) return <p className="text-muted">Loading…</p>;
   if (!account) return <p className="text-muted">Your account couldn't be loaded. Please refresh the page.</p>;
 
-  const handleChange = (field: keyof PaymentFormValues) => (e: ChangeEvent<HTMLInputElement>) => setValues((prev) => ({ ...prev, [field]: e.target.value }));
-
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const amount = Number(values.amount);
-    const badAmount = !values.amount.trim() || !Number.isInteger(amount) || amount <= 0;
-    setAmountError(badAmount ? "Enter a whole amount greater than zero." : undefined);
-    setProofError(proof ? null : "Choose an image of your proof of payment.");
-    if (badAmount || !proof) return;
-
-    setStatus("idle");
-    setErrorMessage(null);
-    setIsSubmitting(true);
-    try {
-      await submitPayment(amount, proof, values.description || undefined, purchaseId || undefined);
-      await reloadPurchases();
-      setValues({ amount: "", description: "" });
-      setProof(null);
-      setStatus("success");
-    } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : "Unable to submit your payment.");
-      setStatus("error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
   return (
     <>
-      <PortalHeading title="Payments" intro="Your balance, ways to pay, and your payment history." />
+      <PortalHeading title="Payments" intro="Pay for a purchase or booking, make a deposit, and see your payment history." />
 
       <div className="portal-balance">
         <div>
@@ -78,46 +39,39 @@ export default function Payments() {
         </div>
       </div>
 
-      <MobileMoneyCard />
+      <PaymentFlow preselect={params.get("purchase")} />
 
-      <form className="form-card customer-account__form" onSubmit={handleSubmit} noValidate>
-        <h3 style={{ marginTop: 0 }}>Paid another way? Upload your proof</h3>
-        <p className="text-muted">A bank slip or transfer screenshot. Once our team has checked it, it pays the purchase you choose — or goes to your balance.</p>
-        {status === "success" && <FormStatusBanner status="success" successMessage="Payment submitted. It will count once our team approves it." errorMessage={null} />}
-        {status === "error" && <FormStatusBanner status="error" successMessage="" errorMessage={errorMessage} />}
-        <div className="form-grid form-grid--2col">
-          <FormField id="transaction-amount" label={`Amount (${account.currency})`} type="number" min="1" step="1" required value={values.amount} onChange={handleChange("amount")} error={amountError} />
-          <FormField id="transaction-description" label="Description (optional)" value={values.description} onChange={handleChange("description")} />
-          {owing.length > 0 && (
-            <FormField as="select" id="transaction-purchase" label="What is it for?" wrapperClassName="form-grid__full" value={purchaseId} onChange={(e) => setPurchaseId(e.target.value)}>
-              <option value="">Add it to my account balance</option>
-              {owing.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.reference} — {p.title} (balance {money(p.balance, p.currency)})
-                </option>
-              ))}
-            </FormField>
-          )}
-          <div className="form-field form-grid__full">
-            <label htmlFor="payment-proof">
-              Proof of payment<span className="form-field__required"> *</span>
-            </label>
-            <input
-              id="payment-proof"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className={proofError ? "form-field__input form-field__input--error" : "form-field__input"}
-              onChange={(event) => setProof(event.target.files?.[0] ?? null)}
-            />
-            {proofError && <p className="form-field__error" role="alert">{proofError}</p>}
+      {mobile.length > 0 && (
+        <section className="portal-card customer-account">
+          <h3>Mobile money payments</h3>
+          <div className="customer-account__table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reference</th>
+                  <th>For</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mobile.slice(0, 10).map((payment) => (
+                  <tr key={payment.txRef}>
+                    <td>{new Date(payment.createdAt).toLocaleDateString()}</td>
+                    <td className="mono">{payment.txRef}</td>
+                    <td>{payment.note || "Deposit"}</td>
+                    <td>{formatCurrency(payment.amount, payment.currency)}</td>
+                    <td>
+                      <span className={`portal-pill ${statusTone(payment.status === "success" ? "confirmed" : payment.status === "failed" ? "cancelled" : "")}`}>{MOBILE_STATUS[payment.status]}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-        <div className="form-actions">
-          <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting…" : "Submit for review"}
-          </button>
-        </div>
-      </form>
+        </section>
+      )}
 
       <section className="portal-card customer-account">
         <h3>Transaction history</h3>
@@ -176,6 +130,7 @@ export default function Payments() {
                       <span className={`portal-pill ${statusTone(submission.status === "APPROVED" ? "confirmed" : submission.status === "REJECTED" ? "cancelled" : "")}`}>
                         {submission.status.toLowerCase()}
                       </span>
+                      {submission.reviewNote && <div className="text-muted">{submission.reviewNote}</div>}
                     </td>
                   </tr>
                 ))}

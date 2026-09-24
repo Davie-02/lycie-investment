@@ -20,7 +20,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { EventsService } from "../events/events.service";
 import { runSerializable } from "../common/run-serializable";
 import { toCsv } from "../admin-tools/csv.util";
-import { purchaseRecordedEmail, purchasePaymentReceiptEmail } from "../email/email-templates";
+import { overpaymentEmail, purchaseRecordedEmail, purchasePaymentReceiptEmail } from "../email/email-templates";
 import type { StaffActor } from "../access/current-staff.decorator";
 import {
   balanceOf,
@@ -31,6 +31,8 @@ import {
   paymentStatus,
   priceItems,
   signedAmount,
+  splitPayment,
+  compareWithOwed,
   type PaymentStatus,
 } from "./purchase-math";
 import type { ApplyBalanceDto, CreatePurchaseDto, PurchaseListQuery, RecordPaymentDto, UpdatePurchaseDto } from "./purchases.dto";
@@ -69,6 +71,34 @@ const detailInclude = {
 
 type PurchaseDetail = Prisma.PurchaseGetPayload<{ include: typeof detailInclude }>;
 type Actor = Pick<StaffActor, "sub" | "name">;
+
+/** Extra money beyond what was owed, which went to the customer's account balance. */
+export interface Excess {
+  customerId: string;
+  purchaseReference: string;
+  purchaseTitle: string;
+  amount: Prisma.Decimal;
+  currency: string;
+}
+
+/** What a payment did: the row on the purchase (none when all of it was extra) and any extra. */
+export interface PaymentOutcome {
+  rowId: string | null;
+  applied: Prisma.Decimal;
+  excess: Excess | null;
+}
+
+type PreparedPayment = {
+  kind: string;
+  amount: Prisma.Decimal;
+  method: string;
+  reference: string | null;
+  paidAt: Date;
+  note: string | null;
+  receivedAmount: Prisma.Decimal | null;
+  receivedCurrency: string | null;
+  exchangeRate: Prisma.Decimal | null;
+};
 
 /** A purchase ready for JSON: money as strings, plus balance and payment status. */
 function withBalance<T extends { total: Prisma.Decimal; amountPaid: Prisma.Decimal; status: string; dueDate: Date | null }>(p: T) {
@@ -140,6 +170,8 @@ export class PurchasesService {
 
     // The initial deposit is converted before the transaction (the rate may need a network call).
     const initial = dto.initialPayment ? await this.preparePayment(currency, dto.initialPayment) : null;
+    const walletRate = initial ? (await this.walletRateFor(customer.id, currency)).rate : null;
+    let initialExcess: Excess | null = null;
 
     const created = await this.withReferenceRetry(() =>
       runSerializable(this.prisma, async (tx) => {
@@ -170,12 +202,13 @@ export class PurchasesService {
             items: { create: items },
           },
         });
-        if (initial) await this.addPayment(tx, purchase.id, { ...initial, source: "staff", recordedById: actor.sub, recordedByName: actor.name });
+        if (initial) initialExcess = (await this.addPayment(tx, purchase.id, { ...initial, source: "staff", recordedById: actor.sub, recordedByName: actor.name }, walletRate)).excess;
         if (dto.markVehicleSold && dto.vehicleId) await tx.vehicle.update({ where: { id: dto.vehicleId }, data: { status: "sold" } });
         return purchase;
       })
     );
 
+    if (initialExcess) await this.notifyExcess(initialExcess);
     // The listing now says "sold" on every open page.
     if (dto.markVehicleSold && dto.vehicleId) this.events.emit(["vehicles"]);
 
@@ -311,28 +344,75 @@ export class PurchasesService {
     };
   }
 
-  /** Adds a payment/refund row and moves amountPaid with it. Call inside a transaction. */
+  /**
+   * The rate for putting extra money on the customer's account balance: account-currency
+   * units per 1 of the purchase currency. Worked out BEFORE a transaction (it may need a
+   * network call). Null when no rate is known.
+   */
+  async walletRateFor(customerId: string, purchaseCurrency: string): Promise<{ accountCurrency: string; rate: Prisma.Decimal | null }> {
+    const account = await this.prisma.account.findUnique({ where: { customerId }, select: { currency: true } });
+    const accountCurrency = account?.currency ?? "MWK";
+    return { accountCurrency, rate: await this.autoRate(purchaseCurrency, accountCurrency).catch(() => null) };
+  }
+
+  /**
+   * Adds a payment/refund row and moves amountPaid with it. Call inside a transaction.
+   *
+   * A payment is never allowed to overpay a purchase: only what's owed goes on it,
+   * and anything extra is deposited on the customer's account balance (with its own
+   * ledger entry), so it can be used for something else or refunded. The caller
+   * tells the customer about the extra once the transaction has committed.
+   */
   private async addPayment(
     tx: Tx,
     purchaseId: string,
-    payment: Awaited<ReturnType<PurchasesService["preparePayment"]>> & { source: string; sourceRef?: string | null; recordedById?: string | null; recordedByName?: string | null }
-  ) {
+    payment: PreparedPayment & { source: string; sourceRef?: string | null; recordedById?: string | null; recordedByName?: string | null },
+    walletRate?: Prisma.Decimal | null
+  ): Promise<PaymentOutcome> {
     const purchase = await tx.purchase.findUnique({ where: { id: purchaseId } });
     if (!purchase) throw new NotFoundException("Purchase not found.");
     if (payment.kind === "payment" && purchase.status === "cancelled") throw new ConflictException("This purchase is cancelled — payments can't be added. Record a refund instead, or reopen it.");
     if (payment.kind === "refund" && payment.amount.gt(purchase.amountPaid)) {
       throw new BadRequestException(`A refund can't be more than has been paid (${money(purchase.amountPaid, purchase.currency)}).`);
     }
+
+    const { applied, excess } = payment.kind === "refund" ? { applied: payment.amount, excess: new D(0) } : splitPayment(payment.amount, balanceOf(purchase.total, purchase.amountPaid));
+    // The share of what was handed over (in another currency) that paid the purchase.
+    // With a rate, that's exactly applied × rate (never more than was handed over).
+    const share = (value: Prisma.Decimal | null) => {
+      if (!value || payment.amount.lte(0)) return value;
+      if (payment.exchangeRate) return D.min(cents(applied.mul(payment.exchangeRate)), value);
+      return cents(value.mul(applied).div(payment.amount));
+    };
+
+    let excessOut: Excess | null = null;
+    if (excess.gt(0)) {
+      const account = await tx.account.upsert({ where: { customerId: purchase.customerId }, update: {}, create: { customerId: purchase.customerId } });
+      let extra: Prisma.Decimal;
+      if (account.currency === purchase.currency) extra = excess;
+      else if (payment.receivedCurrency === account.currency && payment.receivedAmount) extra = cents(payment.receivedAmount.sub(share(payment.receivedAmount) ?? 0));
+      else if (walletRate) extra = cents(excess.mul(walletRate));
+      else throw new BadRequestException(`That's ${money(excess, purchase.currency)} more than is owed, and no ${purchase.currency}→${account.currency} rate is available to put the extra on the customer's balance. Record only what's owed.`);
+      const ref = `EXCESS-${payment.sourceRef ?? `${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`}`;
+      await tx.account.update({ where: { id: account.id }, data: { balance: { increment: extra } } });
+      await tx.financialTransaction.create({
+        data: { accountId: account.id, type: "DEPOSIT", amount: extra, currency: account.currency, reference: ref, description: `Paid more than owed on ${purchase.reference} — ${purchase.title}` },
+      });
+      excessOut = { customerId: purchase.customerId, purchaseReference: purchase.reference, purchaseTitle: purchase.title, amount: extra, currency: account.currency };
+    }
+
+    if (applied.lte(0)) return { rowId: null, applied, excess: excessOut };
+
     const row = await tx.purchasePayment.create({
       data: {
         purchaseId,
         kind: payment.kind,
-        amount: payment.amount,
+        amount: applied,
         method: payment.method,
         reference: payment.reference,
         paidAt: payment.paidAt,
-        note: payment.note,
-        receivedAmount: payment.receivedAmount,
+        note: excessOut ? [payment.note, `${money(excessOut.amount, excessOut.currency)} extra went to the account balance`].filter(Boolean).join(" · ") : payment.note,
+        receivedAmount: share(payment.receivedAmount),
         receivedCurrency: payment.receivedCurrency,
         exchangeRate: payment.exchangeRate,
         source: payment.source,
@@ -341,56 +421,134 @@ export class PurchasesService {
         recordedByName: payment.recordedByName ?? null,
       },
     });
-    await tx.purchase.update({ where: { id: purchaseId }, data: { amountPaid: { increment: signedAmount(payment.kind, payment.amount) } } });
-    return row;
+    await tx.purchase.update({ where: { id: purchaseId }, data: { amountPaid: { increment: signedAmount(payment.kind, applied) } } });
+    return { rowId: row.id, applied, excess: excessOut };
   }
 
   async recordPayment(purchaseId: string, dto: RecordPaymentDto, actor: Actor) {
     const purchase = await this.prisma.purchase.findUnique({ where: { id: purchaseId }, include: { customer: { select: { name: true, email: true, phone: true } } } });
     if (!purchase) throw new NotFoundException("Purchase not found.");
     const prepared = await this.preparePayment(purchase.currency, dto);
-    const row = await runSerializable(this.prisma, (tx) =>
-      this.addPayment(tx, purchaseId, { ...prepared, source: "staff", recordedById: actor.sub, recordedByName: actor.name })
+    const { rate } = await this.walletRateFor(purchase.customerId, purchase.currency);
+    const outcome = await runSerializable(this.prisma, (tx) =>
+      this.addPayment(tx, purchaseId, { ...prepared, source: "staff", recordedById: actor.sub, recordedByName: actor.name }, rate)
     );
-    if (dto.notifyCustomer !== false) await this.sendReceipt(purchaseId, row.id);
+    if (dto.notifyCustomer !== false && outcome.rowId) await this.sendReceipt(purchaseId, outcome.rowId);
+    if (outcome.excess) await this.notifyExcess(outcome.excess);
+    return { ...(await this.get(purchaseId)), excess: outcome.excess ? { amount: outcome.excess.amount.toFixed(2), currency: outcome.excess.currency } : null };
+  }
+
+  /**
+   * Tells the customer they paid more than they owed and where the extra went:
+   * email and WhatsApp, plus a message in their account inbox.
+   */
+  async notifyExcess(excess: Excess): Promise<void> {
+    try {
+      const customer = await this.prisma.customerUser.findUnique({ where: { id: excess.customerId }, select: { name: true, email: true, phone: true } });
+      if (!customer) return;
+      const amount = money(excess.amount, excess.currency);
+      const accountUrl = `${process.env.FRONTEND_URL ?? "http://localhost:5173"}/account/payments`;
+      const body = `You paid ${amount} more than you owed on ${excess.purchaseReference} (${excess.purchaseTitle}). We haven't lost it: the extra ${amount} is now on your account balance. You can use it toward another purchase from your account, or contact us if you'd like it refunded.`;
+      await this.prisma.customerMessage.create({
+        data: { customerId: excess.customerId, subject: `You paid ${amount} more than you owed`, body, requestType: "purchase", requestId: excess.purchaseReference, sentByName: "Lycie Investments accounts" },
+      });
+      const mail = overpaymentEmail({ name: customer.name, amount, reference: excess.purchaseReference, title: excess.purchaseTitle, accountUrl });
+      void this.notifications.notify({ email: customer.email, phone: customer.phone, ...mail, text: body });
+    } catch (error) {
+      this.logger.warn(`Couldn't tell a customer about an overpayment: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  /**
+   * A purchase that ended up overpaid (e.g. its price was lowered after payment):
+   * moves the extra to the customer's account balance and tells them.
+   */
+  async moveCreditToBalance(purchaseId: string, actor: Actor) {
+    const purchase = await this.prisma.purchase.findUnique({ where: { id: purchaseId } });
+    if (!purchase) throw new NotFoundException("Purchase not found.");
+    const extra = balanceOf(purchase.total, purchase.amountPaid).neg();
+    if (extra.lte(0)) throw new ConflictException("This purchase isn't overpaid.");
+    const { accountCurrency, rate } = await this.walletRateFor(purchase.customerId, purchase.currency);
+    if (!rate) throw new BadRequestException(`No ${purchase.currency}→${accountCurrency} exchange rate is available right now.`);
+    const inAccount = cents(extra.mul(rate));
+    const ref = `CREDIT-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString("hex").toUpperCase()}`;
+
+    await runSerializable(this.prisma, async (tx) => {
+      // Re-checked inside the transaction, so two clicks can't move it twice.
+      const fresh = await tx.purchase.findUniqueOrThrow({ where: { id: purchaseId } });
+      if (!balanceOf(fresh.total, fresh.amountPaid).neg().eq(extra)) throw new ConflictException("This purchase changed meanwhile. Please reload and try again.");
+      const account = await tx.account.upsert({ where: { customerId: purchase.customerId }, update: {}, create: { customerId: purchase.customerId, currency: accountCurrency } });
+      await tx.purchasePayment.create({
+        data: {
+          purchaseId,
+          kind: "refund",
+          amount: extra,
+          method: "account_balance",
+          reference: ref,
+          note: "Overpayment moved to the customer's account balance",
+          receivedAmount: accountCurrency === purchase.currency ? null : inAccount,
+          receivedCurrency: accountCurrency === purchase.currency ? null : accountCurrency,
+          exchangeRate: accountCurrency === purchase.currency ? null : rate,
+          source: "overpayment",
+          sourceRef: ref,
+          recordedById: actor.sub,
+          recordedByName: actor.name,
+        },
+      });
+      await tx.purchase.update({ where: { id: purchaseId }, data: { amountPaid: { decrement: extra } } });
+      await tx.account.update({ where: { id: account.id }, data: { balance: { increment: inAccount } } });
+      await tx.financialTransaction.create({
+        data: { accountId: account.id, type: "DEPOSIT", amount: inAccount, currency: account.currency, reference: ref, description: `Overpaid on ${purchase.reference} — ${purchase.title}` },
+      });
+    });
+    await this.notifyExcess({ customerId: purchase.customerId, purchaseReference: purchase.reference, purchaseTitle: purchase.title, amount: inAccount, currency: accountCurrency });
     return this.get(purchaseId);
   }
 
   /**
    * Money the customer paid through the website (mobile money, an approved
    * proof). Idempotent on `sourceRef`: a second call for the same money does nothing.
-   * Returns false when the purchase can't take it (gone or cancelled) so the caller
-   * can credit the customer's balance instead.
+   * Anything beyond what's owed goes to their account balance (see addPayment).
+   * Returns applied=false when the purchase can't take it (gone or cancelled) so the
+   * caller can credit the customer's balance instead. Call notifyExcess() after commit.
    */
   async applyExternalPayment(
     tx: Tx,
-    input: { purchaseId: string; amount: Prisma.Decimal; method: string; source: "mobile_money" | "payment_proof"; sourceRef: string; receivedAmount?: Prisma.Decimal | null; receivedCurrency?: string | null; exchangeRate?: Prisma.Decimal | null; note?: string | null; recordedByName?: string | null; recordedById?: string | null }
-  ): Promise<boolean> {
+    input: { purchaseId: string; amount: Prisma.Decimal; method: string; source: "mobile_money" | "payment_proof"; sourceRef: string; receivedAmount?: Prisma.Decimal | null; receivedCurrency?: string | null; exchangeRate?: Prisma.Decimal | null; note?: string | null; recordedByName?: string | null; recordedById?: string | null; walletRate?: Prisma.Decimal | null }
+  ): Promise<{ applied: boolean; excess: Excess | null }> {
     const purchase = await tx.purchase.findUnique({ where: { id: input.purchaseId }, select: { status: true } });
-    if (!purchase || purchase.status === "cancelled") return false;
-    const already = await tx.purchasePayment.findUnique({ where: { sourceRef: input.sourceRef } });
-    if (already) return true;
-    await this.addPayment(tx, input.purchaseId, {
-      kind: "payment",
-      amount: cents(input.amount),
-      method: input.method,
-      reference: input.sourceRef,
-      paidAt: new Date(),
-      note: input.note ?? null,
-      receivedAmount: input.receivedAmount ?? null,
-      receivedCurrency: input.receivedCurrency ?? null,
-      exchangeRate: input.exchangeRate ?? null,
-      source: input.source,
-      sourceRef: input.sourceRef,
-      recordedById: input.recordedById ?? null,
-      recordedByName: input.recordedByName ?? null,
-    });
-    return true;
+    if (!purchase || purchase.status === "cancelled") return { applied: false, excess: null };
+    const already =
+      (await tx.purchasePayment.findUnique({ where: { sourceRef: input.sourceRef }, select: { id: true } })) ??
+      (await tx.financialTransaction.findUnique({ where: { reference: `EXCESS-${input.sourceRef}` }, select: { id: true } }));
+    if (already) return { applied: true, excess: null };
+    const outcome = await this.addPayment(
+      tx,
+      input.purchaseId,
+      {
+        kind: "payment",
+        amount: cents(input.amount),
+        method: input.method,
+        reference: input.sourceRef,
+        paidAt: new Date(),
+        note: input.note ?? null,
+        receivedAmount: input.receivedAmount ?? null,
+        receivedCurrency: input.receivedCurrency ?? null,
+        exchangeRate: input.exchangeRate ?? null,
+        source: input.source,
+        sourceRef: input.sourceRef,
+        recordedById: input.recordedById ?? null,
+        recordedByName: input.recordedByName ?? null,
+      },
+      input.walletRate
+    );
+    return { applied: true, excess: outcome.excess };
   }
 
   async voidPayment(paymentId: string, reason: string, actor: Actor) {
     const payment = await this.prisma.purchasePayment.findUnique({ where: { id: paymentId }, include: { purchase: { select: { customerId: true, currency: true } } } });
     if (!payment) throw new NotFoundException("Payment not found.");
+    if (payment.source === "overpayment") throw new ConflictException("Money moved to the customer's balance can't be voided here. Adjust the balance instead.");
 
     await runSerializable(this.prisma, async (tx) => {
       // Claim it, so two people voiding at once can't reverse it twice.
@@ -824,6 +982,151 @@ export class PurchasesService {
     const row = await this.prisma.purchase.findFirst({ where: { id, customerId }, select: this.customerSelect });
     if (!row) throw new NotFoundException("Purchase not found.");
     return withBalance(row);
+  }
+
+  /**
+   * A hire booking paid online becomes a purchase (once — the source is unique), priced
+   * from the booking's own server-computed cost, never from anything the customer sends.
+   */
+  async purchaseForHireRequest(customerId: string, hireRequestId: string) {
+    const existing = await this.prisma.purchase.findUnique({ where: { sourceType_sourceId: { sourceType: "hire-request", sourceId: hireRequestId } } });
+    if (existing) {
+      if (existing.customerId !== customerId) throw new NotFoundException("Booking not found.");
+      return existing;
+    }
+    const booking = await this.prisma.hireRequest.findUnique({ where: { id: hireRequestId }, include: { vehicle: { select: { name: true } } } });
+    if (!booking || booking.customerId !== customerId) throw new NotFoundException("Booking not found.");
+    if (!["pending", "confirmed"].includes(booking.status)) throw new ConflictException("This booking can't be paid for (it's cancelled or finished).");
+    if (booking.totalCost <= 0) throw new ConflictException("This booking has no price yet. Please contact us.");
+
+    const dates = `${booking.pickupDate.toISOString().slice(0, 10)} to ${booking.returnDate.toISOString().slice(0, 10)}`;
+    try {
+      return await this.withReferenceRetry(() =>
+        runSerializable(this.prisma, async (tx) =>
+          tx.purchase.create({
+            data: {
+              reference: await this.nextReference(tx),
+              customerId,
+              type: "hire",
+              title: `Hire: ${booking.vehicle.name}, ${booking.days} day${booking.days === 1 ? "" : "s"}`,
+              currency: booking.currency,
+              subtotal: new D(booking.totalCost),
+              total: new D(booking.totalCost),
+              dueDate: booking.pickupDate,
+              sourceType: "hire-request",
+              sourceId: booking.id,
+              createdByName: "Website (hire booking)",
+              items: { create: [{ category: "hire", description: `${booking.vehicle.name}, ${dates}`, quantity: 1, unitPrice: new D(booking.totalCost), amount: new D(booking.totalCost), sortOrder: 0 }] },
+            },
+          })
+        )
+      );
+    } catch (error) {
+      // Two payments started at the same moment: the other one created it.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        return this.prisma.purchase.findUniqueOrThrow({ where: { sourceType_sourceId: { sourceType: "hire-request", sourceId: hireRequestId } } });
+      }
+      throw error;
+    }
+  }
+
+  /** What the customer chose to pay for, checked to be theirs and still owing. */
+  async resolveTarget(customerId: string, target: { purchaseId?: string; hireRequestId?: string }) {
+    if (target.purchaseId && target.hireRequestId) throw new BadRequestException("Choose one thing to pay for.");
+    const purchaseId = target.purchaseId ?? (target.hireRequestId ? (await this.purchaseForHireRequest(customerId, target.hireRequestId)).id : null);
+    if (!purchaseId) throw new BadRequestException("Choose what you're paying for.");
+    return this.payable(customerId, purchaseId);
+  }
+
+  /** Money already sent by proof for this purchase and waiting for approval (in the proofs' currency). */
+  async pendingProofs(purchaseId: string): Promise<{ amount: Prisma.Decimal; currency: string | null; count: number }> {
+    const rows = await this.prisma.paymentSubmission.findMany({ where: { purchaseId, status: "PENDING" }, select: { amount: true, currency: true } });
+    return { amount: rows.reduce((sum, r) => sum.add(r.amount), new D(0)), currency: rows[0]?.currency ?? null, count: rows.length };
+  }
+
+  /**
+   * Checks a payment the customer is about to make against what they owe.
+   * `amount` is in `paidIn`. More than owed is refused unless they've agreed that
+   * the extra goes to their account balance.
+   */
+  async checkAgainstOwed(customerId: string, purchaseId: string, amount: number, paidIn: string, acceptExcess: boolean | undefined) {
+    const { purchase, owed } = await this.payable(customerId, purchaseId);
+    const rate = await this.autoRate(purchase.currency, paidIn);
+    if (!rate) throw new BadRequestException(`We can't convert ${paidIn} to ${purchase.currency} right now. Please try again later or contact us.`);
+    const pending = await this.pendingProofs(purchase.id);
+    const pendingInPaid = pending.currency && pending.currency !== paidIn ? new D(0) : pending.amount;
+    const owedInPaid = owed.mul(rate);
+    const check = compareWithOwed(amount, paidIn === "MWK" ? owedInPaid.ceil() : cents(owedInPaid), pendingInPaid);
+    if (check.status === "more" && !acceptExcess) {
+      throw new BadRequestException(
+        `That's ${money(check.excess, paidIn)} more than you owe on ${purchase.reference}${pending.count ? " (counting payments already sent and waiting for approval)" : ""}. ` +
+          "Lower the amount, or agree that the extra goes to your account balance."
+      );
+    }
+    return { purchase, owed, rate, check };
+  }
+
+  /**
+   * Everything the customer can pay for right now: purchases with a balance, hire
+   * bookings not yet paid, and what they already have on their account balance.
+   * Amounts include the kwacha equivalent at today's rate (mobile money is in kwacha).
+   */
+  async payTargets(customerId: string) {
+    const [purchases, bookings, account] = await Promise.all([
+      this.prisma.purchase.findMany({ where: { customerId, status: "active" }, orderBy: { purchasedAt: "desc" }, select: { id: true, reference: true, title: true, type: true, currency: true, total: true, amountPaid: true, dueDate: true, sourceType: true, sourceId: true } }),
+      this.prisma.hireRequest.findMany({
+        where: { customerId, status: { in: ["pending", "confirmed"] } },
+        orderBy: { pickupDate: "asc" },
+        select: { id: true, days: true, totalCost: true, currency: true, pickupDate: true, returnDate: true, status: true, vehicle: { select: { name: true } } },
+      }),
+      this.prisma.account.findUnique({ where: { customerId }, select: { balance: true, currency: true } }),
+    ]);
+    const rates = new Map<string, Prisma.Decimal | null>();
+    const toMwk = async (currency: string) => {
+      if (!rates.has(currency)) rates.set(currency, await this.autoRate(currency, "MWK").catch(() => null));
+      return rates.get(currency) ?? null;
+    };
+    const linkedBookings = new Set(purchases.filter((p) => p.sourceType === "hire-request").map((p) => p.sourceId));
+
+    const owing = [];
+    for (const p of purchases) {
+      const owed = balanceOf(p.total, p.amountPaid);
+      if (owed.lte(0)) continue;
+      const rate = await toMwk(p.currency);
+      const pending = await this.pendingProofs(p.id);
+      owing.push({
+        kind: "purchase" as const,
+        id: p.id,
+        reference: p.reference,
+        title: p.title,
+        type: p.type,
+        currency: p.currency,
+        total: p.total.toFixed(2),
+        owed: owed.toFixed(2),
+        owedMwk: rate ? owed.mul(rate).ceil().toFixed(0) : null,
+        rateToMwk: rate ? rate.toFixed(6) : null,
+        dueDate: p.dueDate,
+        pendingProofs: pending.count ? { amount: pending.amount.toFixed(2), currency: pending.currency, count: pending.count } : null,
+      });
+    }
+    const hire = [];
+    for (const b of bookings) {
+      if (linkedBookings.has(b.id) || b.totalCost <= 0) continue;
+      const rate = await toMwk(b.currency);
+      hire.push({
+        kind: "hire" as const,
+        id: b.id,
+        title: `Hire: ${b.vehicle.name}, ${b.days} day${b.days === 1 ? "" : "s"}`,
+        status: b.status,
+        currency: b.currency,
+        total: String(b.totalCost),
+        owed: String(b.totalCost),
+        owedMwk: rate ? new D(b.totalCost).mul(rate).ceil().toFixed(0) : null,
+        rateToMwk: rate ? rate.toFixed(6) : null,
+        pickupDate: b.pickupDate,
+      });
+    }
+    return { purchases: owing, hireBookings: hire, account: account ? { balance: account.balance.toFixed(2), currency: account.currency } : null };
   }
 
   /** For the "pay toward this purchase" options: checks it's theirs and still owing. */

@@ -414,3 +414,16 @@ export function purchasePaymentReceiptEmail(input: {
     `),
   };
 }
+
+/** The customer paid more than they owed: where the extra went and what they can do with it. */
+export function overpaymentEmail(input: { name: string; amount: string; reference: string; title: string; accountUrl: string }) {
+  return {
+    subject: `You paid ${input.amount} more than you owed`,
+    html: wrapper(`
+      <p>Hi ${escapeHtml(input.name)},</p>
+      <p>Your payment for <strong>${escapeHtml(input.title)}</strong> (${escapeHtml(input.reference)}) was <strong>${escapeHtml(input.amount)}</strong> more than you owed.</p>
+      <p>The extra is safe: it's on your <strong>account balance</strong>. You can use it toward another purchase from your account, or contact us if you'd like it refunded.</p>
+      ${accountButton(input.accountUrl, "See my balance")}
+    `),
+  };
+}

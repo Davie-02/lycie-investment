@@ -99,3 +99,26 @@ export function convertReceived(receivedAmount: Value, rate: Value): Decimal {
 export function signedAmount(kind: string, amount: Value): Decimal {
   return kind === "refund" ? new D(amount).neg() : new D(amount);
 }
+
+/**
+ * A payment against what's still owed: the part that pays the purchase, and any
+ * extra (which goes to the customer's account balance instead of overpaying it).
+ */
+export function splitPayment(amount: Value, owed: Value): { applied: Decimal; excess: Decimal } {
+  const pay = cents(amount);
+  const due = D.max(cents(owed), 0);
+  const applied = D.min(pay, due);
+  return { applied, excess: pay.sub(applied) };
+}
+
+/**
+ * How a payment compares with what's owed, for warnings before paying.
+ * `pending` = money already sent and waiting for approval (proofs).
+ */
+export function compareWithOwed(amount: Value, owed: Value, pending: Value = 0): { status: "less" | "exact" | "more"; excess: Decimal; remaining: Decimal } {
+  const due = D.max(new D(owed).sub(new D(pending)), 0);
+  const pay = new D(amount);
+  if (pay.gt(due)) return { status: "more", excess: cents(pay.sub(due)), remaining: new D(0) };
+  if (pay.eq(due)) return { status: "exact", excess: new D(0), remaining: new D(0) };
+  return { status: "less", excess: new D(0), remaining: cents(due.sub(pay)) };
+}

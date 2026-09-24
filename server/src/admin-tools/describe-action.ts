@@ -77,6 +77,7 @@ export function describeAction({ method, route, params, body }: ActionInput): st
     [/^\/purchases\/:id\/payments$/, body?.kind === "refund" ? "Recorded a refund on a purchase" : "Recorded a payment on a purchase"],
     [/^\/purchases\/:id\/apply-balance$/, "Paid a purchase from the customer's balance"],
     [/^\/purchases\/:id\/cancel$/, "Cancelled a purchase"],
+    [/^\/purchases\/:id\/move-credit$/, "Moved an overpayment to the customer's balance"],
     [/^\/purchases\/:id\/reopen$/, "Reopened a purchase"],
     [/^\/purchases\/:id$/, "Edited a purchase"],
     [/^\/purchases$/, "Recorded a purchase"],

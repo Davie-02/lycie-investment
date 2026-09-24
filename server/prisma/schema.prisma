@@ -1100,6 +1100,8 @@ model Purchase {
   paymentSubmissions PaymentSubmission[]
   mobilePayments     MobilePayment[]
 
+  /// One purchase per website request (e.g. a hire booking paid online), so paying twice can't create two.
+  @@unique([sourceType, sourceId])
   @@index([customerId, purchasedAt])
   @@index([status, purchasedAt])
   @@index([type, purchasedAt])

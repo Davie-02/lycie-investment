@@ -56,3 +56,27 @@ describe("purchase arithmetic", () => {
     expect(signedAmount("payment", 50).toFixed(2)).toBe("50.00");
   });
 });
+
+describe("paying against what's owed", () => {
+  it("pays the purchase up to what's owed; the rest is extra", () => {
+    const { splitPayment } = jest.requireActual("./purchase-math");
+    const a = splitPayment(1200, 1000);
+    expect([a.applied.toFixed(2), a.excess.toFixed(2)]).toEqual(["1000.00", "200.00"]);
+    const b = splitPayment(300, 1000);
+    expect([b.applied.toFixed(2), b.excess.toFixed(2)]).toEqual(["300.00", "0.00"]);
+    const c = splitPayment(50, 0);
+    expect([c.applied.toFixed(2), c.excess.toFixed(2)]).toEqual(["0.00", "50.00"]);
+    const d = splitPayment(50, -20); // already overpaid
+    expect([d.applied.toFixed(2), d.excess.toFixed(2)]).toEqual(["0.00", "50.00"]);
+  });
+
+  it("warns before paying: less, exact or more (counting proofs already sent)", () => {
+    const { compareWithOwed } = jest.requireActual("./purchase-math");
+    expect(compareWithOwed(500, 1000).status).toBe("less");
+    expect(compareWithOwed(500, 1000).remaining.toFixed(2)).toBe("500.00");
+    expect(compareWithOwed(1000, 1000).status).toBe("exact");
+    const more = compareWithOwed(800, 1000, 400);
+    expect(more.status).toBe("more");
+    expect(more.excess.toFixed(2)).toBe("200.00");
+  });
+});

@@ -1,15 +1,10 @@
 /**
  * My purchases: everything the customer has bought from us — each cost, any
  * deal, promotion or discount (and what they saved), every payment, and the
- * balance still to pay — with ways to pay the balance: mobile money, their
- * account balance, or a proof of payment for that purchase.
+ * balance still to pay. "Pay" opens the payment flow with that purchase chosen.
  */
-import { useEffect, useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import FormField from "@/components/forms/FormField";
-import { usePricing } from "@/context/PricingContext";
-import { mobileMoneyEnabled, payPurchaseFromBalance, startPurchaseMobilePayment } from "@/services/customer.service";
-import { ApiError } from "@/services/http";
 import { stageLabel } from "@/utils/shipmentStages";
 import {
   ITEM_CATEGORIES,
@@ -45,11 +40,6 @@ function totalsByCurrency(purchases: Purchase[]) {
 export default function Purchases() {
   const { purchases, isLoading } = usePortal();
   const [filter, setFilter] = useState<Filter>("all");
-  const [mobileOn, setMobileOn] = useState(false);
-
-  useEffect(() => {
-    void mobileMoneyEnabled().then(setMobileOn).catch(() => setMobileOn(false));
-  }, []);
 
   if (isLoading) return <p className="text-muted">Loading…</p>;
 
@@ -109,7 +99,7 @@ export default function Purchases() {
 
           {shown.length === 0 && <p className="text-muted">Nothing to show here.</p>}
           {shown.map((purchase) => (
-            <PurchaseCard key={purchase.id} purchase={purchase} mobileOn={mobileOn} />
+            <PurchaseCard key={purchase.id} purchase={purchase} />
           ))}
         </>
       )}
@@ -117,7 +107,7 @@ export default function Purchases() {
   );
 }
 
-function PurchaseCard({ purchase: p, mobileOn }: { purchase: Purchase; mobileOn: boolean }) {
+function PurchaseCard({ purchase: p }: { purchase: Purchase }) {
   const owing = p.status === "active" && Number(p.balance) > 0;
   const tone = paymentTone(p.paymentStatus);
   const onOffer = p.pricing !== "standard";
@@ -267,119 +257,16 @@ function PurchaseCard({ purchase: p, mobileOn }: { purchase: Purchase; mobileOn:
         )}
       </details>
 
-      {owing && <PayBalance purchase={p} mobileOn={mobileOn} />}
-    </article>
-  );
-}
-
-/** The ways to pay what's left: mobile money, the account balance, or a proof of payment. */
-function PayBalance({ purchase: p, mobileOn }: { purchase: Purchase; mobileOn: boolean }) {
-  const { account, reloadPurchases } = usePortal();
-  const { rate } = usePricing();
-  const [mode, setMode] = useState<"none" | "mobile" | "balance">("none");
-  const [amount, setAmount] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  // Kwacha per 1 unit of the purchase's currency (only dollars and kwacha are converted here).
-  const kwachaRate = p.currency === "MWK" ? 1 : p.currency === "USD" ? rate : null;
-  const owedMwk = kwachaRate ? Math.ceil(Number(p.balance) * kwachaRate) : null;
-  const walletMwk = account && account.currency === "MWK" ? Number(account.balance) : 0;
-  const canMobile = mobileOn && owedMwk !== null && owedMwk >= 100;
-  const canBalance = walletMwk > 0 && owedMwk !== null;
-
-  function open(next: "mobile" | "balance") {
-    setMode(next);
-    setError(null);
-    setDone(null);
-    setAmount(String(next === "balance" ? Math.min(walletMwk, owedMwk ?? 0) : owedMwk ?? ""));
-  }
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const value = Number(amount.replace(/[^\d.]/g, ""));
-    if (!value || value <= 0) {
-      setError("Enter an amount.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      if (mode === "mobile") {
-        const { checkoutUrl } = await startPurchaseMobilePayment(p.id, Math.round(value));
-        // Only ever PayChangu's own secure page.
-        if (!/^https:\/\/([\w-]+\.)*paychangu\.com\//.test(checkoutUrl)) throw new Error("Unexpected payment address.");
-        window.location.assign(checkoutUrl);
-        return;
-      }
-      await payPurchaseFromBalance(p.id, value);
-      await reloadPurchases();
-      setDone(`Paid MWK ${value.toLocaleString()} from your balance.`);
-      setMode("none");
-    } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Couldn't complete the payment.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const typed = Number(amount.replace(/[^\d.]/g, "")) || 0;
-
-  return (
-    <div className="purchase-pay">
-      {done && (
-        <p className="form-status form-status--success" role="status">
-          {done}
-        </p>
-      )}
-      <div className="purchase-pay__buttons">
-        {canMobile && (
-          <button type="button" className={mode === "mobile" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => open("mobile")}>
-            Pay with mobile money
-          </button>
-        )}
-        {canBalance && (
-          <button type="button" className={mode === "balance" ? "btn btn-primary" : "btn btn-secondary"} onClick={() => open("balance")}>
-            Use my balance ({money(walletMwk, "MWK")})
-          </button>
-        )}
-        <Link to={`/account/payments?purchase=${p.id}`} className="btn-ghost">
-          Paid another way? Upload proof
-        </Link>
-      </div>
-
-      {mode !== "none" && (
-        <form className="purchase-pay__form" onSubmit={submit} noValidate>
-          {error && (
-            <p className="form-status form-status--error" role="alert">
-              {error}
-            </p>
-          )}
-          <FormField
-            id={`pay-${p.id}`}
-            label={mode === "mobile" ? "Amount to pay (MWK)" : "Amount from your balance (MWK)"}
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            footer={
-              <p className="text-muted purchase-pay__hint">
-                {kwachaRate && p.currency !== "MWK" && typed > 0
-                  ? `≈ ${money(Math.round((typed / kwachaRate) * 100) / 100, p.currency)} at today's rate. Balance owed: ${money(p.balance, p.currency)} (≈ MWK ${owedMwk?.toLocaleString()}).`
-                  : `Balance owed: ${money(p.balance, p.currency)}.`}
-              </p>
-            }
-          />
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "Please wait…" : mode === "mobile" ? "Continue to secure payment" : "Pay from my balance"}
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => setMode("none")}>
-              Cancel
-            </button>
+      {owing && (
+        <div className="purchase-pay">
+          <div className="purchase-pay__buttons">
+            <Link to={`/account/payments?purchase=${p.id}`} className="btn btn-primary">
+              Pay {money(p.balance, p.currency)}
+            </Link>
+            <span className="text-muted">By mobile money, from your balance, or with proof of a bank payment.</span>
           </div>
-        </form>
+        </div>
       )}
-    </div>
+    </article>
   );
 }

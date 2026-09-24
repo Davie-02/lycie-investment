@@ -383,12 +383,18 @@ export function unsaveVehicle(vehicleId: string) {
   });
 }
 
-export function submitPayment(amount: number, proof: File, note?: string, purchaseId?: string) {
+/**
+ * Uploads proof of a payment made another way (bank, cash deposit…). It must say what
+ * it's for: a purchase/booking (checked against what's owed) or a deposit with a description.
+ */
+export function submitPayment(input: { amount: number; proof: File; note?: string; target?: PaymentTarget; acceptExcess?: boolean }) {
   const body = new FormData();
-  body.append("amount", String(amount));
-  body.append("proof", proof);
-  if (note) body.append("note", note);
-  if (purchaseId) body.append("purchaseId", purchaseId);
+  body.append("amount", String(input.amount));
+  body.append("proof", input.proof);
+  if (input.note) body.append("note", input.note);
+  if (input.target && "purchaseId" in input.target) body.append("purchaseId", input.target.purchaseId);
+  if (input.target && "hireRequestId" in input.target) body.append("hireRequestId", input.target.hireRequestId);
+  if (input.acceptExcess) body.append("acceptExcess", "true");
 
   return customerFetch<PaymentSubmission>("/financial/me/payment-submissions", {
     method: "POST",
@@ -480,9 +486,6 @@ export async function mobileMoneyEnabled(): Promise<boolean> {
 }
 
 /** Starts a mobile money payment; the browser then goes to the returned checkout page. */
-export function startMobilePayment(amount: number, purpose: string, note?: string) {
-  return customerFetch<{ txRef: string; checkoutUrl: string }>("/payments/mobile", { method: "POST", body: JSON.stringify({ amount, purpose, note }) });
-}
 
 export function confirmMobilePayment(txRef: string) {
   return customerFetch<MobilePaymentView>(`/payments/mobile/${encodeURIComponent(txRef)}/confirm`, { method: "POST", body: "{}" });
@@ -510,12 +513,51 @@ export function getMyPurchases() {
   return customerFetch<Purchase[]>("/customers/me/purchases");
 }
 
-/** Pays part of a purchase from the account balance. `amount` is in the balance's currency. */
-export function payPurchaseFromBalance(purchaseId: string, amount: number) {
-  return customerFetch<Purchase>(`/customers/me/purchases/${encodeURIComponent(purchaseId)}/apply-balance`, { method: "POST", body: JSON.stringify({ amount }) });
+/** Something the customer can pay for (a purchase with a balance, or a hire booking not yet paid). */
+export interface PayTarget {
+  kind: "purchase" | "hire";
+  id: string;
+  reference?: string;
+  title: string;
+  currency: string;
+  total: string;
+  owed: string;
+  /** Kwacha equivalent at today's rate (null when no rate is known). */
+  owedMwk: string | null;
+  rateToMwk: string | null;
+  dueDate?: string | null;
+  pickupDate?: string;
+  status?: string;
+  /** Proofs already sent for it and waiting for approval. */
+  pendingProofs?: { amount: string; currency: string | null; count: number } | null;
 }
 
-/** Mobile money toward one purchase (kwacha; the server checks it isn't more than is owed). */
-export function startPurchaseMobilePayment(purchaseId: string, amount: number) {
-  return customerFetch<{ txRef: string; checkoutUrl: string }>("/payments/mobile", { method: "POST", body: JSON.stringify({ amount, purpose: "other", purchaseId }) });
+export interface PayTargets {
+  purchases: PayTarget[];
+  hireBookings: PayTarget[];
+  account: { balance: string; currency: string } | null;
+}
+
+export function getPayTargets() {
+  return customerFetch<PayTargets>("/customers/me/purchases/pay-targets");
+}
+
+/** Which thing a payment is for: a purchase or a hire booking (the server works out the price). */
+export type PaymentTarget = { purchaseId: string } | { hireRequestId: string };
+
+/** Pays from the account balance (amount in the balance's currency). */
+export function payFromBalance(target: PaymentTarget, amount: number) {
+  return customerFetch<Purchase>("/customers/me/purchases/pay-from-balance", { method: "POST", body: JSON.stringify({ ...target, amount }) });
+}
+
+/**
+ * Mobile money (kwacha). Either for a purchase/booking — compared with what's owed, and
+ * more than owed only with `acceptExcess` — or a deposit, which must say what it's for.
+ */
+export function startMobilePayment(input: { amount: number } & ({ target: PaymentTarget; acceptExcess?: boolean } | { deposit: { purpose: string; note: string } })) {
+  const body =
+    "target" in input
+      ? { amount: input.amount, purpose: "other", ...input.target, acceptExcess: input.acceptExcess || undefined }
+      : { amount: input.amount, purpose: input.deposit.purpose, note: input.deposit.note };
+  return customerFetch<{ txRef: string; checkoutUrl: string }>("/payments/mobile", { method: "POST", body: JSON.stringify(body) });
 }

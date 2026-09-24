@@ -16,6 +16,7 @@ import {
   UseInterceptors,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { Throttle } from "@nestjs/throttler";
 import { memoryStorage } from "multer";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -41,6 +42,7 @@ export class FinancialController {
 
   @Post("me/payment-submissions")
   @Roles("CUSTOMER")
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UseInterceptors(
     FileInterceptor("proof", {
       storage: memoryStorage(),
@@ -73,10 +75,14 @@ export class FinancialController {
     @Param("id") id: string,
     @CurrentUser() user: { sub: string; name?: string },
     @Body("note") note?: string,
-    @Body("creditAmount") creditAmount?: unknown
+    @Body("creditAmount") creditAmount?: unknown,
+    @Body("receivedAmount") receivedAmount?: unknown
   ) {
-    const credit = Number(creditAmount);
-    return this.financial.reviewPayment(id, user, true, typeof note === "string" ? note.slice(0, 500) : undefined, Number.isFinite(credit) && credit > 0 ? Math.round(credit * 100) / 100 : undefined);
+    const money = (value: unknown) => {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 && n < 1e11 ? Math.round(n * 100) / 100 : undefined;
+    };
+    return this.financial.reviewPayment(id, user, true, typeof note === "string" ? note.slice(0, 500) : undefined, money(creditAmount), money(receivedAmount));
   }
 
   @Post("payments/:id/reject")

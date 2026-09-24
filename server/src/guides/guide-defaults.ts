@@ -135,7 +135,7 @@ export const GUIDE_DEFAULTS: GuideDefault[] = [
     "page:/admin/payments",
     "finance",
     "Payment proofs",
-    "Customers can upload proof of a payment (for example a bank slip). Check it, then approve it — if they said which purchase it is for, it pays that purchase; otherwise it is added to their account balance — or reject it.",
+    "Customers upload proof of a payment (for example a bank slip) and say what it is for. Check it against your bank or cash records and approve the amount that actually arrived: it pays the purchase they chose (anything above what is owed goes to their account balance), or a deposit goes to their balance. Or reject it with a reason. The customer is told either way.",
   ),
   g(
     "page:/admin/mobile-payments",

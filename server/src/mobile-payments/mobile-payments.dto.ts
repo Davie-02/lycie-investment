@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
 
 export const PAYMENT_PURPOSES = ["deposit", "hire", "import", "clearing", "other"] as const;
 
@@ -24,4 +24,15 @@ export class StartMobilePaymentDto {
   @IsOptional()
   @IsUUID()
   purchaseId?: string;
+
+  /** Paying for a hire booking (it becomes a purchase, priced from the booking). */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  hireRequestId?: string;
+
+  /** They've agreed that anything above what they owe goes to their account balance. */
+  @IsOptional()
+  @IsBoolean()
+  acceptExcess?: boolean;
 }

@@ -290,3 +290,22 @@ export class PurchaseListQuery {
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) pageSize?: number;
 }
+
+/** A customer paying from their account balance for something they choose. */
+export class PayFromBalanceDto {
+  @IsOptional()
+  @IsUUID()
+  purchaseId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  hireRequestId?: string;
+
+  /** In the account's currency. */
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(MAX_MONEY * 10_000)
+  amount!: number;
+}

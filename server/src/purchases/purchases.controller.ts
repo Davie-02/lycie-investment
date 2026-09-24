@@ -9,7 +9,7 @@ import { CurrentUser } from "../auth/current-user.decorator";
 import { CurrentStaff, type StaffActor } from "../access/current-staff.decorator";
 import { atLeast } from "../access/modules";
 import { PurchasesService } from "./purchases.service";
-import { ApplyBalanceDto, CreatePurchaseDto, PurchaseListQuery, ReasonDto, RecordPaymentDto, UpdatePurchaseDto } from "./purchases.dto";
+import { ApplyBalanceDto, CreatePurchaseDto, PayFromBalanceDto, PurchaseListQuery, ReasonDto, RecordPaymentDto, UpdatePurchaseDto } from "./purchases.dto";
 
 /** A customer's own purchases, balances and payments. */
 @Controller("customers/me/purchases")
@@ -23,9 +23,25 @@ export class MyPurchasesController {
     return this.purchases.mine(user.sub);
   }
 
+  /** What they can pay for right now (purchases owing, unpaid hire bookings) and their balance. */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Get("pay-targets")
+  payTargets(@CurrentUser() user: { sub: string }) {
+    return this.purchases.payTargets(user.sub);
+  }
+
   @Get(":id")
   one(@CurrentUser() user: { sub: string }, @Param("id", ParseUUIDPipe) id: string) {
     return this.purchases.mineOne(user.sub, id);
+  }
+
+  /** Pay for something they choose (a purchase or a hire booking) from their account balance. */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post("pay-from-balance")
+  @HttpCode(200)
+  async payFromBalance(@CurrentUser() user: { sub: string }, @Body() dto: PayFromBalanceDto) {
+    const { purchase } = await this.purchases.resolveTarget(user.sub, { purchaseId: dto.purchaseId, hireRequestId: dto.hireRequestId });
+    return this.purchases.applyBalance(purchase.id, { amount: dto.amount }, { customerId: user.sub });
   }
 
   /** Pay part of a purchase from their own account balance (today's exchange rate). */
@@ -139,6 +155,13 @@ export class PurchasesAdminController {
   @HttpCode(200)
   applyBalance(@Param("id", ParseUUIDPipe) id: string, @Body() dto: ApplyBalanceDto, @CurrentStaff() actor: StaffActor) {
     return this.purchases.applyBalance(id, dto, { actor });
+  }
+
+  /** An overpaid purchase: move the extra to the customer's account balance (and tell them). */
+  @Post(":id/move-credit")
+  @HttpCode(200)
+  moveCredit(@Param("id", ParseUUIDPipe) id: string, @CurrentStaff() actor: StaffActor) {
+    return this.purchases.moveCreditToBalance(id, actor);
   }
 
   @Post("payments/:paymentId/void")

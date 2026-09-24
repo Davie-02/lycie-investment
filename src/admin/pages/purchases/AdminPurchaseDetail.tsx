@@ -27,6 +27,7 @@ const SOURCE_LABEL: Record<string, string> = {
   mobile_money: "Mobile money (automatic)",
   payment_proof: "Approved payment proof",
   account_balance: "From account balance",
+  overpayment: "Extra moved to balance",
 };
 
 export default function AdminPurchaseDetail() {
@@ -64,6 +65,15 @@ export default function AdminPurchaseDetail() {
       done("Payment voided. It stays in the history, crossed out.");
     } catch (err) {
       setNotice(err instanceof Error ? err.message : "Couldn't void it.");
+    }
+  }
+
+  async function moveCredit() {
+    try {
+      await adminApi.post(`/purchases/${p!.id}/move-credit`, {});
+      done("The extra has been moved to the customer's account balance, and they've been told.");
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Couldn't move it.");
     }
   }
 
@@ -174,6 +184,11 @@ export default function AdminPurchaseDetail() {
               {active && owed > 0 && wallet && Number(wallet.balance) > 0 && (
                 <button type="button" className="btn btn-secondary" onClick={() => setPanel("balance")}>
                   Pay from account balance
+                </button>
+              )}
+              {owed < 0 && (
+                <button type="button" className="btn btn-secondary" onClick={() => void moveCredit()}>
+                  Move the extra {money(-owed, p.currency)} to their balance
                 </button>
               )}
               {canManage && Number(p.amountPaid) > 0 && (
@@ -313,7 +328,7 @@ export default function AdminPurchaseDetail() {
                     </td>
                     {canManage && (
                       <td className="no-print">
-                        {!pay.voidedAt && (
+                        {!pay.voidedAt && pay.source !== "overpayment" && (
                           <button type="button" className="btn-ghost" onClick={() => void voidPayment(pay.id)}>
                             Void
                           </button>
@@ -369,6 +384,10 @@ function PaymentForm({ purchase: p, kind, onDone, onCancel }: { purchase: AdminP
   const foreign = paidIn !== p.currency;
   const effectiveRate = Number(rate || suggestedRate || 0);
   const converted = foreign && effectiveRate > 0 && Number(received) > 0 ? Math.round((Number(received) / effectiveRate) * 100) / 100 : null;
+  // What this payment counts as, compared with what's still owed.
+  const counts = foreign ? converted : Number(amount) || null;
+  const stillOwed = Math.max(0, Number(p.balance));
+  const extra = kind === "payment" && counts !== null && counts > stillOwed ? Math.round((counts - stillOwed) * 100) / 100 : 0;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -384,8 +403,12 @@ function PaymentForm({ purchase: p, kind, onDone, onCancel }: { purchase: AdminP
     setBusy(true);
     setError(null);
     try {
-      await adminApi.post(`/purchases/${p.id}/payments`, body);
-      onDone(kind === "refund" ? "Refund recorded." : `Payment recorded${notify ? " — the customer has been sent a receipt" : ""}.`);
+      const saved = await adminApi.post<{ excess: { amount: string; currency: string } | null }>(`/purchases/${p.id}/payments`, body);
+      onDone(
+        kind === "refund"
+          ? "Refund recorded."
+          : `Payment recorded${notify ? " — the customer has been sent a receipt" : ""}.${saved.excess ? ` ${money(saved.excess.amount, saved.excess.currency)} extra went to their account balance and they've been told.` : ""}`
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't save.");
     } finally {
@@ -444,6 +467,15 @@ function PaymentForm({ purchase: p, kind, onDone, onCancel }: { purchase: AdminP
         <FormField id="pay-date" label={kind === "refund" ? "Date refunded" : "Date received"} type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
         <FormField id="pay-note" label="Note (optional)" value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
       </div>
+      {kind === "payment" && counts !== null && counts > 0 && (
+        <p className={extra > 0 ? "pay-note pay-note--warn" : "pay-note"}>
+          {extra > 0
+            ? `This is ${money(extra, p.currency)} more than is owed (${money(stillOwed, p.currency)}). Only what's owed goes on this purchase; the extra goes to the customer's account balance and they'll be told.`
+            : counts === stillOwed
+              ? "This pays the purchase in full."
+              : `This pays part of it; ${money(Math.round((stillOwed - counts) * 100) / 100, p.currency)} will still be owed.`}
+        </p>
+      )}
       <label className="purchase-form__check">
         <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} /> Send the customer a receipt
       </label>

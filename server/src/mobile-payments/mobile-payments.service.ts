@@ -14,7 +14,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { mobilePaymentReceiptEmail } from "../email/email-templates";
 import { createCheckout, paychanguConfigured, verifyPayment } from "./paychangu.client";
 import { StartMobilePaymentDto } from "./mobile-payments.dto";
-import { PurchasesService } from "../purchases/purchases.service";
+import { PurchasesService, type Excess } from "../purchases/purchases.service";
 
 const PURPOSE_LABEL: Record<string, string> = {
   deposit: "account deposit",
@@ -45,18 +45,18 @@ export class MobilePaymentsService {
     const customer = await this.prisma.customerUser.findUnique({ where: { id: customerId } });
     if (!customer) throw new NotFoundException("Customer not found.");
 
-    // Paying toward a purchase: fix the exchange rate now (the one the customer is shown),
-    // and don't take more than is owed.
+    // Every payment says what it's for: a purchase, a hire booking (which becomes a purchase,
+    // priced by the server), or a deposit with a description. For a purchase, the amount is
+    // compared with what's owed and the exchange rate is fixed now (the one the customer saw).
     let target: { purchaseId: string; exchangeRate: Prisma.Decimal; reference: string } | null = null;
     let purpose: string = dto.purpose;
-    if (dto.purchaseId) {
-      const { purchase, owed } = await this.purchases.payable(customerId, dto.purchaseId);
-      const rate = await this.purchases.autoRate(purchase.currency, "MWK");
-      if (!rate) throw new ServiceUnavailableException("We can't convert to kwacha right now. Please try again later.");
-      const maxMwk = Math.ceil(owed.mul(rate).toNumber());
-      if (dto.amount > maxMwk) throw new BadRequestException(`That's more than you owe on this purchase (${mwk(maxMwk)}).`);
+    if (dto.purchaseId || dto.hireRequestId) {
+      const { purchase } = await this.purchases.resolveTarget(customerId, { purchaseId: dto.purchaseId, hireRequestId: dto.hireRequestId });
+      const { rate } = await this.purchases.checkAgainstOwed(customerId, purchase.id, dto.amount, "MWK", dto.acceptExcess);
       target = { purchaseId: purchase.id, exchangeRate: rate, reference: purchase.reference };
       purpose = ["hire", "import", "clearing"].includes(purchase.type) ? purchase.type : "other";
+    } else if (!dto.note || dto.note.trim().length < 3) {
+      throw new BadRequestException("Choose what you're paying for — or, for a deposit, say what it's for.");
     }
 
     const txRef = `LYC-${Date.now().toString(36).toUpperCase()}-${randomBytes(4).toString("hex").toUpperCase()}`;
@@ -116,6 +116,10 @@ export class MobilePaymentsService {
       return this.publicView(failed);
     }
 
+    // Worked out before the transaction (it may need a network call): only used if the
+    // customer's balance is in a currency other than kwacha and they paid more than owed.
+    const walletRate = payment.purchaseId && payment.customerId ? (await this.purchases.walletRateFor(payment.customerId, "MWK")).rate : null;
+    let excess: Excess | null = null;
     const credited = await this.prisma.$transaction(async (tx) => {
       // Claim it: only one caller (return page, webhook, staff re-check) moves pending → success.
       const claimed = await tx.mobilePayment.updateMany({
@@ -125,7 +129,7 @@ export class MobilePaymentsService {
       if (claimed.count !== 1) return false;
       // Toward a purchase: it pays that purchase (at the rate fixed when they started).
       if (payment.purchaseId && payment.exchangeRate) {
-        const applied = await this.purchases.applyExternalPayment(tx, {
+        const result = await this.purchases.applyExternalPayment(tx, {
           purchaseId: payment.purchaseId,
           amount: new Prisma.Decimal(payment.amount).div(payment.exchangeRate),
           method: "mobile_money",
@@ -134,8 +138,11 @@ export class MobilePaymentsService {
           receivedAmount: new Prisma.Decimal(payment.amount),
           receivedCurrency: payment.currency,
           exchangeRate: payment.exchangeRate,
+          // account units per 1 MWK × MWK per 1 of the purchase currency
+          walletRate: walletRate ? walletRate.mul(payment.exchangeRate) : null,
         });
-        if (applied) return true;
+        excess = result.excess;
+        if (result.applied) return true;
         // The purchase was cancelled meanwhile: the money goes to their balance instead.
       }
       if (payment.customerId) {
@@ -169,6 +176,8 @@ export class MobilePaymentsService {
         text: `We've received your payment of ${mwk(payment.amount)} (reference ${payment.txRef}). Thank you!`,
       });
     }
+    // Paid more than owed (e.g. two payments for the same thing): tell them where the extra went.
+    if (excess) await this.purchases.notifyExcess(excess);
     const fresh = await this.prisma.mobilePayment.findUniqueOrThrow({ where: { id: payment.id } });
     return this.publicView(fresh);
   }
