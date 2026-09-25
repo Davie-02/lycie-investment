@@ -90,7 +90,7 @@ export class DocumentsService {
   }
 
   private async readImage(buffer: Buffer, mimeType: string): Promise<string> {
-    if (!this.gemini.isConfigured) throw new UnprocessableEntityException("Reading images needs the Gemini key to be set up.");
+    if (!this.gemini.hasGemini) throw new UnprocessableEntityException("Reading images needs the Gemini key to be set up.");
     try {
       const { text } = await this.gemini.generate("You transcribe images for a knowledge base.", [
         { role: "user", text: IMAGE_PROMPT, image: { mimeType, data: buffer.toString("base64") } },

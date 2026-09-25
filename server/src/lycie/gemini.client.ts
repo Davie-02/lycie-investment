@@ -1,7 +1,9 @@
 import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
+import { GroqClient, GroqError, readGroqConfig, type GroqConfig } from "./groq.client";
 
 export const GEMINI_FETCH = "GEMINI_FETCH";
 export const GEMINI_CONFIG = "GEMINI_CONFIG";
+export const GROQ_CONFIG = "GROQ_CONFIG";
 
 export interface GeminiConfig {
   apiKey: string | undefined;
@@ -126,15 +128,38 @@ export class GeminiClient {
   private readonly cooldownUntil = new Map<string, number>();
   private readonly config: GeminiConfig;
   private readonly fetchFn: FetchFn;
+  /** The backup provider for plain-text answers when Gemini can't answer (see groq.client.ts). */
+  private readonly groq: GroqClient;
   /** Overridable in tests. */
   now: () => number = () => Date.now();
 
   constructor(
     @Optional() @Inject(GEMINI_FETCH) fetchFn?: FetchFn,
-    @Optional() @Inject(GEMINI_CONFIG) config?: GeminiConfig
+    @Optional() @Inject(GEMINI_CONFIG) config?: GeminiConfig,
+    @Optional() @Inject(GROQ_CONFIG) groqConfig?: GroqConfig
   ) {
     this.fetchFn = fetchFn ?? ((...args) => fetch(...args));
     this.config = config ?? readGeminiConfig();
+    // Tests that pass their own Gemini config get no backup unless they ask for one.
+    const groq = groqConfig ?? (config ? { ...readGroqConfig({}), apiKey: undefined } : readGroqConfig());
+    this.groq = new GroqClient(groq, this.fetchFn, () => this.now());
+  }
+
+  /**
+   * Can the backup take this request? Only plain text: web search and pictures need Gemini.
+   */
+  private groqCan(turns: ChatTurn[], options?: GenerateOptions): boolean {
+    return this.groq.isConfigured && !options?.search && !turns.some((turn) => turn.image);
+  }
+
+  /** Every Gemini model is resting after a long-lasting failure (e.g. the daily quota): go straight to the backup. */
+  private geminiResting(): boolean {
+    const now = this.now();
+    return this.config.models.every((model) => (this.cooldownUntil.get(model) ?? 0) - now > 2 * MINUTE);
+  }
+
+  private toGroqTurns(turns: ChatTurn[]) {
+    return turns.map((turn) => ({ role: turn.role, text: turn.text }));
   }
 
   /**
@@ -173,6 +198,11 @@ export class GeminiClient {
    * quota or overloaded, and how fast each is from this server.
    */
   async diagnose(): Promise<Array<{ model: string; ok: boolean; ms: number; problem?: string }>> {
+    const [gemini, groq] = await Promise.all([this.diagnoseGemini(), this.groq.diagnose()]);
+    return [...gemini, ...groq];
+  }
+
+  private async diagnoseGemini(): Promise<Array<{ model: string; ok: boolean; ms: number; problem?: string }>> {
     if (!this.config.apiKey) return [{ model: "(none)", ok: false, ms: 0, problem: "GEMINI_API_KEY is not set." }];
     return Promise.all(
       this.config.models.map(async (model) => {
@@ -190,14 +220,45 @@ export class GeminiClient {
 
   /** The effective, non-secret configuration (shown in the admin check). */
   get settings() {
-    return { models: this.config.models, startTogether: this.config.parallelStart ?? 1, raceAfterMs: this.config.hedgeDelayMs ?? 0, firstWordDeadlineMs: this.config.firstTokenTimeoutMs };
+    return { models: this.config.models, backupModels: this.groq.isConfigured ? this.groq.models.map((m) => `groq:${m}`) : [], startTogether: this.config.parallelStart ?? 1, raceAfterMs: this.config.hedgeDelayMs ?? 0, firstWordDeadlineMs: this.config.firstTokenTimeoutMs };
   }
 
+  /** Some AI can answer text (Gemini, or the Groq backup). */
   get isConfigured(): boolean {
+    return Boolean(this.config.apiKey) || this.groq.isConfigured;
+  }
+
+  /** Gemini itself is set up — needed for web search (deals, briefings) and reading pictures. */
+  get hasGemini(): boolean {
     return Boolean(this.config.apiKey);
   }
 
+  /**
+   * One answer. Gemini first; if it can't answer (quota, outage, no key) a plain-text
+   * request goes to the Groq backup. A prompt Gemini BLOCKED is never re-asked elsewhere.
+   */
   async generate(system: string, turns: ChatTurn[], options?: GenerateOptions): Promise<GeminiResult> {
+    const backup = this.groqCan(turns, options);
+    if (backup && (!this.config.apiKey || this.geminiResting())) return this.fromGroq(() => this.groq.generate(system, this.toGroqTurns(turns), options));
+    try {
+      return await this.generateWithGemini(system, turns, options);
+    } catch (error) {
+      if (!(error instanceof GeminiUnavailableError) || !backup) throw error;
+      this.logger.warn(`Gemini couldn't answer (${error.message}); using the Groq backup.`);
+      return this.fromGroq(() => this.groq.generate(system, this.toGroqTurns(turns), options));
+    }
+  }
+
+  /** Runs a backup request, reporting its failure the same way as Gemini's. */
+  private async fromGroq(run: () => Promise<{ text: string; model: string }>): Promise<GeminiResult> {
+    try {
+      return await run();
+    } catch (error) {
+      throw new GeminiUnavailableError(error instanceof GroqError ? `backup: ${error.message}` : "backup failed");
+    }
+  }
+
+  private async generateWithGemini(system: string, turns: ChatTurn[], options?: GenerateOptions): Promise<GeminiResult> {
     if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
 
     const search = Boolean(options?.search);
@@ -390,6 +451,19 @@ export class GeminiClient {
    * that model — if it then breaks off, the customer keeps the (partial) answer.
    */
   async generateStream(system: string, turns: ChatTurn[], onText: (delta: string) => void): Promise<GeminiResult> {
+    const backup = this.groqCan(turns);
+    if (backup && (!this.config.apiKey || this.geminiResting())) return this.fromGroq(() => this.groq.generateStream(system, this.toGroqTurns(turns), onText));
+    try {
+      // Only fails when no words were shown yet (see below), so switching providers can't mix two answers.
+      return await this.streamWithGemini(system, turns, onText);
+    } catch (error) {
+      if (!(error instanceof GeminiUnavailableError) || !backup) throw error;
+      this.logger.warn(`Gemini couldn't answer (${error.message}); streaming from the Groq backup.`);
+      return this.fromGroq(() => this.groq.generateStream(system, this.toGroqTurns(turns), onText));
+    }
+  }
+
+  private async streamWithGemini(system: string, turns: ChatTurn[], onText: (delta: string) => void): Promise<GeminiResult> {
     if (!this.config.apiKey) throw new GeminiUnavailableError("GEMINI_API_KEY is not configured.");
 
     const startedAt = this.now();

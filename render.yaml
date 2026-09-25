@@ -39,6 +39,10 @@ services:
       # Lycie chat widget simply hides itself.
       - key: GEMINI_API_KEY
         sync: false
+      # Free backup AI from https://console.groq.com (no card). Lycie and the AI writer
+      # switch to it when Gemini is out of quota or down. Optional.
+      - key: GROQ_API_KEY
+        sync: false
       # Optional mailbox check at sign-up: kickbox, zerobounce or abstract (+ its API key).
       # Leave blank and the free DNS/typo/throwaway checks still run.
       - key: EMAIL_VERIFICATION_PROVIDER

@@ -664,3 +664,18 @@ and payment lookups are rate-limited; hire bookings and purchases must belong to
 **Where:** `PurchasesService.addPayment/splitPayment/checkAgainstOwed/payTargets/purchaseForHireRequest/notifyExcess`,
 `GET /customers/me/purchases/pay-targets`, `POST /customers/me/purchases/pay-from-balance`, `POST /purchases/:id/move-credit`;
 `src/pages/Customer/portal/PaymentFlow.tsx`; `src/admin/pages/AdminPayments.tsx`. Migration `20260927100000_purchase_source_unique`.
+
+## Backup AI: Groq (added 2026-09-25)
+
+**What:** when Gemini can't answer (free daily quota used up, overloaded, or no key), plain-text AI work — Lycie's
+chat (streamed), the AI writer, FAQ drafts, testimonial ideas — is answered by Groq's free tier instead. Web search
+(deals finder, market briefing) and reading pictures still need Gemini. A prompt Gemini blocks is never re-asked.
+
+**Set up:** `GROQ_API_KEY` on Render (free at console.groq.com). Optional `GROQ_MODELS` (default
+`openai/gpt-oss-20b,openai/gpt-oss-120b`). Check it in **Lycie AI → AI connection check** (backup models show as
+`groq:…`) and **System → Settings & status** ("Backup AI (Groq)").
+
+**Where:** `server/src/lycie/groq.client.ts` (OpenAI-style chat API, per-model rest after failures, retries without
+the reasoning settings if a model refuses them); wired into `GeminiClient.generate/generateStream`
+(`gemini.client.ts`); tests in `groq-fallback.spec.ts`. When every Gemini model is resting for more than two minutes
+(quota), requests go straight to Groq instead of waiting.

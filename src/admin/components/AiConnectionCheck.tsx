@@ -4,7 +4,7 @@ import { ApiError } from "@/services/http";
 import { adminApi } from "../adminApi";
 
 interface Check {
-  settings: { models: string[]; raceAfterMs: number; firstWordDeadlineMs: number };
+  settings: { models: string[]; backupModels?: string[]; raceAfterMs: number; firstWordDeadlineMs: number };
   results: Array<{ model: string; ok: boolean; ms: number; problem?: string }>;
 }
 
@@ -53,7 +53,12 @@ export default function AiConnectionCheck() {
         <>
           <p style={{ marginTop: "var(--space-4)" }}>
             <strong>{working} of {check.results.length} models working.</strong>{" "}
-            <span className="text-muted">If one is slow, the next is started after {check.settings.raceAfterMs / 1000}s and the first answer wins.</span>
+            <span className="text-muted">If one is slow, the next is started after {check.settings.raceAfterMs / 1000}s and the first answer wins.</span>{" "}
+            <span className="text-muted">
+              {check.settings.backupModels?.length
+                ? "Models marked groq: are the backup — used for chat and writing when Gemini is out of quota or down."
+                : "No backup AI is set up (GROQ_API_KEY)."}
+            </span>
           </p>
           <div className="admin-table-wrap">
             <table className="admin-table">

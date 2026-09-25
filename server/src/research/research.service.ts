@@ -46,7 +46,8 @@ export class ResearchService {
   constructor(private readonly gemini: GeminiClient) {}
 
   get available(): boolean {
-    return this.gemini.isConfigured;
+    // Web research needs Gemini's Google Search; the Groq backup can't search.
+    return this.gemini.hasGemini;
   }
 
   private async headlines(query: string): Promise<Headline[]> {
